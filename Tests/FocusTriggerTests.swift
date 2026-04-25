@@ -40,7 +40,7 @@ final class FocusTriggerTests: XCTestCase {
         }
         try await Task.sleep(nanoseconds: 50_000_000)
         task.cancel()
-        XCTAssertNil(await task.value)
+        do { let _v = await task.value; XCTAssertNil(_v) }
     }
 
     func testFocusActivationFlipsToOn() async throws {
@@ -84,7 +84,7 @@ final class FocusTriggerTests: XCTestCase {
         }
         try await Task.sleep(nanoseconds: 50_000_000)
         task.cancel()
-        XCTAssertNil(await task.value)
+        do { let _v = await task.value; XCTAssertNil(_v) }
     }
 
     func testRequestPermissionIfNeededHonorsStatus() async {
@@ -124,6 +124,6 @@ final class FocusTriggerTests: XCTestCase {
         try await Task.sleep(nanoseconds: 50_000_000)
         task.cancel()
         // The stream is finished, so iterator.next() returns nil and exits.
-        XCTAssertNil(await task.value)
+        do { let _v = await task.value; XCTAssertNil(_v) }
     }
 }

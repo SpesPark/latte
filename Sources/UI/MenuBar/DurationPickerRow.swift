@@ -6,6 +6,8 @@ public struct DurationPickerRow: View {
     public let isActive: Bool
     public let action: () -> Void
 
+    @State private var isHovered: Bool = false
+
     public init(duration: AwakeDuration, isActive: Bool, action: @escaping () -> Void) {
         self.duration = duration
         self.isActive = isActive
@@ -14,19 +16,33 @@ public struct DurationPickerRow: View {
 
     public var body: some View {
         Button(action: action) {
-            HStack {
+            HStack(spacing: Theme.Spacing.sm) {
+                Rectangle()
+                    .fill(isActive ? Theme.Colors.accentAwake : Color.clear)
+                    .frame(width: 3)
+                    .padding(.vertical, 4)
+
                 Text(duration.label)
                     .font(Theme.Fonts.body)
+
                 Spacer()
+
                 if isActive {
                     Image(systemName: "checkmark")
+                        .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(Theme.Colors.accentAwake)
                 }
             }
-            .padding(.horizontal, Theme.Spacing.lg)
+            .padding(.horizontal, Theme.Spacing.lg - 3)
             .padding(.vertical, Theme.Spacing.sm)
             .contentShape(Rectangle())
+            .background(
+                RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
+                    .fill(isHovered ? Color.primary.opacity(0.06) : Color.clear)
+                    .padding(.horizontal, Theme.Spacing.sm)
+            )
         }
         .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
     }
 }

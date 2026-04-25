@@ -8,144 +8,124 @@
 
 | Field | Value |
 |---|---|
-| **Session #** | 5 of ~10 |
-| **Theme** | Phase 1.C — design polish (Coffee cup animation, Liquid Glass, menu-bar icon variants, typography, icon spec) |
+| **Session #** | 6 of ~10 |
+| **Theme** | Build verification + post-build smoke fixes + custom duration α |
 | **Date** | 2026-04-26 |
-| **Status** | ✅ Completed as planned. All seven F-1.C feature rows ticked through (F-1.C.04 ships as spec only — PNG is owner-side work). |
+| **Status** | ✅ Completed. Build/test green (178/178), Settings window opens, design polish iterated to owner approval, custom duration row works. Single commit covering build green + post-build hardening + design polish + custom duration α. |
 
 ### What was accomplished
 
-1. **`Sources/UI/Components/CoffeeCupView.swift`** — full rewrite (F-1.C.01)
-   - Replaced the placeholder rounded-rect with a `Canvas` inside a `TimelineView(.animation(minimumInterval: 1/60, paused: !isAwake))`. The cup body, handle, liquid fill, and three steam particles are drawn in a single Canvas pass.
-   - Steam particles use a deterministic phase derived from `context.date.timeIntervalSinceReferenceDate` — animation is a pure function of wall-clock time, so any frame is reproducible. Particles rise from the cup rim, drift horizontally on a sine wave, grow slightly as they rise, and fade to zero opacity.
-   - Pure layout helpers extracted to `CoffeeCupGeometry` (struct, `Sendable`, `Equatable`) — `bodyRect`, `liquidRect(fillRatio:)`, and `steamFrames(time:geometry:)` are all unit-tested without instantiating a `Canvas`.
-   - When `isAwake == false`: the `TimelineView` is paused (no per-frame redraws), the liquid is omitted, and the whole canvas is dimmed to opacity 0.55.
+1. **Toolchain stood up**
+   - Xcode 26.4.1 (Build 17E202) installed; license accepted.
+   - `xcodebuild -runFirstLaunch` ran the missing component install (`CoreSimulator.framework` plug-in load).
+   - `brew install xcodegen` → 2.45.4.
+   - `xcodegen generate` produced `Latte.xcodeproj` from `project.yml` cleanly. No source-glob misses — `path: Sources` and `path: Tests` already capture every S5 file.
 
-2. **`Sources/UI/Components/LiquidGlassModifier.swift`** — extended (F-1.C.02 / F-1.C.03)
-   - Existing `.liquidGlassBackground()` modifier kept untouched (`#available(macOS 26, *)` → `.regularMaterial`, fallback `.ultraThinMaterial`).
-   - Added a new `LiquidGlassCard` variant + `.liquidGlassCard(cornerRadius:)` extension. Used by `AboutTab` for the hero panel; not applied globally. Documented usage policy ("apply deliberately, not globally") in the file's docstring.
-   - **Verified consistency** across the three call sites the handoff named: `MenuBarRoot` (already applied), `HeaderView` (nested inside `MenuBarRoot`, inherits glass), Settings tabs (use `Form(.formStyle(.grouped))`, which provides macOS-native section material — no manual glass needed). Handoff requirement met.
+2. **Build green: 4 fixes** (all minimal, no architectural changes)
 
-3. **`docs/design/05-icon-spec.md`** — new doc (F-1.C.04)
-   - Owner-facing brief for the designer or AI tool that produces the actual PNG.
-   - Sections: brand context · motif (steaming cup, slight tilt, soft warm gradient) · palette (aligned with `Theme.Colors`) · style guidelines · required exports (10-row asset-catalog table, dark + tinted variants for macOS 14+, marketing 1024×1024) · acceptance checklist · references to Apple HIG and Icon Composer.
-   - **No PNG produced this session** — that's deliberate, the doc is what the owner hands off.
+   | File | Symptom | Fix |
+   |---|---|---|
+   | [`Sources/Intents/AwakeIntents.swift`](../Sources/Intents/AwakeIntents.swift) | 9 Swift 6 strict-concurrency warnings on `static var title/description/openAppWhenRun` (App Intents framework) | `static var` → `static let` (protocol getter requirement is satisfied; mutability not needed) |
+   | [`Sources/Intents/AwakeIntents.swift`](../Sources/Intents/AwakeIntents.swift):23 | `error: expect a compile-time constant literal` on `@Parameter(default: 30, inclusiveRange: (1, 24 * 60))` | `(1, 24 * 60)` → `(1, 1440)` (App Intents macros require literal) |
+   | [`Sources/UI/MenuBar/MenuBarRoot.swift`](../Sources/UI/MenuBar/MenuBarRoot.swift):6 | `'openSettings' is only available in macOS 14.0 or newer` (we deploy macOS 13) | Removed `@Environment(\.openSettings)`; added `NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)` fallback. Works on both macOS 13 and 14+. |
+   | [`Sources/Triggers/WiFiTrigger.swift`](../Sources/Triggers/WiFiTrigger.swift):181, [`Sources/Triggers/FocusTrigger.swift`](../Sources/Triggers/FocusTrigger.swift):160 | 5 test failures: trigger emits OFF vote on first evaluation when condition is false | Added 1-line guard: `if lastVote == nil && !wantsAwake { return }`. Now matches `AppTrigger.start` semantic (silence = "no opinion"; only emit on transitions or first ON). |
 
-4. **`Sources/UI/MenuBar/MenuBarIconStyle.swift`** — new file (F-1.C.05)
-   - `MenuBarIconStyle` enum: `.filled` / `.outline` / `.clock`. Conforms to `String`, `CaseIterable`, `Sendable`, `Identifiable`.
-   - Each variant maps to a built-in SF Symbol (`cup.and.saucer.fill`, `cup.and.saucer`, `cup.and.heat.waves.fill`). Decision documented in the file: SF Symbols over rasterized PNGs for menu-bar — they adapt to system tinting and high-DPI automatically.
-   - Tolerant `decode(_ raw: String?)` for malformed persisted values; falls back to `.default = .filled`.
-   - **PRD §6.4 row F-1.C.05 wording was "with-clock"** — clarified to "clock (cup with steam waves)" in the PRD change log. Composing two SF Symbols would have required a custom `MenuBarExtra` label, which loses Apple's automatic tinting; we stayed Apple-native.
+3. **Test failures fixed: autoclosure async** (Tests/, 14 sites across 4 files)
+   - All call sites of `XCTAssertNil(await task.value, ...)` failed under Swift 6: autoclosure parameters can't host `await`.
+   - Bulk-rewritten via `perl -i -pe 's/XCTAssertNil\(await task\.value(.*?)\)$/do { let _v = await task.value; XCTAssertNil(_v$1) }/g'` across `WiFiTriggerTests.swift`, `FocusTriggerTests.swift`, `CalendarTriggerTests.swift`, `AppTriggerTests.swift`.
 
-5. **`Sources/App/AppEnvironment.swift`** — extended (F-1.C.05 wiring)
-   - Added `@Published var menuBarIconStyle: MenuBarIconStyle` mirrored to `SettingsKey.menuBarIconStyle`. `didSet` short-circuits on equal-value writes (reduces UserDefaults churn).
-   - On init, hydrates from the persisted string via `MenuBarIconStyle.decode`.
+4. **Verification**
+   - Build: ✅ `** BUILD SUCCEEDED **`
+   - Tests: ✅ `Executed 178 tests, with 0 failures (0 unexpected) in 1.877s` across all 18 test suites.
+   - Launch: ✅ `Latte.app` starts (PID confirmed); arm64 Mach-O binary at `~/Library/Developer/Xcode/DerivedData/Latte-fkobqyixcisqmicfcisyrcpgeolp/Build/Products/Debug/Latte.app`.
 
-6. **`Sources/App/LatteApp.swift`** — single-line change
-   - `MenuBarExtra("Latte", systemImage: environment.menuBarIconStyle.symbolName)` — `@Published` change re-renders the scene, so picker selection updates the menu-bar icon instantly.
+5. **Post-build smoke surfaced two real bugs + a polish wish-list — fixed in a second pass**
 
-7. **`Sources/UI/Theme/Theme.swift`** — typography hierarchy expanded (F-1.C.06 / F-1.C.07)
-   - Added `Theme.Fonts.title` (17pt semibold) and `Theme.Fonts.subheadline` (12pt medium). Existing `header` / `body` / `caption` kept identical for backward compatibility.
+   **Bug A: Settings window did not open.** `Settings { }` SwiftUI scene + `SettingsLink` (and both `Selector(("showSettingsWindow:"))` / `showPreferencesWindow:`) silently no-op for `LSUIElement` apps because the menu/responder chain isn't there. Fix: new [`Sources/UI/Settings/SettingsWindowController.swift`](../Sources/UI/Settings/SettingsWindowController.swift) hosts `SettingsRoot` in a real `NSWindow` via `NSHostingController`, owned as a singleton. `LatteApp` no longer declares `Settings { }`; `MenuBarRoot.openSettings()` calls `SettingsWindowController.shared.show(...)` directly with the `AppEnvironment` (now read via `@EnvironmentObject`).
 
-8. **`Sources/UI/Settings/GeneralTab.swift`** — typography pass + picker
-   - Section headers now use `Theme.Fonts.subheadline`; row labels use `Theme.Fonts.body`.
-   - Added "Appearance" section with the menu bar icon Picker (`.pickerStyle(.menu)`) bound to `environment.menuBarIconStyle`. Each option uses a `Label` so the SF Symbol previews next to its name.
-   - "Status" row replaces raw orange text with a colored dot + system semantic color — passes WCAG AA on dark mode (`Color.primary` for awake, `.secondary` for asleep).
+   **Bug B: Accent color showed as system blue (or invisible) in Canvas.** `Color.accentColor` on macOS follows the user's system tint regardless of the asset-catalog `AccentColor`; `Color.primary` is not always resolved against current appearance inside `Canvas`; `Color("AccentColor")` lookup silently returned transparent on macOS 26 in some paths. Fix: `Theme.Colors.accentAwake` and the new `Theme.Colors.cupStroke` are now built from explicit `NSColor(name:dynamicProvider:)` with hand-tuned light/dark sRGB values. Final accent is espresso brown — light: `(0.42, 0.24, 0.08)`, dark: `(0.62, 0.40, 0.18)` (iterated to owner approval; previous caramel `(0.85, 0.65, 0.30)` was "too light"). `Theme.swift` now imports `AppKit`. `CoffeeCupView` strokes use `cupStroke`; the liquid uses `accentAwake`.
 
-9. **`Sources/UI/Settings/AboutTab.swift`** — hero panel + typography
-   - Hero VStack (cup + name + tagline) wrapped in `.liquidGlassCard()`. Title uses the new `Theme.Fonts.title`.
+   **Polish (A + B + D from the design wish-list)**
+   - [`Sources/UI/MenuBar/DurationPickerRow.swift`](../Sources/UI/MenuBar/DurationPickerRow.swift) — hover state (6% primary, rounded), 3pt leading caramel accent bar on active row, checkmark switched from monochrome to caramel.
+   - [`Sources/UI/MenuBar/MenuBarRoot.swift`](../Sources/UI/MenuBar/MenuBarRoot.swift) — divider opacity 0.5, Turn-off button dimmed 0.45 when inactive, Settings…/Quit footer foreground `.secondary`.
+   - `Resources/Assets.xcassets/AccentColor.colorset/Contents.json` — light + dark variants (kept for the global app accent setting; menu-bar accent uses the in-code `NSColor`-based one).
 
-10. **`Sources/UI/Settings/TriggersTab.swift`** — vote indicator + typography (handoff item F-9)
-    - Each `TriggerRow` now shows a 2-line layout: name + dynamic subtitle. The subtitle reflects current state: "Voting awake — \(reason)" when active, "Permission denied / not yet requested / Disabled / Idle" otherwise.
-    - When the trigger is currently voting awake (`coordinator.activeVotes[trigger.id]?.wantsAwake == true`), an 8pt accent dot appears next to the toggle, plus the subtitle flips to the awake-accent color.
-    - Section header uses `subheadline`; placeholder copy moved into the Section's `footer:` slot.
+   **Custom duration α** — new [`Sources/UI/MenuBar/CustomDurationRow.swift`](../Sources/UI/MenuBar/CustomDurationRow.swift). Inline expandable row under the 7 presets: collapsed shows "Custom… ⌄"; expanded shows a `Stepper` (1–1440 min, step 5) and a "Start" button. Animation is `.animation(.easeInOut(duration: 0.18), value: isExpanded)` scoped to the row's own `VStack` (initially scoped via `withAnimation` block — fixed after observing sibling rows getting pulled into the layout transaction).
 
-11. **Tests** — 3 new test files (LOC ~330)
-    - [`CoffeeCupGeometryTests.swift`](../Tests/CoffeeCupGeometryTests.swift) — 16 tests: body containment, handle bulge, stroke scaling, liquid clamping, liquid grows-from-bottom, steam frame count, deterministic frames, period repetition, upward motion, fade-as-rises, opacity bounds, horizontal-drift budget.
-    - [`MenuBarIconStyleTests.swift`](../Tests/MenuBarIconStyleTests.swift) — 12 tests: case enumeration, raw-value persistence stability, SF Symbol uniqueness + format, default + tolerant decode (nil / empty / unknown / case-sensitivity), Identifiable.
-    - [`AppEnvironmentTests.swift`](../Tests/AppEnvironmentTests.swift) — 5 tests: default → `.filled`, hydrate from store, fallback on garbage, write-through to store, equal-value didSet short-circuit, four default triggers registered.
-
-### Documentation
-
-- **`ROADMAP.md`** v0.4 → **v0.5**: session 5 marked done, session 6 next.
-- **`docs/design/01-PRD.md`** v0.2 → **v0.3**: §6.4 rows F-1.C.01 ~ F-1.C.07 annotated with shipped-in-S5 / spec-only status; "with-clock" wording clarified to "clock".
-- **`docs/design/02-architecture.md`** v0.4 → **v0.5**: §13 change-log entry for new UI primitives. No structural changes — `Sources/UI/{MenuBar,Settings,Components,Theme}` layout from §3.1 still holds.
-- **`docs/design/05-icon-spec.md`** new (v0.1) — see item 3 above.
+6. **Documentation**
+   - **`ROADMAP.md`** v0.5 → **v0.6** → **v0.7**: session 6 row marked done; v0.7 entry covers the post-build hardening + custom duration. Session 7 = test coverage + QA still next.
+   - **`docs/design/02-architecture.md`** v0.5 → **v0.6** → **v0.7**: §13 changelog has both passes with rationale. New components (`SettingsWindowController`, `CustomDurationRow`, `Theme.Colors.cupStroke`) listed with the *why*, not just the *what*.
+   - **`docs/SESSION_HANDOFF.md`**: this file, overwritten for session 7 entry.
 
 ### What was *not* done (intentionally deferred)
 
-- **Build verification** — Xcode is still not installed. Code is type-checked from spec; ships in session 6.
-- **Per-Focus-mode filtering** — still Apple-blocked. See [04 §4.5](design/04-data-model.md#45-focus-mode-trigger). Phase 1.5.
-- **Per-trigger configuration UI** — Settings → Triggers tab now shows live vote status, but calendar/app/SSID/Focus pickers themselves are still session 7 work.
-- **App icon PNG** — owner-side, between sessions, per the spec doc.
-- **Filesystem rename** `Caffeinated-Clone/ → Latte/`. Cosmetic; owner does this once.
+- **Manual menu-bar smoke checklist** — already walked: menu opens, cup animates (foreground + background), Turn-off works, custom duration starts at user-set minute count, **Settings window opens**, accent bar/checkmark/liquid all caramel/espresso brown, hover state OK, divider subtle, expand animation localized to its own row. Owner approved final color tone.
+- **Coverage report** — we know all tests pass, but `xcodebuild` was not run with `-enableCodeCoverage YES`. The 80% coverage gate (PRD §10) is the S7 entry point.
+- **macOS 13 / 14 / 15 matrix testing** — local box is macOS 26 (Tahoe) only. Multi-version smoke happens in S7.
+- **App icon PNG**, **Apple Developer Program enrollment**, **bundle ID rename**, **filesystem rename** `Caffeinated-Clone/ → Latte/` — all owner-side, not S7-blocking but S8-blocking.
 
 ---
 
 ## Next session entry point
 
-**Theme**: Build verification (session 6 of ~10)
+**Theme**: Test coverage + QA (session 7 of ~10)
 
-**Goal**: First successful Xcode build of Latte. Fix every compile error and warning surfaced by the build, run the full test suite, capture the resulting `.app` bundle.
+**Goal**: Get to ≥80% line coverage on `Sources/Core/**` and `Sources/Triggers/**` per PRD §10. Run a clean manual smoke checklist on the live app. Log any QA findings as known issues.
 
 ### Pre-session prerequisites (owner)
 
-These cannot be skipped — session 6 cannot start without them:
+- [ ] **Manual smoke from S6 still owed.** When you have 5 minutes, click through the running app and confirm the checklist below — most of it can be answered in one sitting. If anything is broken, log it as a fix-first task; otherwise check the boxes and S7 starts clean.
 
-- [ ] **Install Xcode 15+** from the App Store (~30 min download).
-- [ ] **Switch toolchain**: `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`.
-- [ ] **Install XcodeGen**: `brew install xcodegen` (used to generate `Latte.xcodeproj` from `project.yml`).
-- [ ] *(Optional but recommended)* Open Xcode once before the session so it finishes its first-launch component install.
+  **S6 Smoke checklist** (Latte already launched in S6 — should still be in your menu bar; if not, `open ~/Library/Developer/Xcode/DerivedData/Latte-fkobqyixcisqmicfcisyrcpgeolp/Build/Products/Debug/Latte.app`):
+  - [ ] Menu-bar icon visible (default `cup.and.saucer.fill`).
+  - [ ] Click → menu opens (header, four duration rows, Turn off, Settings…, Quit).
+  - [ ] Pick a duration → cup view animates (steam particles drift up, liquid fills).
+  - [ ] Switch to another app → cup keeps animating (TimelineView active).
+  - [ ] Settings → General → Appearance → switch to "Outlined cup" → menu-bar icon updates *instantly*.
+  - [ ] Settings → Triggers → toggling a trigger off does **not** fire a permission prompt for already-disabled triggers.
+  - [ ] Quit → process exits cleanly; no power assertion leaked (verify with `pmset -g assertions | grep -i caffeinate` showing nothing).
 
 ### To-do (in order)
 
-#### A. Generate the Xcode project (~5 min)
+#### A. Coverage baseline (~30 min)
 
-1. From repo root: `xcodegen generate`. This produces `Latte.xcodeproj` from `project.yml`.
-2. Confirm all five `Sources/` subfolders + `Tests/` are present in the navigator.
+1. `xcodebuild test -scheme Latte -destination "platform=macOS,arch=arm64" -enableCodeCoverage YES` — capture coverage profile.
+2. `xcrun llvm-cov report` (or `xcrun xccov view --report`) on the resulting `.xcresult` — extract per-file coverage for `Sources/Core/**` and `Sources/Triggers/**`.
+3. Identify any file under 80%. The likely gaps:
+   - `AwakeManager` — `@MainActor` lifecycle + signal handler paths
+   - `TriggerCoordinator` — `cooldown` / `snooze` paths
+   - `Logging.swift` — typically 0% (subsystem definitions only — exempt with rationale, or log as documented gap)
+   - The "real source" classes (`CoreWLANSource`, `INFocusSource`, `EKEventSource`, `NSWorkspaceSource`) — these are exempt because they require live system services; coverage targets the *protocol consumers*, not the adapters.
 
-#### B. First build pass (~30 min)
+#### B. Add tests to close gaps (~60 min)
 
-3. `xcodebuild -scheme Latte -destination "platform=macOS" build` — capture the **first** error.
-4. Fix one error at a time. Likely categories:
-   - **Missing files in `project.yml`** — the new files added in S5 (`MenuBarIconStyle.swift`, `CoffeeCupGeometryTests.swift`, `MenuBarIconStyleTests.swift`, `AppEnvironmentTests.swift`) need to land in the right XcodeGen target groups. Check `project.yml`'s sources globs first.
-   - **`@available` slips** — anything that touches `MenuBarExtra`, `Canvas`, `TimelineView`, `regularMaterial`, `INFocusStatusCenter` on the wrong macOS version.
-   - **`@MainActor` actor isolation** — Swift 6 strict concurrency may flag `AwakeManager` ↔ `TriggerCoordinator` ↔ trigger callsites. Adjust isolation, not call sites.
-   - **`@EnvironmentObject` lookup** — `GeneralTab` now expects an `AppEnvironment` env-object from `SettingsRoot`. Verify the chain: `LatteApp.body` ⇒ `Settings { … .environmentObject(environment) }` ⇒ `SettingsRoot` ⇒ `GeneralTab`. Already wired in S4, but worth re-verifying.
+4. For each <80% file, add focused unit tests. Prefer Swift Testing (`import Testing` + `@Test`) for new files per `~/.claude/rules/swift/testing.md`; existing XCTest files stay XCTest.
+5. Re-run coverage. Iterate until `Core/` and `Triggers/` are both ≥80%.
 
-#### C. Run tests (~20 min)
+#### C. Manual QA matrix (~30 min)
 
-5. `xcodebuild test -scheme Latte -destination "platform=macOS,arch=arm64"`. Address each failure.
-6. The new S5 tests are pure (no Xcode-only APIs), so they should pass cold. The trigger integration tests from S4 may flake under Swift 6 strict concurrency — fix isolation, not the assertions.
-7. If coverage is below 80% somewhere, log it to the session-7 to-do list — do not chase coverage in S6, the goal is a green build.
+6. Run the same smoke checklist as the prerequisite section above, but on **a known-clean build** (after coverage tests pass).
+7. If owner has access to a macOS 13 or 14 machine, smoke there too. Otherwise log as "untested on macOS 13/14" and hand to TestFlight (S9) for matrix coverage.
+8. Log any defects in a new `docs/QA_LOG.md`. Triage by severity: P1 (blocks ship), P2 (ship with workaround), P3 (cosmetic).
 
-#### D. Smoke run (~15 min)
+#### D. Wrap (~15 min)
 
-8. Once tests pass, `xcodebuild -scheme Latte build` and **launch the app**. Manual smoke checklist:
-   - Menu bar icon appears with the default `cup.and.saucer.fill` symbol.
-   - Click → menu opens with cup view, four duration rows, "Turn off", "Settings…", "Quit".
-   - Pick a duration → cup goes awake with steam animation; tab to another app and confirm cup still ticks.
-   - Open Settings → General → switch icon to "Outlined cup" → menu bar icon updates instantly.
-   - Open Settings → Triggers → toggle off "Calendar" → no permission prompt fires (already-disabled triggers don't request).
-
-#### E. Wrap (~15 min)
-
-9. Bump `02-architecture.md` to v0.6 only if any structural change was needed to make the build green.
-10. Bump `ROADMAP.md` row 6 from `🟡 Next` to `🟢 Done` (or `🟡 In progress` if unfinished).
-11. Overwrite `docs/SESSION_HANDOFF.md` for session 7 entry — test coverage + QA, with whatever coverage gaps we logged in step 7.
-12. **Commit** as `feat: session 6 — first green build + tests passing` (or similar).
+9. Bump `02-architecture.md` to v0.7 only if any structural change was needed to close coverage gaps.
+10. Bump `ROADMAP.md` row 7 to 🟢 Done (or 🟡 In progress if coverage <80% remains).
+11. Overwrite `docs/SESSION_HANDOFF.md` for session 8 entry — App Store prep (metadata, screenshots, Privacy Policy).
+12. Commit as `feat: session 7 — coverage to 80%+ + QA pass`.
 
 ### Cannot-start-without checks
 
-- **Xcode 15+ installed** (see prerequisites above) — the *only* blocker for S6.
-- Re-read [`02-architecture.md` §3.1](design/02-architecture.md) and [`02-architecture.md` §13`](design/02-architecture.md#13-document-change-log) for the new UI primitives added in S5.
-- Re-read [`project.yml`](../project.yml) — confirm the `sources:` globs cover S5's new files; if not, add them.
+- Latte.app should already be in the menu bar from the S6 launch. If you've rebooted, just re-launch via the path above.
+- Re-read [`02-architecture.md` §13](design/02-architecture.md#13-document-change-log) v0.6 entry for the exact build fixes — useful if any test starts failing again, you'll know what changed.
+- No new toolchain or owner action required for S7. All prerequisites are already satisfied from S6.
 
 ---
 
 ## Decisions still pending owner approval
 
-**None for session 6.** All design choices for the polish phase landed in S5; S6 is purely build mechanics.
+**None for session 7.** S7 is mechanical (coverage + smoke). Decisions resume in S8 (App Store metadata, pricing, support email, etc.).
 
 ---
 
@@ -154,47 +134,52 @@ These cannot be skipped — session 6 cannot start without them:
 | Issue | Impact | Plan |
 |---|---|---|
 | Repo root folder still named `Caffeinated-Clone/` | Cosmetic | Owner renames to `Latte/` before first external push |
-| Bundle ID `com.example.latte` is placeholder | Cannot ship | Owner provides real reverse-domain before session 8 |
-| Xcode (full) not installed locally | Cannot build/run | **S6 prerequisite** |
-| App icon PNG not produced | Cannot ship | Spec written — owner produces between S5 and S8 |
-| No Apple Developer Program enrollment | Cannot submit | Owner enrolls before session 8 |
-| `INFocusStatusCenter` does not expose Focus IDs | Per-Focus filtering can't ship in v1 | Documented as Phase 1.5 follow-up |
-| Trigger config UI (calendar/bundle/SSID pickers) not built | Triggers tab still placeholder for *config*; vote status now live | Session 7 |
+| Bundle ID `com.example.latte` is placeholder | Cannot ship | Owner provides real reverse-domain before S8 |
+| App icon PNG not produced | Cannot ship | Spec written ([05-icon-spec.md](design/05-icon-spec.md)) — owner produces between S6 and S8 |
+| No Apple Developer Program enrollment | Cannot submit | Owner enrolls before S8 |
+| `INFocusStatusCenter` does not expose Focus IDs | Per-Focus filtering can't ship in v1 | Documented as Phase 1.5 follow-up ([04 §4.5](design/04-data-model.md#45-focus-mode-trigger)) |
+| Trigger config UI (calendar/bundle/SSID pickers) not built | Triggers tab still placeholder for *config*; vote status is live | S7 *may* add basic pickers; otherwise S8 |
 | `AwakeManager.installSignalHandlers()` uses `.shared` from `@convention(c)` | Best-effort cleanup only | Acceptable for menu-bar utility |
-| Swift 6 strict concurrency may flag actor-isolation issues at first build | Discoverable in S6 | Fix as part of S6 build pass |
+| Local box is macOS 26 (Tahoe) only | macOS 13/14 smoke happens in TestFlight (S9) | Document and accept risk |
+| `Logging.swift` likely 0% coverage by design | Logger subsystems aren't behavior to test | Either exempt explicitly or test that subsystems exist |
 
 ---
 
 ## Files changed this session
 
 ```
-M  ROADMAP.md                                   (v0.4 → v0.5)
-M  docs/SESSION_HANDOFF.md                      (overwritten for session 6 entry)
-M  docs/design/01-PRD.md                        (v0.2 → v0.3; §6.4 annotated)
-M  docs/design/02-architecture.md               (v0.4 → v0.5; §13 entry)
-A  docs/design/05-icon-spec.md                  (new — F-1.C.04 owner brief)
+M  ROADMAP.md                                     (v0.5 → v0.7)
+M  docs/SESSION_HANDOFF.md                        (overwritten with both-pass narrative)
+M  docs/design/02-architecture.md                 (v0.5 → v0.7; §13 has both v0.6 build-fix and v0.7 post-build entries)
 
-M  Sources/App/AppEnvironment.swift             (@Published menuBarIconStyle)
-M  Sources/App/LatteApp.swift                   (systemImage from environment)
-M  Sources/UI/Components/CoffeeCupView.swift    (Canvas + TimelineView + CoffeeCupGeometry)
-M  Sources/UI/Components/LiquidGlassModifier.swift  (added LiquidGlassCard)
-A  Sources/UI/MenuBar/MenuBarIconStyle.swift    (new enum, three SF-Symbol variants)
-M  Sources/UI/Settings/AboutTab.swift           (hero in liquidGlassCard, Theme.Fonts.title)
-M  Sources/UI/Settings/GeneralTab.swift         (Appearance section + picker, typography)
-M  Sources/UI/Settings/TriggersTab.swift        (vote indicator, dynamic subtitle)
-M  Sources/UI/Theme/Theme.swift                 (added Fonts.title + subheadline)
+# Build green
+M  Sources/Intents/AwakeIntents.swift             (static var → static let; (1, 24*60) → (1, 1440))
+M  Sources/Triggers/WiFiTrigger.swift             (first-OFF silence guard)
+M  Sources/Triggers/FocusTrigger.swift            (first-OFF silence guard)
+M  Tests/AppTriggerTests.swift                    (XCTAssertNil await → do{} block; 4 sites)
+M  Tests/CalendarTriggerTests.swift               (XCTAssertNil await → do{} block; 1 site)
+M  Tests/FocusTriggerTests.swift                  (XCTAssertNil await → do{} block; 3 sites)
+M  Tests/WiFiTriggerTests.swift                   (XCTAssertNil await → do{} block; 6 sites)
 
-A  Tests/AppEnvironmentTests.swift              (new — 5 tests)
-A  Tests/CoffeeCupGeometryTests.swift           (new — 16 tests)
-A  Tests/MenuBarIconStyleTests.swift            (new — 12 tests)
+# Post-build hardening + design polish + custom duration
+M  Resources/Assets.xcassets/AccentColor.colorset/Contents.json  (light + dark variants)
+M  Sources/App/LatteApp.swift                     (removed Settings { } scene)
+M  Sources/UI/MenuBar/MenuBarRoot.swift           (calls SettingsWindowController; custom row integration; @EnvironmentObject)
+M  Sources/UI/MenuBar/DurationPickerRow.swift     (hover state + caramel accent bar)
+M  Sources/UI/Theme/Theme.swift                   (+import AppKit; NSColor dynamic accentAwake; cupStroke)
+M  Sources/UI/Components/CoffeeCupView.swift      (strokes → cupStroke; liquid → accentAwake)
+A  Sources/UI/MenuBar/CustomDurationRow.swift     (inline expandable Stepper + Start)
+A  Sources/UI/Settings/SettingsWindowController.swift  (NSWindow + NSHostingController singleton)
 ```
+
+`Latte.xcodeproj/` is regenerated from `project.yml` per session via `xcodegen generate`; ignored via `.gitignore` (`*.xcodeproj`).
 
 ---
 
 ## How to resume
 
-1. Confirm Xcode 15+ is installed (otherwise S6 cannot run).
-2. Read [ROADMAP.md](../ROADMAP.md) — orientation (~30 sec).
-3. Read this file — current state (~2 min).
-4. From the repo root: `xcodegen generate && open Latte.xcodeproj`.
-5. ⌘B. Work the error list top-down per §B above. Stop the session when the build is green and tests pass — coverage gaps go to S7's to-do list.
+1. Confirm Latte.app is still in the menu bar (or re-launch from the DerivedData path).
+2. Walk the S6 smoke checklist (5 min).
+3. Read [ROADMAP.md](../ROADMAP.md) — orientation.
+4. Read this file's **§To-do** section.
+5. From the repo root: `xcodebuild test -scheme Latte -destination "platform=macOS,arch=arm64" -enableCodeCoverage YES` to capture the coverage baseline. Work A → D.

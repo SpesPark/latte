@@ -39,7 +39,7 @@ final class WiFiTriggerTests: XCTestCase {
         }
         try await Task.sleep(nanoseconds: 50_000_000)
         task.cancel()
-        XCTAssertNil(await task.value)
+        do { let _v = await task.value; XCTAssertNil(_v) }
     }
 
     func testTransitionFromOnToOffEmitsOff() async throws {
@@ -83,7 +83,7 @@ final class WiFiTriggerTests: XCTestCase {
         }
         try await Task.sleep(nanoseconds: 50_000_000)
         task.cancel()
-        XCTAssertNil(await task.value)
+        do { let _v = await task.value; XCTAssertNil(_v) }
     }
 
     func testInverseLogicWithEmptyListIsNoOp() async throws {
@@ -101,7 +101,7 @@ final class WiFiTriggerTests: XCTestCase {
         }
         try await Task.sleep(nanoseconds: 50_000_000)
         task.cancel()
-        XCTAssertNil(await task.value, "empty inverse list should never vote ON")
+        do { let _v = await task.value; XCTAssertNil(_v, "empty inverse list should never vote ON") }
     }
 
     func testRepeatedEvaluateWithSameStateDoesNotReEmit() async throws {
@@ -116,7 +116,7 @@ final class WiFiTriggerTests: XCTestCase {
         }
         try await Task.sleep(nanoseconds: 50_000_000)
         task.cancel()
-        XCTAssertNil(await task.value, "no state change → no vote")
+        do { let _v = await task.value; XCTAssertNil(_v, "no state change → no vote") }
     }
 
     func testDisabledNoOp() async throws {
@@ -133,7 +133,7 @@ final class WiFiTriggerTests: XCTestCase {
         }
         try await Task.sleep(nanoseconds: 50_000_000)
         task.cancel()
-        XCTAssertNil(await task.value)
+        do { let _v = await task.value; XCTAssertNil(_v) }
     }
 
     func testDeniedPermissionNoOp() async throws {
@@ -149,6 +149,6 @@ final class WiFiTriggerTests: XCTestCase {
         }
         try await Task.sleep(nanoseconds: 50_000_000)
         task.cancel()
-        XCTAssertNil(await task.value)
+        do { let _v = await task.value; XCTAssertNil(_v) }
     }
 }

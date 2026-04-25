@@ -53,9 +53,10 @@ public struct CoffeeCupView: View {
     }
 
     private func drawCup(in ctx: inout GraphicsContext, geometry: CoffeeCupGeometry) {
+        let strokeColor = Theme.Colors.cupStroke
         let body = Path(roundedRect: geometry.bodyRect, cornerSize: geometry.bodyCornerSize)
         ctx.fill(body, with: .color(Theme.Colors.cup))
-        ctx.stroke(body, with: .color(Theme.Colors.coffee), lineWidth: geometry.strokeWidth)
+        ctx.stroke(body, with: .color(strokeColor), lineWidth: geometry.strokeWidth)
 
         var handle = Path()
         handle.move(to: geometry.handleStart)
@@ -64,7 +65,7 @@ public struct CoffeeCupView: View {
             control1: geometry.handleControl1,
             control2: geometry.handleControl2
         )
-        ctx.stroke(handle, with: .color(Theme.Colors.coffee), lineWidth: geometry.strokeWidth)
+        ctx.stroke(handle, with: .color(strokeColor), lineWidth: geometry.strokeWidth)
     }
 
     private func drawLiquid(
@@ -76,7 +77,7 @@ public struct CoffeeCupView: View {
         guard liquidRect.height > 0.5 else { return }
 
         let liquid = Path(roundedRect: liquidRect, cornerSize: CGSize(width: 4, height: 4))
-        ctx.fill(liquid, with: .color(Theme.Colors.coffee))
+        ctx.fill(liquid, with: .color(Theme.Colors.accentAwake))
 
         if fillRatio > 0.05 {
             var foam = Path()

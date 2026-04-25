@@ -2,9 +2,9 @@
 
 > Multi-session execution plan for Latte (working folder: `Caffeinated-Clone/`).
 >
-> **Current phase**: Phase 1.C design polish complete (session 5); ready for build verification
-> **Current session**: 5 of ~10 (complete)
-> **Next session entry point**: see [docs/SESSION_HANDOFF.md](docs/SESSION_HANDOFF.md) — Session 6 = Build verification (owner-blocked on Xcode)
+> **Current phase**: Build green (session 6 complete); 178/178 tests passing
+> **Current session**: 6 of ~10 (complete)
+> **Next session entry point**: see [docs/SESSION_HANDOFF.md](docs/SESSION_HANDOFF.md) — Session 7 = Test coverage + QA
 
 ---
 
@@ -32,8 +32,8 @@ Each row is one focused session. Sessions are sequential — earlier ones produc
 | 3 | **Phase 1.0 implementation** | Rewrite Sources to match architecture; implement MVP features | All `Sources/**/*.swift`, replaces current skeleton | 🟢 Done |
 | 4 | **Phase 1.A — Triggers** | Calendar + App + Wi-Fi + Focus triggers fully implemented | `Sources/Triggers/*.swift`, integration tests | 🟢 Done |
 | 5 | **Phase 1.C — Design polish** | Coffee cup animation, Liquid Glass + fallback, app icon spec | UI files, asset catalog updates | 🟢 Done |
-| 6 | **Build verification** *(needs Xcode installed)* | First successful build, fix compile errors, run tests | Working `.app` bundle, all tests passing | 🟡 Next (Xcode-blocked) |
-| 7 | **Test coverage + QA** | ≥80% coverage, manual smoke test on macOS 13/14/15 | Test files, QA log | ⚪ Pending |
+| 6 | **Build verification** | First successful build, fix compile errors, run tests | Working `.app` bundle, all tests passing | 🟢 Done |
+| 7 | **Test coverage + QA** | ≥80% coverage, manual smoke test on macOS 13/14/15 | Test files, QA log | 🟡 Next |
 | 8 | **App Store prep** *(needs Dev Program + icon)* | Metadata, screenshots, Privacy Policy, submission | App Store Connect record, GitHub Pages site | 🔴 Blocked: Dev Program, Icon |
 | 9 | **TestFlight beta launch** | Beta build, recruit ≥10 testers | TestFlight build, beta feedback log | ⚪ Pending |
 | 10 | **Submission + launch** | Address beta feedback, submit to App Store, launch on ProductHunt | App Store live, ProductHunt post | ⚪ Pending |
@@ -117,3 +117,5 @@ The HANDOFF doc is **always overwritten** at the end of each session. The ROADMA
 | 0.3 | 2026-04-25 | Session 3 complete; Phase 1.0 code + tests landed; sessions 1–3 done, session 4 marked next |
 | 0.4 | 2026-04-26 | Session 4 complete; Phase 1.A trigger real wiring + Source DI pattern + tests; sessions 1–4 done, session 5 marked next |
 | 0.5 | 2026-04-26 | Session 5 complete; Phase 1.C design polish — Canvas+TimelineView coffee cup, Liquid Glass card, menu bar icon variants, Settings typography, TriggersTab vote indicator, `05-icon-spec.md`; sessions 1–5 done, session 6 marked next |
+| 0.6 | 2026-04-26 | Session 6 complete; first green Xcode build (Xcode 26.4.1) + all 178 tests passing; fixes: `static let` for AppIntent properties, `(1, 1440)` literal for `@Parameter` range, `NSApp.sendAction` fallback for `openSettings` (macOS 13 compat), first-OFF silence semantic for WiFi/Focus triggers (consistent with AppTrigger); sessions 1–6 done, session 7 marked next |
+| 0.7 | 2026-04-26 | Session 6 (extended) — post-build smoke surfaced gaps; fixed: `SettingsWindowController` (NSHostingController-based; `Settings { }` scene + `SettingsLink` don't wire reliably for LSUIElement menu-bar apps), espresso-brown accent via `NSColor` dynamic provider (Canvas doesn't resolve `Color.accentColor` / `Color.primary` against current appearance), `Theme.Colors.cupStroke` explicit `NSColor.labelColor`-based dynamic, `DurationPickerRow` hover state + caramel accent bar + dimmed Turn-off, divider opacity 0.5, **custom duration α** (`CustomDurationRow` — inline 1–1440-min Stepper + Start). All 178 tests still pass. |

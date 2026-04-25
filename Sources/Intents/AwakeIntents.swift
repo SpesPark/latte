@@ -2,9 +2,9 @@ import AppIntents
 import Foundation
 
 public struct ToggleAwakeIntent: AppIntent {
-    public static var title: LocalizedStringResource = "Toggle Latte"
-    public static var description = IntentDescription("Toggle Latte awake/asleep state.")
-    public static var openAppWhenRun: Bool = false
+    public static let title: LocalizedStringResource = "Toggle Latte"
+    public static let description = IntentDescription("Toggle Latte awake/asleep state.")
+    public static let openAppWhenRun: Bool = false
 
     public init() {}
 
@@ -16,11 +16,11 @@ public struct ToggleAwakeIntent: AppIntent {
 }
 
 public struct StartAwakeIntent: AppIntent {
-    public static var title: LocalizedStringResource = "Start Latte"
-    public static var description = IntentDescription("Keep the Mac awake for a duration.")
-    public static var openAppWhenRun: Bool = false
+    public static let title: LocalizedStringResource = "Start Latte"
+    public static let description = IntentDescription("Keep the Mac awake for a duration.")
+    public static let openAppWhenRun: Bool = false
 
-    @Parameter(title: "Minutes", default: 30, inclusiveRange: (1, 24 * 60))
+    @Parameter(title: "Minutes", default: 30, inclusiveRange: (1, 1440))
     public var minutes: Int
 
     public init() {}
@@ -34,9 +34,9 @@ public struct StartAwakeIntent: AppIntent {
 }
 
 public struct StopAwakeIntent: AppIntent {
-    public static var title: LocalizedStringResource = "Stop Latte"
-    public static var description = IntentDescription("Allow the Mac to sleep again.")
-    public static var openAppWhenRun: Bool = false
+    public static let title: LocalizedStringResource = "Stop Latte"
+    public static let description = IntentDescription("Allow the Mac to sleep again.")
+    public static let openAppWhenRun: Bool = false
 
     public init() {}
 

@@ -18,10 +18,5 @@ struct LatteApp: App {
                 }
         }
         .menuBarExtraStyle(.window)
-
-        Settings {
-            SettingsRoot(manager: environment.manager, coordinator: environment.coordinator)
-                .environmentObject(environment)
-        }
     }
 }

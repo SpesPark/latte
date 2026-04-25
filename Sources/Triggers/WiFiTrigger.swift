@@ -178,6 +178,7 @@ public final class WiFiTrigger: Trigger {
             wantsAwake = onList
         }
 
+        if lastVote == nil && !wantsAwake { return }
         if lastVote == wantsAwake { return }
         lastVote = wantsAwake
         let reason: String

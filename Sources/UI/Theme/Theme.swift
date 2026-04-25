@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 public enum Theme {
@@ -20,7 +21,20 @@ public enum Theme {
         public static let coffee = Color(red: 0.36, green: 0.20, blue: 0.09)
         public static let foam = Color(red: 0.96, green: 0.93, blue: 0.85)
         public static let cup = Color(red: 0.95, green: 0.95, blue: 0.97)
-        public static let accentAwake = Color.orange
+        /// Caramel accent for active state. Built from a dynamic `NSColor`
+        /// so the brand color stays consistent regardless of the user's
+        /// system tint, with light/dark variants resolved per-appearance.
+        public static let accentAwake = Color(nsColor: NSColor(name: "AccentAwake") { appearance in
+            let isDark = appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+            return isDark
+                ? NSColor(srgbRed: 0.62, green: 0.40, blue: 0.18, alpha: 1.0)
+                : NSColor(srgbRed: 0.42, green: 0.24, blue: 0.08, alpha: 1.0)
+        })
+
+        /// Dynamic stroke color for `CoffeeCupView`. Canvas does not always
+        /// resolve `Color.primary` against the current appearance, so we use
+        /// `NSColor.labelColor` directly to guarantee light/dark adaptation.
+        public static let cupStroke = Color(nsColor: NSColor.labelColor.withAlphaComponent(0.55))
         public static let accentAsleep = Color.secondary
     }
 

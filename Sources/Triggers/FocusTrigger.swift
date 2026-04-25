@@ -157,6 +157,7 @@ public final class FocusTrigger: Trigger {
         // v1: list non-empty + Focus active ⇒ ON. We can't filter by specific ID.
         let configured = !settings.focusTriggerFocusIDs.isEmpty
         let wantsAwake = configured && currentlyActive
+        if lastVote == nil && !wantsAwake { return }
         if lastVote == wantsAwake { return }
         lastVote = wantsAwake
         continuation.yield(TriggerVote(
