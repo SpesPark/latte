@@ -1,0 +1,64 @@
+name: Caffeinated
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+  defaultConfig: Debug
+
+settings:
+  base:
+    SWIFT_VERSION: "5.10"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_HARDENED_RUNTIME: YES
+    SWIFT_STRICT_CONCURRENCY: complete
+
+targets:
+  Caffeinated:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources
+    resources:
+      - path: Resources/Assets.xcassets
+    settings:
+      base:
+        INFOPLIST_FILE: Resources/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.caffeinated
+        CODE_SIGN_ENTITLEMENTS: Configuration/Caffeinated.entitlements
+        GENERATE_INFOPLIST_FILE: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        LD_RUNPATH_SEARCH_PATHS:
+          - "$(inherited)"
+          - "@executable_path/../Frameworks"
+
+  CaffeinatedTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.caffeinated.tests
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: Caffeinated
+
+schemes:
+  Caffeinated:
+    build:
+      targets:
+        Caffeinated: all
+        CaffeinatedTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - CaffeinatedTests
+    archive:
+      config: Release

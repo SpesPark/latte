@@ -1,0 +1,540 @@
+# 02 — Architecture
+
+| Field | Value |
+|---|---|
+| **Document version** | 0.1 |
+| **Status** | Draft (awaiting review) |
+| **Resolves Open Questions** | OQ-05 (module boundaries), OQ-06 (Observable vs ObservableObject) |
+| **Depends on** | 01-PRD.md |
+| **Last updated** | 2026-04-25 |
+
+---
+
+## 1. Goals & Non-Goals
+
+### 1.1 Architectural goals (in priority order)
+
+1. **Testable** — Every module that has logic can be unit-tested without launching SwiftUI or touching real `IOPMAssertion`. All system boundaries are mockable via protocol.
+2. **Single-developer-friendly** — One person navigates the codebase in <30 sec to find anything. No deep folder hierarchies, no abstract factories, no plugin loaders.
+3. **Phase 2 ready** — When the iOS companion ships in Phase 2, the macOS app's *core* (state machine, settings, intents) can be lifted into a shared SPM package without rewrite.
+4. **Crash-safe** — Any crash leaves the system in a clean state: power assertion released, files closed, no orphaned timers. `signal()` handler ensures release on SIGTERM/SIGINT.
+5. **macOS 13 floor** — All architecture choices work on 13. Newer-OS-only enhancements (`@Observable`, Liquid Glass, `EKEventStore.requestFullAccessToEvents`) are gated with `#available` and have fallbacks.
+
+### 1.2 Non-goals
+
+- **Hexagonal/Clean Architecture purity** — too much ceremony for a 1-developer menu bar app.
+- **Reactive programming framework** (Combine pipelines, RxSwift) — overkill; we use `@Published` for the ~5 observable properties total.
+- **Dependency-injection container library** — manual constructor injection is sufficient at this scale.
+- **Module-per-feature** SPM packages — folders are enough until Phase 2.
+- **Generic plugin loader** for triggers — explicit registration in code is clearer.
+
+---
+
+## 2. High-level system view
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                         SwiftUI views                            │
+│       MenuBarView · SettingsView · CoffeeCupView · …             │
+│                          ↑ observe                               │
+│                      @Published state                            │
+│                          │                                       │
+│  ┌───────────────────────┴───────────────────────────────────┐   │
+│  │                  AwakeManager (@MainActor)                │   │
+│  │   - Public API: toggle, activate(for:), deactivate        │   │
+│  │   - State: isAwake, endsAt, activeDuration, allowDS       │   │
+│  │   - Owns: timer, session lifecycle                        │   │
+│  └───┬─────────────────────┬───────────────────────┬─────────┘   │
+│      │ acquires            │ persists              │ receives    │
+│      │                     │                       │ requests    │
+│  ┌───▼──────────┐  ┌───────▼────────┐  ┌───────────▼─────────┐   │
+│  │ PowerAssert. │  │ SettingsStore  │  │ TriggerCoordinator  │   │
+│  │ (system)     │  │ (protocol)     │  │ (orchestrates N)    │   │
+│  └──────┬───────┘  └────┬───────────┘  └──────────┬──────────┘   │
+│         │ wraps         │ impls                   │ runs N       │
+│         ▼               ▼                         ▼              │
+│   IOKit.pwr_mgt   UserDefaultsStore        ┌─────────────┐       │
+│   (kernel)        (now)  →  SwiftData      │ CalendarTr. │       │
+│                   (Phase 2)                │ AppTrigger  │       │
+│                                            │ WiFiTrigger │       │
+│                                            │ FocusTrig.  │       │
+│                                            └─────────────┘       │
+│                                                                  │
+│                  AppIntents (out-of-process)                     │
+│                  Toggle / Start / Stop  →  AwakeManager.shared   │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### 2.1 One-line summary of each component
+
+| Component | Responsibility |
+|---|---|
+| **SwiftUI views** | Pure rendering; bind to `AwakeManager`'s `@Published` properties; no logic. |
+| **AwakeManager** | Single source of truth for awake state. Coordinates assertion lifecycle, timer, and trigger requests. |
+| **PowerAssertion** | Thin wrapper over `IOPMAssertionCreateWithName` / `IOPMAssertionRelease`. |
+| **SettingsStore** | Protocol abstracting persistence. UserDefaults impl now; SwiftData impl in Phase 2 — see `04-data-model.md`. |
+| **TriggerCoordinator** | Owns N triggers. Aggregates their "want awake" votes via combination policy → forwards to AwakeManager. |
+| **Trigger** (4 implementations) | Each watches a system signal (calendar event, app launch, Wi-Fi SSID, Focus mode) and votes. |
+| **AppIntents** | Shortcuts/Spotlight entry points. Talk to `AwakeManager.shared`. |
+
+---
+
+## 3. Module / folder structure
+
+### 3.1 Decision: folders, not SPM packages (resolves OQ-05)
+
+For v1, the app is a single Xcode target with these folders under `Sources/`:
+
+```
+Sources/
+├── App/                       # Entry point + composition root
+│   ├── LatteApp.swift         # @main, scene composition
+│   └── AppEnvironment.swift   # Wires all dependencies for views
+│
+├── Core/                      # Pure-logic, no SwiftUI imports
+│   ├── AwakeManager.swift
+│   ├── AwakeDuration.swift
+│   ├── PowerAssertion.swift
+│   ├── SettingsStore.swift            # Protocol + UserDefaults impl
+│   └── Logging.swift                  # os.Logger conveniences
+│
+├── Triggers/                  # Each file = one trigger + protocol
+│   ├── Trigger.swift                  # Protocol + TriggerVote enum
+│   ├── TriggerCoordinator.swift
+│   ├── CalendarTrigger.swift
+│   ├── AppTrigger.swift
+│   ├── WiFiTrigger.swift
+│   └── FocusTrigger.swift
+│
+├── Intents/                   # AppIntents (Shortcuts integration)
+│   └── AwakeIntents.swift
+│
+├── UI/                        # All SwiftUI views
+│   ├── MenuBar/
+│   │   ├── MenuBarRoot.swift          # The menu bar window content
+│   │   ├── DurationPickerRow.swift
+│   │   └── HeaderView.swift
+│   ├── Settings/
+│   │   ├── SettingsRoot.swift         # TabView shell
+│   │   ├── GeneralTab.swift
+│   │   ├── TriggersTab.swift
+│   │   └── AboutTab.swift
+│   ├── Components/
+│   │   ├── CoffeeCupView.swift
+│   │   └── LiquidGlassModifier.swift  # macOS 26+ branch with fallback
+│   └── Theme/
+│       └── Theme.swift                # Colors, fonts, spacing constants
+│
+└── Resources/                 # Asset catalogs, plists referenced from project.yml
+```
+
+### 3.2 Dependency rule
+
+Folders may **only** depend on folders to their left in this order:
+
+```
+Resources    ← (no deps)
+Core         ← (no deps on app code; only Foundation, IOKit, os)
+Triggers     ← Core
+Intents      ← Core
+UI           ← Core, Triggers (for status display only — never to mutate triggers directly)
+App          ← all of the above
+```
+
+Concretely:
+- **`Core/` MUST NOT import SwiftUI.** This makes Core unit-testable on Linux/CI without UI runtime.
+- **`Triggers/` MUST NOT import SwiftUI.** Triggers can be tested headless.
+- **`UI/` MAY import Core and Triggers** (for display) but MUST NOT mutate trigger state directly. UI calls `AwakeManager` methods only.
+- **`Intents/` imports Core only.** AppIntents run in a separate process context; they must not assume UI is running.
+
+A simple lint check (future): grep for `import SwiftUI` in `Core/` or `Triggers/` files — should always return zero matches.
+
+### 3.3 When does a folder become an SPM package?
+
+In Phase 2 (iOS companion app), `Core/` graduates to a local SPM package:
+
+```
+Latte.xcworkspace
+├── Latte (macOS app target) ──┐
+├── Latte iOS (iOS app target)─┤── depend on
+└── Packages/
+    └── LatteCore/             ←── (was Sources/Core)
+        └── Package.swift
+```
+
+For v1, this is **deferred**. Premature packagization adds friction (separate build settings, tests run differently, no inline editing convenience).
+
+**Trigger**: when iOS app gets its first commit, that's the cue to extract `Core/` into a package in the same PR.
+
+---
+
+## 4. Component contracts
+
+This section defines the **public interface** of each major component. Implementations are written in subsequent sessions; the interfaces are locked here.
+
+### 4.1 `AwakeManager`
+
+```swift
+@MainActor
+public final class AwakeManager: ObservableObject {
+
+    // Singleton for AppIntents access; injected to views via environment
+    public static let shared: AwakeManager
+
+    // MARK: Published state (read-only externally)
+    @Published public private(set) var isAwake: Bool
+    @Published public private(set) var endsAt: Date?
+    @Published public private(set) var activeDuration: AwakeDuration?
+    @Published public private(set) var activeReason: AwakeReason
+
+    // MARK: Settings (read/write)
+    @Published public var allowDisplaySleep: Bool
+
+    // MARK: Public API
+    public func toggle()
+    public func activate(for duration: AwakeDuration, reason: AwakeReason = .user)
+    public func deactivate(reason: AwakeReason = .user)
+
+    // MARK: Trigger interface (TriggerCoordinator only)
+    func receiveTriggerVote(_ vote: TriggerVote, from triggerId: String)
+}
+
+public enum AwakeReason: Equatable {
+    case user                // Manual toggle / preset / AppIntent
+    case trigger(id: String) // Activated by a trigger
+    case launch              // "Activate on launch" preference
+}
+```
+
+The `AwakeReason` field lets the UI explain *why* the Mac is awake ("Awake during your Zoom call") and lets state-machine policy (doc 03) decide conflict resolution.
+
+### 4.2 `PowerAssertion`
+
+```swift
+public final class PowerAssertion {
+    public enum Mode {
+        case displayAndSystem  // kIOPMAssertionTypeNoDisplaySleep
+        case systemOnly        // kIOPMAssertionTypeNoIdleSleep
+    }
+
+    public init() // creates an inactive assertion
+    public var isActive: Bool { get }
+    public var currentMode: Mode? { get }
+
+    @discardableResult
+    public func activate(mode: Mode, reason: String) -> Bool
+    public func deactivate()
+
+    deinit  // releases assertion if still active
+}
+```
+
+Already drafted in skeleton (`Sources/PowerAssertion.swift`); the contract here is the canonical version.
+
+### 4.3 `SettingsStore` (protocol)
+
+```swift
+public protocol SettingsStore: AnyObject {
+    func bool(_ key: SettingsKey, default: Bool) -> Bool
+    func setBool(_ value: Bool, for key: SettingsKey)
+    func string(_ key: SettingsKey) -> String?
+    func setString(_ value: String?, for key: SettingsKey)
+    func data(_ key: SettingsKey) -> Data?
+    func setData(_ value: Data?, for key: SettingsKey)
+}
+
+public enum SettingsKey: String {
+    case allowDisplaySleep
+    case activateOnLaunch
+    case launchAtLogin
+    case calendarTriggerEnabled
+    case calendarTriggerCalendarIDs
+    case appTriggerEnabled
+    case appTriggerBundleIDs
+    case wifiTriggerEnabled
+    case wifiTriggerSSIDs
+    case focusTriggerEnabled
+    // ...extended in 04-data-model.md
+}
+
+public final class UserDefaultsSettingsStore: SettingsStore { … }
+public final class InMemorySettingsStore: SettingsStore { … }  // for tests
+```
+
+Schema details and migration plan live in `04-data-model.md`. This file just locks the **shape**.
+
+### 4.4 `Trigger` (protocol)
+
+```swift
+@MainActor
+public protocol Trigger: AnyObject {
+    var id: String { get }
+    var displayName: String { get }
+    var symbol: String { get }      // SF Symbol for Settings UI
+    var requiresPermission: Bool { get }
+
+    var isEnabled: Bool { get set }
+    var permissionStatus: TriggerPermissionStatus { get }
+
+    func start() async
+    func stop()
+    func requestPermissionIfNeeded() async -> Bool
+
+    var voteStream: AsyncStream<TriggerVote> { get }
+}
+
+public enum TriggerPermissionStatus {
+    case notRequired
+    case notDetermined
+    case granted
+    case denied
+}
+
+public struct TriggerVote: Equatable {
+    public let wantsAwake: Bool
+    public let reason: String       // e.g. "Zoom meeting (Standup)"
+    public let until: Date?         // if known; otherwise nil = indefinite
+}
+```
+
+The `voteStream` is an async sequence emitted whenever the trigger's opinion changes (e.g., calendar event starts/ends). `TriggerCoordinator` consumes these streams and aggregates votes per the policy in doc 03.
+
+### 4.5 `TriggerCoordinator`
+
+```swift
+@MainActor
+public final class TriggerCoordinator: ObservableObject {
+
+    public init(awakeManager: AwakeManager, store: SettingsStore)
+
+    public func register(_ trigger: Trigger)
+    public func startEnabledTriggers() async
+    public func stopAll()
+
+    @Published public private(set) var triggers: [Trigger]
+    @Published public private(set) var activeVotes: [String: TriggerVote] // by trigger id
+}
+```
+
+The coordinator:
+- Holds the list of registered triggers
+- Watches each trigger's `voteStream`
+- Aggregates votes per the rules in `03-state-machine.md`
+- Calls `awakeManager.receiveTriggerVote(...)` when the aggregate changes
+
+Triggers do **not** call `AwakeManager` directly — they only emit votes. This keeps trigger logic isolated and the state machine in one place.
+
+---
+
+## 5. Concurrency model
+
+### 5.1 Decisions
+
+- **`SWIFT_STRICT_CONCURRENCY=complete`** is enabled (already in `project.yml`). This forces sendability annotations and catches data races at compile time.
+- **`@MainActor`** is applied to every stateful type (`AwakeManager`, `TriggerCoordinator`, every `Trigger`, every view). Reasons:
+  - All state is read by SwiftUI on the main thread anyway.
+  - The Mac app is not throughput-critical; making everything MainActor avoids a class of bugs at near-zero performance cost.
+  - `IOPMAssertion` calls are documented as thread-safe but the assertion handle is best owned by one actor.
+- **Background work** (e.g., EventKit polling, `CWWiFiClient` scans) happens via `Task.detached` or `nonisolated` async functions. Results are awaited and applied on `@MainActor`.
+- **No `Combine.Publisher` chains.** `@Published` is used with SwiftUI's `ObservableObject` integration. Triggers use `AsyncStream` for vote events.
+
+### 5.2 Observation: `ObservableObject` (resolves OQ-06)
+
+**Decision**: Use `ObservableObject + @Published` for v1. **Defer `@Observable` macro to Phase 1.5 or later.**
+
+Rationale:
+- `@Observable` requires macOS 14+. We target macOS 13.
+- `ObservableObject` is well-understood and has clear `@StateObject` / `@EnvironmentObject` semantics.
+- Migrating to `@Observable` later is a mostly-mechanical refactor (~1 hour) that we can do when we drop macOS 13 support.
+
+If a property has performance concerns from over-publishing, we use `objectWillChange.send()` manually in that one spot. We do not preemptively optimize.
+
+### 5.3 Cancellation
+
+- All `start()` async methods are cancellable. Calling `stop()` on a trigger must abort any in-flight permission request or polling task.
+- `AwakeManager`'s timer is invalidated on every `deactivate()` and on `deinit`.
+
+---
+
+## 6. Error handling & logging
+
+### 6.1 Error policy
+
+- **Recoverable errors** (calendar permission denied, Wi-Fi access failure) → log + UI surfaces a banner in Settings. App continues working.
+- **Programmer errors** (unreachable cases, broken invariants) → `preconditionFailure` in DEBUG, logged + best-effort continue in RELEASE.
+- **System errors** (`IOPMAssertionCreateWithName` returns non-success) → log + UI shows "Could not keep Mac awake; try restarting Latte". This is the most user-visible error path; we treat it carefully.
+
+### 6.2 Logging
+
+- **`os.Logger`** is used everywhere. Each module has a `Logger(subsystem: "com.example.latte", category: "<module>")`.
+- **No `print()`** in production code. Lint check via grep before each commit.
+- **Log levels**:
+  - `.debug` — verbose tracing, off in Release
+  - `.info` — lifecycle events (assertion activated, trigger registered)
+  - `.notice` — user-visible state changes
+  - `.error` — recoverable errors
+  - `.fault` — programmer errors / invariant violations
+
+### 6.3 Crash safety
+
+The app installs a `signal()` handler in `main` (or `@main`'s init equivalent) for `SIGINT`, `SIGTERM`, `SIGABRT`:
+
+```swift
+// At app boot
+signal(SIGINT) { _ in
+    AwakeManager.shared.deactivate(reason: .user)
+    exit(0)
+}
+```
+
+This ensures the power assertion is released even on hard kill, preventing the worst-case scenario where Latte crashes overnight and the user's Mac never sleeps.
+
+---
+
+## 7. Build system & dependency policy
+
+### 7.1 Build
+
+- **XcodeGen** generates `Latte.xcodeproj` from `project.yml`.
+- The `.xcodeproj` is **gitignored**. Only `project.yml` is committed.
+- `xcodegen generate` is the canonical way to (re)create the project locally and on CI.
+
+### 7.2 Dependencies
+
+- **Zero third-party SPM packages** in v1. Every dependency added increases:
+  - App Store review surface
+  - Maintenance burden when Swift/Xcode upgrades
+  - Risk of supply-chain issues (a sleep utility doesn't need this)
+- **System frameworks only**: `SwiftUI`, `AppKit` (minimal), `IOKit.pwr_mgt`, `EventKit`, `CoreWLAN`, `AppIntents`, `ServiceManagement`, `os.log`.
+- Re-evaluate at Phase 1.5. Likely first additions:
+  - `KeyboardShortcuts` (sindresorhus) for global hotkey support
+  - `Sparkle` if we ever distribute outside App Store (not currently planned)
+
+### 7.3 CI
+
+- **GitHub Actions** on private repo, macOS-14 runner.
+- One workflow: lint (SwiftFormat dry-run + `grep -r "print(" Sources/`), build, test.
+- Triggered on every push and PR.
+- Total runtime budget: <5 min per run.
+
+---
+
+## 8. Testing architecture
+
+### 8.1 Test layers
+
+| Layer | Tooling | What's tested | Approx. % of total tests |
+|---|---|---|---|
+| **Unit** | XCTest | `AwakeManager`, `PowerAssertion` (with mock IOKit), `Duration`, `SettingsStore` (in-memory), `TriggerCoordinator` (with mock triggers) | 60% |
+| **Integration** | XCTest | Trigger ↔ AwakeManager wiring, SettingsStore migration, AppIntents → AwakeManager | 30% |
+| **UI smoke** | XCUITest (lightweight) | Menu bar opens, toggle changes icon, Settings tabs render | 10% |
+
+We target **80% coverage on `Sources/Core/` and `Sources/Triggers/`** (the logic-heavy folders). UI views are not coverage-targeted.
+
+### 8.2 Mocking strategy
+
+- **`MockPowerAssertion`** — implements the same public surface as `PowerAssertion` but records calls without touching IOKit. `AwakeManager` accepts a protocol-typed assertion in its initializer (default: real one).
+- **`InMemorySettingsStore`** — `SettingsStore` impl backed by a dict.
+- **`MockTrigger`** — manual `voteStream` for testing `TriggerCoordinator` aggregation logic.
+
+### 8.3 What we deliberately don't test
+
+- IOKit's behavior — that's Apple's job.
+- SwiftUI rendering — too brittle, low ROI for menu-bar utility.
+- Private `os.Logger` output — tested implicitly.
+
+---
+
+## 9. Phase 2 readiness — what enables iOS app later
+
+Decisions made now to keep the iOS port cheap:
+
+| Decision | Why it helps Phase 2 |
+|---|---|
+| `Core/` is SwiftUI-free | Lifts cleanly into shared SPM package |
+| `SettingsStore` is a protocol | iOS impl can write to iCloud KVStore |
+| `AwakeReason` includes `.trigger(id:)` | Cross-device "iPhone toggled it" reason fits naturally |
+| Triggers vote via streams | A "remote toggle from iPhone" can be modeled as another trigger |
+| `AppIntents` are first-class | Same intent surface used on both platforms |
+| No third-party deps | Less to port and audit on iOS |
+
+What is **explicitly not** designed for now (deferred until iOS app is real):
+- APNs token lifecycle
+- iCloud KVStore conflict resolution
+- Watch app architecture
+
+---
+
+## 10. Skeleton ↔ this architecture: gap list
+
+The current `Sources/` skeleton (from session 1's earlier work) has a different folder layout. Migration in session 3 will:
+
+| Current | Target |
+|---|---|
+| `Sources/CaffeinatedApp.swift` | `Sources/App/LatteApp.swift` |
+| `Sources/AwakeManager.swift` | `Sources/Core/AwakeManager.swift` |
+| `Sources/PowerAssertion.swift` | `Sources/Core/PowerAssertion.swift` |
+| `Sources/Duration.swift` | `Sources/Core/AwakeDuration.swift` |
+| `Sources/MenuBarView.swift` | `Sources/UI/MenuBar/MenuBarRoot.swift` (split into 3 files) |
+| `Sources/SettingsView.swift` | `Sources/UI/Settings/SettingsRoot.swift` (split into 3 tab files) |
+| `Sources/CoffeeCupView.swift` | `Sources/UI/Components/CoffeeCupView.swift` |
+| `Sources/Triggers/*.swift` | `Sources/Triggers/*.swift` (mostly unchanged) |
+| `Sources/Intents/AwakeIntents.swift` | `Sources/Intents/AwakeIntents.swift` (unchanged) |
+| (none) | `Sources/Core/SettingsStore.swift` (new) |
+| (none) | `Sources/Core/Logging.swift` (new) |
+| (none) | `Sources/Triggers/TriggerCoordinator.swift` (new) |
+| (none) | `Sources/UI/Theme/Theme.swift` (new) |
+
+This is the work for **session 3** (Phase 1.0 implementation).
+
+---
+
+## 11. Open Questions resolved by this doc
+
+| ID | Status |
+|---|---|
+| OQ-05 (module boundaries — folders or SPM?) | **Resolved**: folders for v1; extract `Core/` to SPM in Phase 2 |
+| OQ-06 (`@Observable` vs `ObservableObject`) | **Resolved**: `ObservableObject` for v1; `@Observable` deferred to post-macOS-13-deprecation |
+
+Remaining Open Questions (to be resolved in 03 / 04):
+
+| ID | Resolves in |
+|---|---|
+| OQ-01, OQ-02 (trigger priority, manual vs trigger conflict) | 03-state-machine.md |
+| OQ-03, OQ-04 (UserDefaults vs SwiftData; migration) | 04-data-model.md |
+| OQ-07 (onboarding) | 06-ui-spec.md |
+| OQ-08 (app icon direction) | 06-ui-spec.md |
+| OQ-09 (App Store category) | 10-release-plan.md |
+| OQ-10 (Korean copy tone) | 11-localization.md |
+
+---
+
+## 12. Decisions Log (this doc)
+
+| Date | Decision |
+|---|---|
+| 2026-04-25 | Folder-based modules in v1; `Core/` extraction to SPM deferred to Phase 2 |
+| 2026-04-25 | `ObservableObject + @Published` for v1 observation; `@Observable` migration deferred |
+| 2026-04-25 | `@MainActor` everywhere stateful + `SWIFT_STRICT_CONCURRENCY=complete` |
+| 2026-04-25 | Zero third-party SPM dependencies in v1 |
+| 2026-04-25 | Triggers communicate via `AsyncStream<TriggerVote>` to coordinator (not direct `AwakeManager` access) |
+| 2026-04-25 | `signal()` handler ensures power assertion release on SIGINT/SIGTERM/SIGABRT |
+| 2026-04-25 | Test coverage target: **80% on `Core/` and `Triggers/`**; UI views not coverage-targeted |
+
+---
+
+## 13. Document Change Log
+
+| Version | Date | Changes |
+|---|---|---|
+| 0.1 | 2026-04-25 | Initial draft |
+
+---
+
+## 14. Sign-off Checklist (before moving to 03-state-machine.md)
+
+- [ ] Owner accepts module/folder structure (§3)
+- [ ] Owner accepts ObservableObject decision (§5.2)
+- [ ] Owner accepts no-third-party-deps stance (§7.2)
+- [ ] Owner accepts the trigger vote-stream pattern over direct manager calls (§4.4–4.5)
+- [ ] Owner agrees with the gap list in §10 (rewrite work in session 3)

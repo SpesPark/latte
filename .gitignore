@@ -1,0 +1,39 @@
+# Xcode
+build/
+DerivedData/
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+
+# Swift Package Manager
+.swiftpm/
+.build/
+Package.resolved
+
+# macOS
+.DS_Store
+*.swp
+
+# IDE
+.idea/
+.vscode/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# Generated
+*.generated.swift
+ExportOptions.plist
+
+# Secrets
+.env
+.env.local
+*.p12
+*.mobileprovision
+AuthKey_*.p8
