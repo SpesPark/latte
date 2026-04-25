@@ -2,9 +2,9 @@
 
 > Multi-session execution plan for Latte (working folder: `Caffeinated-Clone/`).
 >
-> **Current phase**: Build green + UI polish + customization (session 6 complete); 195/195 tests passing
-> **Current session**: 6 of ~10 (complete)
-> **Next session entry point**: see [docs/SESSION_HANDOFF.md](docs/SESSION_HANDOFF.md) — Session 7 = Test coverage + QA
+> **Current phase**: Coverage gate cleared (session 7 complete); 227/227 tests passing; Core/ + Triggers/ all ≥80%
+> **Current session**: 7 of ~10 (complete)
+> **Next session entry point**: see [docs/SESSION_HANDOFF.md](docs/SESSION_HANDOFF.md) — Session 8 = App Store prep (blocked on Dev Program + icon)
 
 ---
 
@@ -33,8 +33,8 @@ Each row is one focused session. Sessions are sequential — earlier ones produc
 | 4 | **Phase 1.A — Triggers** | Calendar + App + Wi-Fi + Focus triggers fully implemented | `Sources/Triggers/*.swift`, integration tests | 🟢 Done |
 | 5 | **Phase 1.C — Design polish** | Coffee cup animation, Liquid Glass + fallback, app icon spec | UI files, asset catalog updates | 🟢 Done |
 | 6 | **Build verification** | First successful build, fix compile errors, run tests | Working `.app` bundle, all tests passing | 🟢 Done |
-| 7 | **Test coverage + QA** | ≥80% coverage, manual smoke test on macOS 13/14/15 | Test files, QA log | 🟡 Next |
-| 8 | **App Store prep** *(needs Dev Program + icon)* | Metadata, screenshots, Privacy Policy, submission | App Store Connect record, GitHub Pages site | 🔴 Blocked: Dev Program, Icon |
+| 7 | **Test coverage + QA** | ≥80% coverage, manual smoke test on macOS 13/14/15 | Test files, QA log | 🟢 Done |
+| 8 | **App Store prep** *(needs Dev Program + icon)* | Metadata, screenshots, Privacy Policy, submission | App Store Connect record, GitHub Pages site | 🟡 Next (blocked on Dev Program + icon) |
 | 9 | **TestFlight beta launch** | Beta build, recruit ≥10 testers | TestFlight build, beta feedback log | ⚪ Pending |
 | 10 | **Submission + launch** | Address beta feedback, submit to App Store, launch on ProductHunt | App Store live, ProductHunt post | ⚪ Pending |
 
@@ -119,4 +119,5 @@ The HANDOFF doc is **always overwritten** at the end of each session. The ROADMA
 | 0.5 | 2026-04-26 | Session 5 complete; Phase 1.C design polish — Canvas+TimelineView coffee cup, Liquid Glass card, menu bar icon variants, Settings typography, TriggersTab vote indicator, `05-icon-spec.md`; sessions 1–5 done, session 6 marked next |
 | 0.6 | 2026-04-26 | Session 6 complete; first green Xcode build (Xcode 26.4.1) + all 178 tests passing; fixes: `static let` for AppIntent properties, `(1, 1440)` literal for `@Parameter` range, `NSApp.sendAction` fallback for `openSettings` (macOS 13 compat), first-OFF silence semantic for WiFi/Focus triggers (consistent with AppTrigger); sessions 1–6 done, session 7 marked next |
 | 0.7 | 2026-04-26 | Session 6 (extended) — post-build smoke surfaced gaps; fixed: `SettingsWindowController` (NSHostingController-based; `Settings { }` scene + `SettingsLink` don't wire reliably for LSUIElement menu-bar apps), espresso-brown accent via `NSColor` dynamic provider (Canvas doesn't resolve `Color.accentColor` / `Color.primary` against current appearance), `Theme.Colors.cupStroke` explicit `NSColor.labelColor`-based dynamic, `DurationPickerRow` hover state + caramel accent bar + dimmed Turn-off, divider opacity 0.5, **custom duration α** (`CustomDurationRow` — inline 1–1440-min Stepper + Start). All 178 tests still pass. |
+| 0.9 | 2026-04-26 | Session 7 complete — **coverage + QA gate**. Coverage baseline (`xcodebuild -enableCodeCoverage YES`) + per-file analysis revealed 4 files under 80% (`SettingsStore` 75.2%, `PowerAssertion` 29.6%, `WiFiTrigger` 60.2%, `CalendarTrigger` 52.0%) once live-system adapters were excluded. Closed the gaps: `SettingsStore` 100% (added `double` round-trip + 5 type-mismatch fallback tests), `PowerAssertion` 87.3% (new `Tests/PowerAssertionTests.swift` exercising real `IOPMAssertion*` APIs — promoted off the adapter exemption list since IOKit power assertions need no entitlement), `WiFiTrigger` 96.5% (start/stop lifecycle, `requestPermissionIfNeeded`, isEnabled setter, permissionStatus getter), `CalendarTrigger` 98.8% (start/stop, isEnabled/permissionStatus, typed settings setters). 227/227 tests pass, all gated files ≥80%. New `docs/QA_LOG.md` consolidates the coverage snapshot, owner-side smoke checklist, adapter exemption rationale, and macOS 13/14/15 matrix deferral to TestFlight. |
 | 0.8 | 2026-04-26 | Session 6 (extended again) — **coffee tone customization**. New `CoffeeAccent` enum with 5 hand-tuned presets (Espresso / Caramel / Mocha / Latte / Noir), each carrying light + dark sRGB pairs resolved via `NSColor(name:dynamicProvider:)`. Persisted under new `SettingsKey.coffeeAccent`, mirrored on `AppEnvironment.@Published var coffeeAccent`. Settings → General → Appearance gains a Coffee tone Picker with color-dot previews, plus a small `CoffeeCupView` preview at the top of the Appearance section so the user sees the new tone live without leaving the window (the menu-bar popover closes when Settings takes focus). Five views consume `environment.coffeeAccent.color` (`HeaderView`/`CoffeeCupView` liquid, `DurationPickerRow`/`CustomDurationRow` accent bar + checkmark, `GeneralTab` status dot, `TriggersTab` voting indicator, `AboutTab` cup). 17 new tests (12 `CoffeeAccentTests` + 5 `AppEnvironmentTests` for accent ⇄ store mirror); 195/195 pass. |

@@ -77,6 +77,44 @@ class SettingsStoreContractTests: XCTestCase {
         store.remove(.activateOnLaunch)
         XCTAssertFalse(store.bool(.activateOnLaunch, default: false))
     }
+
+    func testDoubleRoundTrip() {
+        let store = makeStore()
+        XCTAssertEqual(store.double(.calendarTriggerLeadTimeMinutes, default: 1.5), 1.5)
+        store.setDouble(3.14, for: .calendarTriggerLeadTimeMinutes)
+        XCTAssertEqual(store.double(.calendarTriggerLeadTimeMinutes, default: 0), 3.14, accuracy: 0.0001)
+    }
+
+    func testBoolTypeMismatchFallsBackToDefault() {
+        let store = makeStore()
+        store.setString("not-a-bool", for: .allowDisplaySleep)
+        XCTAssertTrue(store.bool(.allowDisplaySleep, default: true))
+        XCTAssertFalse(store.bool(.allowDisplaySleep, default: false))
+    }
+
+    func testStringTypeMismatchReturnsNil() {
+        let store = makeStore()
+        store.setInteger(42, for: .menuBarIconStyle)
+        XCTAssertNil(store.string(.menuBarIconStyle))
+    }
+
+    func testIntegerTypeMismatchFallsBackToDefault() {
+        let store = makeStore()
+        store.setString("not-an-int", for: .calendarTriggerLeadTimeMinutes)
+        XCTAssertEqual(store.integer(.calendarTriggerLeadTimeMinutes, default: 7), 7)
+    }
+
+    func testDoubleTypeMismatchFallsBackToDefault() {
+        let store = makeStore()
+        store.setString("not-a-double", for: .calendarTriggerLeadTimeMinutes)
+        XCTAssertEqual(store.double(.calendarTriggerLeadTimeMinutes, default: 9.5), 9.5)
+    }
+
+    func testDataTypeMismatchReturnsNil() {
+        let store = makeStore()
+        store.setString("not-data", for: .appTriggerBundleIDs)
+        XCTAssertNil(store.data(.appTriggerBundleIDs))
+    }
 }
 
 final class InMemorySettingsStoreTests: SettingsStoreContractTests {

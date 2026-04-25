@@ -256,4 +256,73 @@ final class CalendarTriggerTests: XCTestCase {
         XCTAssertTrue(r3)
         XCTAssertEqual(nd.requestAccessCalls, 1)
     }
+
+    func testIsEnabledSetterPersists() {
+        let settings = InMemorySettingsStore()
+        let trigger = CalendarTrigger(settings: settings, source: MockCalendarSource())
+        XCTAssertFalse(trigger.isEnabled)
+        trigger.isEnabled = true
+        XCTAssertTrue(trigger.isEnabled)
+        XCTAssertTrue(settings.bool(.calendarTriggerEnabled, default: false))
+    }
+
+    func testPermissionStatusReflectsSource() {
+        let settings = InMemorySettingsStore()
+        let source = MockCalendarSource(permissionStatus: .denied)
+        let trigger = CalendarTrigger(settings: settings, source: source)
+        XCTAssertEqual(trigger.permissionStatus, .denied)
+        source.permissionStatus = .granted
+        XCTAssertEqual(trigger.permissionStatus, .granted)
+    }
+
+    func testStartPollsAndStopCancels() async throws {
+        let now = Date(timeIntervalSince1970: 1_750_000_000)
+        let event = CalendarEventSnapshot(
+            id: "ev-start",
+            title: "Standup",
+            startDate: now.addingTimeInterval(-60),
+            endDate: now.addingTimeInterval(600),
+            isAllDay: false,
+            calendarID: "cal-1"
+        )
+        let (trigger, _, _, _) = makeFixture(events: [event], nowOverride: now)
+        await trigger.start()
+
+        // start() schedules an immediate pollOnce; wait briefly for it to run.
+        var it = trigger.voteStream.makeAsyncIterator()
+        let vote = await it.next()
+        XCTAssertEqual(vote?.wantsAwake, true)
+        XCTAssertEqual(vote?.reason, "Calendar: Standup")
+
+        // Second start() is a no-op while the poll task is running.
+        await trigger.start()
+
+        trigger.stop()
+        let after = await it.next()
+        XCTAssertNil(after, "stream should finish after stop()")
+    }
+
+    func testCalendarSettingsTypedSetters() {
+        let settings = InMemorySettingsStore()
+        settings.calendarTriggerCalendarIDs = ["work", "personal"]
+        XCTAssertEqual(settings.calendarTriggerCalendarIDs, ["work", "personal"])
+
+        settings.calendarTriggerExcludeAllDay = false
+        XCTAssertFalse(settings.calendarTriggerExcludeAllDay)
+        settings.calendarTriggerExcludeAllDay = true
+        XCTAssertTrue(settings.calendarTriggerExcludeAllDay)
+
+        settings.calendarTriggerLeadTimeMinutes = 7
+        XCTAssertEqual(settings.calendarTriggerLeadTimeMinutes, 7)
+        // Out-of-range values are clamped on write.
+        settings.calendarTriggerLeadTimeMinutes = 99
+        XCTAssertEqual(settings.calendarTriggerLeadTimeMinutes, 15)
+        settings.calendarTriggerLeadTimeMinutes = -3
+        XCTAssertEqual(settings.calendarTriggerLeadTimeMinutes, 0)
+
+        settings.calendarTriggerTrailingMinutes = 4
+        XCTAssertEqual(settings.calendarTriggerTrailingMinutes, 4)
+        settings.calendarTriggerTrailingMinutes = 200
+        XCTAssertEqual(settings.calendarTriggerTrailingMinutes, 15)
+    }
 }

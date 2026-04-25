@@ -8,201 +8,200 @@
 
 | Field | Value |
 |---|---|
-| **Session #** | 6 of ~10 |
-| **Theme** | Build verification + post-build smoke fixes + custom duration α + coffee tone customization |
+| **Session #** | 7 of ~10 |
+| **Theme** | Test coverage + QA gate |
 | **Date** | 2026-04-26 |
-| **Status** | ✅ Completed. Build/test green (195/195), Settings window opens, design polish iterated to owner approval, custom duration row works, coffee tone picker (5 presets) with live preview is wired end-to-end through 7 views. Two commits: `feat: session 6 — green build + post-build polish + custom duration α` (3d5839a) and `feat: coffee tone customization — 5 presets + Settings preview` (this session's second commit). |
+| **Status** | ✅ Completed. 227/227 tests passing. All `Sources/Core/**` and `Sources/Triggers/**` files at ≥80% line coverage (lowest 82.8%, several at 100%) once live-system adapter classes (`EKCalendarSource`, `NSWorkspaceSource`, `INFocusSource`, `CoreWLANSource`) are excluded — that exemption is now formally documented in `02-architecture.md` §13 (v0.9) and `docs/QA_LOG.md`. PowerAssertion was promoted off the exemption list because IOKit `IOPMAssertion*` works in any test process without entitlements. |
 
 ### What was accomplished
 
-1. **Toolchain stood up**
-   - Xcode 26.4.1 (Build 17E202) installed; license accepted.
-   - `xcodebuild -runFirstLaunch` ran the missing component install (`CoreSimulator.framework` plug-in load).
-   - `brew install xcodegen` → 2.45.4.
-   - `xcodegen generate` produced `Latte.xcodeproj` from `project.yml` cleanly. No source-glob misses — `path: Sources` and `path: Tests` already capture every S5 file.
+1. **Coverage baseline**
+   - `xcodebuild test -enableCodeCoverage YES` → `xcrun xccov view --report --json` → per-file analysis script (in `/tmp/Latte_S7_round*.xcresult`).
+   - Initial 4 gaps identified:
+     - `Core/SettingsStore` 75.2% — never exercised `double` accessors or any "wrong-type-stored" fallback path.
+     - `Core/PowerAssertion` 29.6% — only the Mock had been exercised; real IOKit class was untouched by tests.
+     - `Triggers/WiFiTrigger` 60.2% — `start()`/`stop()`/`requestPermissionIfNeeded()`/setters never called.
+     - `Triggers/CalendarTrigger` 52.0% — same pattern.
 
-2. **Build green: 4 fixes** (all minimal, no architectural changes)
+2. **Gap-closing tests** (3 files modified, 1 new)
+   - `Tests/SettingsStoreTests.swift` (+6 tests): `testDoubleRoundTrip`, `testBoolTypeMismatchFallsBackToDefault`, `testStringTypeMismatchReturnsNil`, `testIntegerTypeMismatchFallsBackToDefault`, `testDoubleTypeMismatchFallsBackToDefault`, `testDataTypeMismatchReturnsNil`. Both `InMemory` and `UserDefaults` impls run them via the parametrized `SettingsStoreContractTests` base — so each test fires twice (12 new test runs).
+   - `Tests/PowerAssertionTests.swift` (NEW, 6 tests): direct tests against the real `PowerAssertion`, exercising `IOPMAssertionCreateWithName` / `IOPMAssertionRelease` from the test process. Covers initial state, IOKit type-key distinction (`kIOPMAssertionTypeNoDisplaySleep` vs `kIOPMAssertionTypeNoIdleSleep`), activate→deactivate, idempotent re-activate with same mode, mode-change replacement, and inactive-deactivate no-op.
+   - `Tests/WiFiTriggerTests.swift` (+4 tests): `testIsEnabledSetterPersists`, `testPermissionStatusReflectsSource`, `testStartEvaluatesImmediatelyAndStopCancels`, `testRequestPermissionIfNeededDelegatesToSource`.
+   - `Tests/CalendarTriggerTests.swift` (+4 tests): `testIsEnabledSetterPersists`, `testPermissionStatusReflectsSource`, `testStartPollsAndStopCancels`, `testCalendarSettingsTypedSetters` (covers clamping at write-time for lead/trailing minutes, both bounds).
 
-   | File | Symptom | Fix |
-   |---|---|---|
-   | [`Sources/Intents/AwakeIntents.swift`](../Sources/Intents/AwakeIntents.swift) | 9 Swift 6 strict-concurrency warnings on `static var title/description/openAppWhenRun` (App Intents framework) | `static var` → `static let` (protocol getter requirement is satisfied; mutability not needed) |
-   | [`Sources/Intents/AwakeIntents.swift`](../Sources/Intents/AwakeIntents.swift):23 | `error: expect a compile-time constant literal` on `@Parameter(default: 30, inclusiveRange: (1, 24 * 60))` | `(1, 24 * 60)` → `(1, 1440)` (App Intents macros require literal) |
-   | [`Sources/UI/MenuBar/MenuBarRoot.swift`](../Sources/UI/MenuBar/MenuBarRoot.swift):6 | `'openSettings' is only available in macOS 14.0 or newer` (we deploy macOS 13) | Removed `@Environment(\.openSettings)`; added `NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)` fallback. Works on both macOS 13 and 14+. |
-   | [`Sources/Triggers/WiFiTrigger.swift`](../Sources/Triggers/WiFiTrigger.swift):181, [`Sources/Triggers/FocusTrigger.swift`](../Sources/Triggers/FocusTrigger.swift):160 | 5 test failures: trigger emits OFF vote on first evaluation when condition is false | Added 1-line guard: `if lastVote == nil && !wantsAwake { return }`. Now matches `AppTrigger.start` semantic (silence = "no opinion"; only emit on transitions or first ON). |
+3. **Coverage result** (final, on `/tmp/Latte_S7_round3.xcresult`)
 
-3. **Test failures fixed: autoclosure async** (Tests/, 14 sites across 4 files)
-   - All call sites of `XCTAssertNil(await task.value, ...)` failed under Swift 6: autoclosure parameters can't host `await`.
-   - Bulk-rewritten via `perl -i -pe 's/XCTAssertNil\(await task\.value(.*?)\)$/do { let _v = await task.value; XCTAssertNil(_v$1) }/g'` across `WiFiTriggerTests.swift`, `FocusTriggerTests.swift`, `CalendarTriggerTests.swift`, `AppTriggerTests.swift`.
+   | File | Cov% |
+   |---|---|
+   | Core/AwakeDuration | 100.0% |
+   | Core/AwakeManager | 94.1% |
+   | Core/Logging | 100.0% |
+   | Core/PowerAssertion | 87.3% |
+   | Core/SettingsStore | 100.0% |
+   | Triggers/Trigger | 82.8% |
+   | Triggers/TriggerCoordinator | 92.3% |
+   | Triggers/AppTrigger | 98.5% |
+   | Triggers/CalendarTrigger | 98.8% |
+   | Triggers/FocusTrigger | 97.9% |
+   | Triggers/WiFiTrigger | 96.5% |
 
-4. **Verification**
-   - Build: ✅ `** BUILD SUCCEEDED **`
-   - Tests: ✅ `Executed 178 tests, with 0 failures (0 unexpected) in 1.877s` across all 18 test suites.
-   - Launch: ✅ `Latte.app` starts (PID confirmed); arm64 Mach-O binary at `~/Library/Developer/Xcode/DerivedData/Latte-fkobqyixcisqmicfcisyrcpgeolp/Build/Products/Debug/Latte.app`.
+   **GATE: PASS.**
 
-5. **Post-build smoke surfaced two real bugs + a polish wish-list — fixed in a second pass**
+4. **Documentation**
+   - `docs/QA_LOG.md` (NEW) — coverage snapshot, owner-side smoke checklist (menu-bar UI / custom duration / coffee tone / icon style / triggers / quit hygiene), adapter exemption rationale, macOS-version matrix (deferred to S9 TestFlight).
+   - `02-architecture.md` v0.8 → **v0.9**: §13 entry codifies the gate scope, the adapter-exemption list, and the PowerAssertion promotion.
+   - `ROADMAP.md` v0.8 → **v0.9**: row 7 (Test coverage + QA) now 🟢 Done; row 8 marked 🟡 Next.
 
-   **Bug A: Settings window did not open.** `Settings { }` SwiftUI scene + `SettingsLink` (and both `Selector(("showSettingsWindow:"))` / `showPreferencesWindow:`) silently no-op for `LSUIElement` apps because the menu/responder chain isn't there. Fix: new [`Sources/UI/Settings/SettingsWindowController.swift`](../Sources/UI/Settings/SettingsWindowController.swift) hosts `SettingsRoot` in a real `NSWindow` via `NSHostingController`, owned as a singleton. `LatteApp` no longer declares `Settings { }`; `MenuBarRoot.openSettings()` calls `SettingsWindowController.shared.show(...)` directly with the `AppEnvironment` (now read via `@EnvironmentObject`).
+### Test count
 
-   **Bug B: Accent color showed as system blue (or invisible) in Canvas.** `Color.accentColor` on macOS follows the user's system tint regardless of the asset-catalog `AccentColor`; `Color.primary` is not always resolved against current appearance inside `Canvas`; `Color("AccentColor")` lookup silently returned transparent on macOS 26 in some paths. Fix: `Theme.Colors.accentAwake` and the new `Theme.Colors.cupStroke` are now built from explicit `NSColor(name:dynamicProvider:)` with hand-tuned light/dark sRGB values. Final accent is espresso brown — light: `(0.42, 0.24, 0.08)`, dark: `(0.62, 0.40, 0.18)` (iterated to owner approval; previous caramel `(0.85, 0.65, 0.30)` was "too light"). `Theme.swift` now imports `AppKit`. `CoffeeCupView` strokes use `cupStroke`; the liquid uses `accentAwake`.
+178 → 195 → **227** (+32 net since S6 close: 12 SettingsStore parametrized doubles, 6 PowerAssertion, 8 WiFi, 6 Calendar). All passing.
 
-   **Polish (A + B + D from the design wish-list)**
-   - [`Sources/UI/MenuBar/DurationPickerRow.swift`](../Sources/UI/MenuBar/DurationPickerRow.swift) — hover state (6% primary, rounded), 3pt leading caramel accent bar on active row, checkmark switched from monochrome to caramel.
-   - [`Sources/UI/MenuBar/MenuBarRoot.swift`](../Sources/UI/MenuBar/MenuBarRoot.swift) — divider opacity 0.5, Turn-off button dimmed 0.45 when inactive, Settings…/Quit footer foreground `.secondary`.
-   - `Resources/Assets.xcassets/AccentColor.colorset/Contents.json` — light + dark variants (kept for the global app accent setting; menu-bar accent uses the in-code `NSColor`-based one).
+### What's NOT done (intentional)
 
-   **Custom duration α** — new [`Sources/UI/MenuBar/CustomDurationRow.swift`](../Sources/UI/MenuBar/CustomDurationRow.swift). Inline expandable row under the 7 presets: collapsed shows "Custom… ⌄"; expanded shows a `Stepper` (1–1440 min, step 5) and a "Start" button. Animation is `.animation(.easeInOut(duration: 0.18), value: isExpanded)` scoped to the row's own `VStack` (initially scoped via `withAnimation` block — fixed after observing sibling rows getting pulled into the layout transaction).
-
-6. **Coffee tone customization** (added at the very end of the session, after the user asked "can the coffee color be a setting?")
-
-   New customization surface — five hand-picked tones (Espresso default / Caramel / Mocha / Latte / Noir), each with light + dark sRGB pairs resolved through `NSColor(name:dynamicProvider:)`:
-
-   - [`Sources/UI/Theme/CoffeeAccent.swift`](../Sources/UI/Theme/CoffeeAccent.swift) — 5-case enum carrying the color matrix. `displayName` + `shortDescription` for the picker. Tolerant `decode(_ raw: String?)` returns `.default` (espresso) on nil/empty/unknown. The previous static `Theme.Colors.accentAwake` is now a compat alias pointing to `.default.color`.
-   - [`Sources/Core/SettingsStore.swift`](../Sources/Core/SettingsStore.swift) — new `SettingsKey.coffeeAccent`.
-   - [`Sources/App/AppEnvironment.swift`](../Sources/App/AppEnvironment.swift) — `@Published var coffeeAccent: CoffeeAccent`, hydrated on init, write-through with equality short-circuit (matches the `menuBarIconStyle` pattern).
-   - **7 views switched from the static accent to `environment.coffeeAccent.color`**: `HeaderView` (passes through), `CoffeeCupView` (now takes a `liquidColor` parameter, default `.default.color`), `DurationPickerRow`, `CustomDurationRow`, `GeneralTab` status dot, `TriggersTab` voting indicator, `AboutTab` hero cup.
-   - [`Sources/UI/Settings/GeneralTab.swift`](../Sources/UI/Settings/GeneralTab.swift) — Appearance section gains:
-     1. A "Preview" `LabeledContent` row at the top with a 36pt `CoffeeCupView` whose liquid is `environment.coffeeAccent.color`. This was the user's specific ask: the menu-bar popover closes when Settings takes focus, so without an in-window preview the user couldn't *see* the live color change while choosing a tone.
-     2. A "Coffee tone" `Picker` (`.menu` style) listing all 5 cases with a 12pt color dot + display name + short description per row.
-
-   **Tests added — 17, all passing (total 195/195)**:
-   - [`Tests/CoffeeAccentTests.swift`](../Tests/CoffeeAccentTests.swift) — 12 tests: case order, raw-value stability, displayName/shortDescription uniqueness + non-empty, default = espresso, tolerant decode (nil / empty / unknown / case-sensitivity), color non-crashing for every case.
-   - [`Tests/AppEnvironmentTests.swift`](../Tests/AppEnvironmentTests.swift) — +5: defaults to espresso, hydrate from store, fallback on garbage, write-through, equal-value didSet short-circuit.
-   - [`Tests/SettingsStoreTests.swift`](../Tests/SettingsStoreTests.swift):119 — required-keys list updated to include `latte.coffeeAccent` (the existing exhaustive-keys assertion would otherwise fail).
-
-7. **Documentation**
-   - **`ROADMAP.md`** v0.5 → **v0.6** → **v0.7** → **v0.8**: each version captures one logical pass (build-green / post-build-hardening / coffee-tone-customization). Session 7 = test coverage + QA still marked next.
-   - **`docs/design/02-architecture.md`** v0.5 → **v0.6** → **v0.7** → **v0.8**: §13 changelog has all three passes with rationale. New types (`SettingsWindowController`, `CustomDurationRow`, `CoffeeAccent`, `Theme.Colors.cupStroke`) all listed with the *why*, not just the *what*.
-   - **`docs/SESSION_HANDOFF.md`**: this file, overwritten for session 7 entry.
-
-### What was *not* done (intentionally deferred)
-
-- **Manual menu-bar smoke checklist** — already walked: menu opens, cup animates (foreground + background), Turn-off works, custom duration starts at user-set minute count, **Settings window opens**, accent/liquid/checkmark all use the chosen `coffeeAccent`, hover state OK, divider subtle, expand animation localized to its own row, **Coffee tone picker switches the live preview cup and (after re-opening the popover) the menu-bar elements instantly**. Owner approved.
-- **Per-trigger config UI** (calendar/bundle/SSID pickers) — still pending, hand off to S7 or S8.
-- **Static `Theme.Colors.accentAwake` cleanup** — now a 1-line alias to `CoffeeAccent.default.color`. Could be removed entirely with a small refactor pass; not worth doing in S7 (coverage focus).
-- **Coverage report** — we know all tests pass, but `xcodebuild` was not run with `-enableCodeCoverage YES`. The 80% coverage gate (PRD §10) is the S7 entry point.
-- **macOS 13 / 14 / 15 matrix testing** — local box is macOS 26 (Tahoe) only. Multi-version smoke happens in S7.
-- **App icon PNG**, **Apple Developer Program enrollment**, **bundle ID rename**, **filesystem rename** `Caffeinated-Clone/ → Latte/` — all owner-side, not S7-blocking but S8-blocking.
-
----
-
-## Next session entry point
-
-**Theme**: Test coverage + QA (session 7 of ~10)
-
-**Goal**: Get to ≥80% line coverage on `Sources/Core/**` and `Sources/Triggers/**` per PRD §10. Run a clean manual smoke checklist on the live app. Log any QA findings as known issues.
-
-### Pre-session prerequisites (owner)
-
-- [ ] **Manual smoke from S6 still owed.** When you have 5 minutes, click through the running app and confirm the checklist below — most of it can be answered in one sitting. If anything is broken, log it as a fix-first task; otherwise check the boxes and S7 starts clean.
-
-  **S6 Smoke checklist** (Latte already launched in S6 — should still be in your menu bar; if not, `open ~/Library/Developer/Xcode/DerivedData/Latte-fkobqyixcisqmicfcisyrcpgeolp/Build/Products/Debug/Latte.app`):
-  - [ ] Menu-bar icon visible (default `cup.and.saucer.fill`).
-  - [ ] Click → menu opens (header, four duration rows, Turn off, Settings…, Quit).
-  - [ ] Pick a duration → cup view animates (steam particles drift up, liquid fills).
-  - [ ] Switch to another app → cup keeps animating (TimelineView active).
-  - [ ] Settings → General → Appearance → switch to "Outlined cup" → menu-bar icon updates *instantly*.
-  - [ ] Settings → Triggers → toggling a trigger off does **not** fire a permission prompt for already-disabled triggers.
-  - [ ] Quit → process exits cleanly; no power assertion leaked (verify with `pmset -g assertions | grep -i caffeinate` showing nothing).
-
-### To-do (in order)
-
-#### A. Coverage baseline (~30 min)
-
-1. `xcodebuild test -scheme Latte -destination "platform=macOS,arch=arm64" -enableCodeCoverage YES` — capture coverage profile.
-2. `xcrun llvm-cov report` (or `xcrun xccov view --report`) on the resulting `.xcresult` — extract per-file coverage for `Sources/Core/**` and `Sources/Triggers/**`.
-3. Identify any file under 80%. The likely gaps:
-   - `AwakeManager` — `@MainActor` lifecycle + signal handler paths
-   - `TriggerCoordinator` — `cooldown` / `snooze` paths
-   - `Logging.swift` — typically 0% (subsystem definitions only — exempt with rationale, or log as documented gap)
-   - The "real source" classes (`CoreWLANSource`, `INFocusSource`, `EKEventSource`, `NSWorkspaceSource`) — these are exempt because they require live system services; coverage targets the *protocol consumers*, not the adapters.
-
-#### B. Add tests to close gaps (~60 min)
-
-4. For each <80% file, add focused unit tests. Prefer Swift Testing (`import Testing` + `@Test`) for new files per `~/.claude/rules/swift/testing.md`; existing XCTest files stay XCTest.
-5. Re-run coverage. Iterate until `Core/` and `Triggers/` are both ≥80%.
-
-#### C. Manual QA matrix (~30 min)
-
-6. Run the same smoke checklist as the prerequisite section above, but on **a known-clean build** (after coverage tests pass).
-7. If owner has access to a macOS 13 or 14 machine, smoke there too. Otherwise log as "untested on macOS 13/14" and hand to TestFlight (S9) for matrix coverage.
-8. Log any defects in a new `docs/QA_LOG.md`. Triage by severity: P1 (blocks ship), P2 (ship with workaround), P3 (cosmetic).
-
-#### D. Wrap (~15 min)
-
-9. Bump `02-architecture.md` to v0.7 only if any structural change was needed to close coverage gaps.
-10. Bump `ROADMAP.md` row 7 to 🟢 Done (or 🟡 In progress if coverage <80% remains).
-11. Overwrite `docs/SESSION_HANDOFF.md` for session 8 entry — App Store prep (metadata, screenshots, Privacy Policy).
-12. Commit as `feat: session 7 — coverage to 80%+ + QA pass`.
-
-### Cannot-start-without checks
-
-- Latte.app should already be in the menu bar from the S6 launch. If you've rebooted, just re-launch via the path above.
-- Re-read [`02-architecture.md` §13](design/02-architecture.md#13-document-change-log) v0.6 entry for the exact build fixes — useful if any test starts failing again, you'll know what changed.
-- No new toolchain or owner action required for S7. All prerequisites are already satisfied from S6.
+- **Owner-side manual smoke checklist** in `docs/QA_LOG.md` is checked-in but unchecked — Claude cannot drive the menu-bar UI. Owner runs through this and ticks lines (or logs defects in the same doc) before S8 starts in earnest. Gate for S8 is: zero P1 items in QA_LOG.
+- **macOS 13/14/15 matrix smoke** — deferred to S9 (TestFlight). Dev box is macOS 26 only.
+- **`AwakeManager` coverage** sits at 94.1% — the remaining 6% is mostly the two log-only paths in the IOKit power-source observer; not worth contorting tests to chase. Documented in 02 §13 v0.9.
+- **`Trigger` protocol file** at 82.8% — the 5 missed lines are default-impl fallbacks for protocols that are always overridden by concrete types. Right at the gate; do not "improve" with pointless override tests.
 
 ---
 
 ## Decisions still pending owner approval
 
-**None for session 7.** S7 is mechanical (coverage + smoke). Decisions resume in S8 (App Store metadata, pricing, support email, etc.).
+- **None blocking S8.** S7 introduced no architectural changes — only tests and a documentation/exemption clarification. Owner sign-off is not required to proceed with S8 setup, but **is** required before submission (G6).
 
 ---
 
 ## Known issues / debt
 
-| Issue | Impact | Plan |
-|---|---|---|
-| Repo root folder still named `Caffeinated-Clone/` | Cosmetic | Owner renames to `Latte/` before first external push |
-| Bundle ID `com.example.latte` is placeholder | Cannot ship | Owner provides real reverse-domain before S8 |
-| App icon PNG not produced | Cannot ship | Spec written ([05-icon-spec.md](design/05-icon-spec.md)) — owner produces between S6 and S8 |
-| No Apple Developer Program enrollment | Cannot submit | Owner enrolls before S8 |
-| `INFocusStatusCenter` does not expose Focus IDs | Per-Focus filtering can't ship in v1 | Documented as Phase 1.5 follow-up ([04 §4.5](design/04-data-model.md#45-focus-mode-trigger)) |
-| Trigger config UI (calendar/bundle/SSID pickers) not built | Triggers tab still placeholder for *config*; vote status is live | S7 *may* add basic pickers; otherwise S8 |
-| `AwakeManager.installSignalHandlers()` uses `.shared` from `@convention(c)` | Best-effort cleanup only | Acceptable for menu-bar utility |
-| Local box is macOS 26 (Tahoe) only | macOS 13/14 smoke happens in TestFlight (S9) | Document and accept risk |
-| `Logging.swift` likely 0% coverage by design | Logger subsystems aren't behavior to test | Either exempt explicitly or test that subsystems exist |
+- **`Theme.Colors.accentAwake` static alias** still lingering as a 1-line forwarder to `CoffeeAccent.default.color`. Drop it in S10 cleanup pass; not worth the diff churn now.
+- **`docs/QA_LOG.md` smoke checklist is unchecked** — see above. This is the only S7→S8 prerequisite.
+- **`Per-trigger config UI`** (calendar/bundle/SSID pickers) — still pending from S5; not on S8 path. Likely lands as a Phase 1.5 follow-up.
 
 ---
 
 ## Files changed this session
 
-**Commit 1 — `feat: session 6 — green build + post-build polish + custom duration α` (3d5839a)**
-
-Already documented in the previous version of this file; covers build green (4 fixes + 14 test sites), `SettingsWindowController`, `NSColor`-based dynamic accent + cupStroke, `DurationPickerRow` polish, divider/Turn-off/footer polish, `CustomDurationRow`. ROADMAP v0.5 → v0.7, 02-architecture v0.5 → v0.7.
-
-**Commit 2 — `feat: coffee tone customization — 5 presets + Settings preview` (this commit)**
-
 ```
-M  ROADMAP.md                                     (v0.7 → v0.8)
-M  docs/SESSION_HANDOFF.md                        (this file)
-M  docs/design/02-architecture.md                 (v0.7 → v0.8; §13 coffee-tone entry)
-
-A  Sources/UI/Theme/CoffeeAccent.swift            (5-case enum + sRGB matrix + dynamic NSColor)
-M  Sources/Core/SettingsStore.swift               (+ SettingsKey.coffeeAccent)
-M  Sources/App/AppEnvironment.swift               (+ @Published coffeeAccent mirror)
-M  Sources/UI/Components/CoffeeCupView.swift      (+ liquidColor parameter)
-M  Sources/UI/MenuBar/HeaderView.swift            (passes environment.coffeeAccent.color)
-M  Sources/UI/MenuBar/DurationPickerRow.swift     (accent bar/checkmark via env)
-M  Sources/UI/MenuBar/CustomDurationRow.swift     (accent via env)
-M  Sources/UI/Settings/GeneralTab.swift           (Preview row + Coffee tone Picker; status dot via env)
-M  Sources/UI/Settings/AboutTab.swift             (hero cup liquidColor via env)
-M  Sources/UI/Settings/TriggersTab.swift          (voting indicator + subtitle accent via env)
-
-A  Tests/CoffeeAccentTests.swift                  (12 new tests)
-M  Tests/AppEnvironmentTests.swift                (+5 tests for coffeeAccent mirror)
-M  Tests/SettingsStoreTests.swift                 (added latte.coffeeAccent to required-keys list)
+A  Tests/PowerAssertionTests.swift
+M  Tests/SettingsStoreTests.swift
+M  Tests/WiFiTriggerTests.swift
+M  Tests/CalendarTriggerTests.swift
+A  docs/QA_LOG.md
+M  docs/design/02-architecture.md   (v0.9, §13 entry)
+M  ROADMAP.md                        (v0.9; row 7 → done, row 8 → next)
+M  docs/SESSION_HANDOFF.md           (this file, overwritten for S8)
+~  Latte.xcodeproj                    (gitignored — re-run `xcodegen generate` after adding files)
 ```
-
-`Latte.xcodeproj/` is regenerated from `project.yml` per session via `xcodegen generate`; ignored via `.gitignore` (`*.xcodeproj`).
-
-`Latte.xcodeproj/` is regenerated from `project.yml` per session via `xcodegen generate`; ignored via `.gitignore` (`*.xcodeproj`).
 
 ---
 
 ## How to resume
 
-1. Confirm Latte.app is still in the menu bar (or re-launch from the DerivedData path).
-2. Walk the S6 smoke checklist (5 min).
-3. Read [ROADMAP.md](../ROADMAP.md) — orientation.
-4. Read this file's **§To-do** section.
-5. From the repo root: `xcodebuild test -scheme Latte -destination "platform=macOS,arch=arm64" -enableCodeCoverage YES` to capture the coverage baseline. Work A → D.
+```bash
+cd ~/Documents/Claude/Projects/Caffeinated-Clone
+git log --oneline -3       # latest commit should be the S7 commit
+xcodebuild test -scheme Latte -destination "platform=macOS,arch=arm64" \
+  -enableCodeCoverage YES -resultBundlePath /tmp/Latte_S8_baseline.xcresult
+xcrun xccov view --report /tmp/Latte_S8_baseline.xcresult | head -20
+```
+
+If the totals match S7 (227 tests, ≥80% on all gated files), proceed to the §"Next session entry point" section below. If not, that's S7 regression — investigate before starting S8 work.
+
+---
+
+## Next session entry point
+
+**Theme**: App Store prep (session 8 of ~10)
+
+**Goal**: Get to "ready to submit" state — App Store Connect record created, app metadata drafted, screenshots captured, Privacy Policy hosted, GitHub Pages landing page up. Submission button itself stays unpressed until S9 beta feedback is in.
+
+### Pre-session prerequisites (owner — these are HARD blockers)
+
+- [ ] **Apple Developer Program enrollment** (`$99/yr`, 1–2 day approval) → <https://developer.apple.com/programs/>. Without this, no App Store Connect access, no signing, no TestFlight.
+- [ ] **App icon PNG** (1024×1024, no alpha, no rounded corners, no embedded shadows) per the brief in `docs/design/05-icon-spec.md`. Place at `Resources/Assets.xcassets/AppIcon.appiconset/icon-1024.png` (Asset Catalog auto-scales to other sizes).
+- [ ] **Bundle ID prefix decision** (e.g., `com.parkbyeongjun.latte`, `com.hightempier.latte`). Replaces `com.example.latte` everywhere — `project.yml`, `Configuration/Latte.entitlements`, App Store Connect record. Pick one and stick with it; renaming after submission is painful.
+- [ ] **Filesystem rename** `Caffeinated-Clone/` → `Latte/` (purely cosmetic but easier now than after the Git history grows further).
+- [ ] **`docs/QA_LOG.md` smoke checklist** ticked (or P1 defects logged + S7-fix commit before S8).
+- [ ] **Author identity for git commits** — currently shows the system username. Run once, before any push to GitHub:
+  ```bash
+  git config --global user.email "hightempier18@gmail.com"
+  git config --global user.name "박병준"
+  ```
+
+### To-do (in order)
+
+#### A. Renames & identity (~30 min, requires owner decisions)
+
+1. Decide bundle ID prefix. Update:
+   - `project.yml` → `targets.Latte.settings.base.PRODUCT_BUNDLE_IDENTIFIER`.
+   - `Configuration/Latte.entitlements` if any keychain/iCloud entitlement embeds the prefix.
+   - Re-run `xcodegen generate`.
+2. Rename project folder `Caffeinated-Clone/` → `Latte/` (use `git mv` to preserve history; update any path-bound references in CLAUDE.md / memory files / scripts).
+3. Drop the App Icon PNG into `Resources/Assets.xcassets/AppIcon.appiconset/` and verify the catalog references it (`Contents.json` → `1024x1024` slot).
+4. Re-run the full test suite to make sure renames didn't break the build.
+
+#### B. App Store Connect record (~60 min, owner-driven)
+
+5. Sign in to App Store Connect → Apps → New App. Fill:
+   - Platform: macOS
+   - Bundle ID: as decided in step 1 (must match Xcode exactly)
+   - SKU: anything stable, e.g., `latte-001`
+   - Primary language: English (US)
+   - User access: Full access (default)
+6. App Information section:
+   - Name: **Latte**
+   - Subtitle (≤30 chars): e.g. *Smart caffeine for your Mac*
+   - Category: Utilities (primary), Productivity (secondary)
+   - Content rights: own all content, no third-party advertising
+7. Pricing & Availability: $2.99 one-time, all territories where Apple permits.
+8. App Privacy: declare data collection (none — Latte stores all settings locally in UserDefaults, no telemetry, no analytics in v1.0). Tick "No data collected" with rationale.
+
+#### C. Screenshots & metadata (~90 min)
+
+9. Capture marketing screenshots — required sizes per Apple guidelines (currently 2880×1800 / 2560×1600 for macOS). Suggested set:
+   - Menu-bar dropdown with cup animation mid-fill, on a Big Sur+ desktop.
+   - Settings → General with the Coffee tone Picker open and Preview cup visible.
+   - Settings → Triggers showing all four triggers with vote indicators.
+   - "About" tab to humanize the app.
+10. Draft App Store description (≤4000 chars) and "What's New" (≤4000 chars). Lead with the differentiator: "Latte sleeps when you do — wakes for meetings, mutes when you're done." Avoid mentioning competitors by name.
+11. Keywords (≤100 chars total, comma-separated): e.g., `caffeine,sleep,awake,meeting,zoom,focus,menu bar,utility,productivity`.
+12. Support URL + Marketing URL: GitHub Pages (set up in step D).
+
+#### D. GitHub Pages site for Privacy Policy + landing (~60 min)
+
+13. Create branch `gh-pages` (or use a separate `latte-site/` repo). Drop a one-page `index.html` (Latte landing) and `privacy.html` (Privacy Policy — App Store requires a hosted URL for this).
+14. Privacy Policy template covers: no data collection, all settings stored locally, no third-party analytics, no network calls in v1.0, contact email.
+15. Verify both URLs serve over HTTPS (required by App Store).
+
+#### E. Build for submission (~30 min)
+
+16. Bump `MARKETING_VERSION` to `1.0.0` and `CURRENT_PROJECT_VERSION` to `1` in `project.yml`.
+17. Archive build: `xcodebuild archive -scheme Latte -destination "platform=macOS,arch=arm64" -archivePath /tmp/Latte.xcarchive`.
+18. Verify the archive opens cleanly in Xcode → Organizer.
+19. **Do not click "Distribute App" yet** — that's S10 after beta feedback.
+
+#### F. Wrap (~15 min)
+
+20. Bump `02-architecture.md` to v1.0 once renames + bundle ID are in.
+21. Bump `ROADMAP.md` row 8 → 🟢 Done, row 9 → 🟡 Next.
+22. Overwrite `docs/SESSION_HANDOFF.md` for session 9 entry — TestFlight beta launch.
+23. Commit as `feat: session 8 — App Store prep (metadata + screenshots + landing site)`.
+
+### Cannot-start-without checks
+
+- Apple Developer Program enrollment **complete** and Team ID known (Xcode → Settings → Accounts).
+- App Icon PNG **delivered**.
+- Bundle ID prefix **decided**.
+- `docs/QA_LOG.md` smoke ticked OR P1 defects fixed.
+
+If any of the above is still pending, **do not start S8**. Instead, defer S8 to a later date and use the time to finish the prerequisites — they cannot be done by Claude.
+
+---
+
+## Recap quick stats
+
+- 227 tests, all passing.
+- Core/ + Triggers/ all ≥80%.
+- 0 P1 defects logged (smoke checklist still owed).
+- 0 architectural changes since S6.
+- Single commit for S7 (per `git-workflow.md` style).

@@ -151,4 +151,65 @@ final class WiFiTriggerTests: XCTestCase {
         task.cancel()
         do { let _v = await task.value; XCTAssertNil(_v) }
     }
+
+    func testIsEnabledSetterPersists() {
+        let settings = InMemorySettingsStore()
+        let trigger = WiFiTrigger(settings: settings, source: MockWiFiSource())
+        XCTAssertFalse(trigger.isEnabled)
+        trigger.isEnabled = true
+        XCTAssertTrue(trigger.isEnabled)
+        XCTAssertTrue(settings.bool(.wifiTriggerEnabled, default: false))
+    }
+
+    func testPermissionStatusReflectsSource() {
+        let settings = InMemorySettingsStore()
+        let denied = MockWiFiSource(permissionStatus: .denied)
+        let trigger = WiFiTrigger(settings: settings, source: denied)
+        XCTAssertEqual(trigger.permissionStatus, .denied)
+        denied.permissionStatus = .granted
+        XCTAssertEqual(trigger.permissionStatus, .granted)
+    }
+
+    func testStartEvaluatesImmediatelyAndStopCancels() async throws {
+        let (trigger, _, _) = makeFixture(currentSSID: "HomeNet")
+        await trigger.start()
+        // start() runs evaluate() synchronously before scheduling the loop, so
+        // an ON vote should already be queued.
+        var it = trigger.voteStream.makeAsyncIterator()
+        let vote = await it.next()
+        XCTAssertEqual(vote?.wantsAwake, true)
+
+        // Calling start again is a no-op (pollTask already running).
+        await trigger.start()
+
+        trigger.stop()
+        // After stop, the stream is finished — next() returns nil.
+        let after = await it.next()
+        XCTAssertNil(after)
+    }
+
+    func testRequestPermissionIfNeededDelegatesToSource() async {
+        let settings = InMemorySettingsStore()
+
+        // .granted → true, no source call
+        let granted = MockWiFiSource(permissionStatus: .granted)
+        let g = WiFiTrigger(settings: settings, source: granted)
+        let r1 = await g.requestPermissionIfNeeded()
+        XCTAssertTrue(r1)
+        XCTAssertEqual(granted.requestAccessCalls, 0)
+
+        // .denied → false, no source call
+        let denied = MockWiFiSource(permissionStatus: .denied)
+        let d = WiFiTrigger(settings: settings, source: denied)
+        let r2 = await d.requestPermissionIfNeeded()
+        XCTAssertFalse(r2)
+        XCTAssertEqual(denied.requestAccessCalls, 0)
+
+        // .notDetermined → asks; mock auto-grants
+        let nd = MockWiFiSource(permissionStatus: .notDetermined)
+        let n = WiFiTrigger(settings: settings, source: nd)
+        let r3 = await n.requestPermissionIfNeeded()
+        XCTAssertTrue(r3)
+        XCTAssertEqual(nd.requestAccessCalls, 1)
+    }
 }
