@@ -19,6 +19,17 @@ public struct GeneralTab: View {
             }
 
             Section {
+                LabeledContent {
+                    CoffeeCupView(
+                        isAwake: true,
+                        fillRatio: 0.85,
+                        liquidColor: environment.coffeeAccent.color
+                    )
+                    .frame(width: 36, height: 36)
+                } label: {
+                    Text("Preview").font(Theme.Fonts.body)
+                }
+
                 Picker(selection: $environment.menuBarIconStyle) {
                     ForEach(MenuBarIconStyle.allCases) { style in
                         Label {
@@ -32,10 +43,30 @@ public struct GeneralTab: View {
                     Text("Menu bar icon").font(Theme.Fonts.body)
                 }
                 .pickerStyle(.menu)
+
+                Picker(selection: $environment.coffeeAccent) {
+                    ForEach(CoffeeAccent.allCases) { accent in
+                        HStack(spacing: Theme.Spacing.sm) {
+                            Circle()
+                                .fill(accent.color)
+                                .frame(width: 12, height: 12)
+                                .overlay(Circle().strokeBorder(Color.primary.opacity(0.15), lineWidth: 0.5))
+                            Text(accent.displayName).font(Theme.Fonts.body)
+                            Spacer(minLength: 0)
+                            Text(accent.shortDescription)
+                                .font(Theme.Fonts.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .tag(accent)
+                    }
+                } label: {
+                    Text("Coffee tone").font(Theme.Fonts.body)
+                }
+                .pickerStyle(.menu)
             } header: {
                 Text("Appearance").font(Theme.Fonts.subheadline)
             } footer: {
-                Text("The icon updates immediately. SF Symbols adapt to the system tint and dark mode automatically.")
+                Text("The icon and accent color update immediately. SF Symbols adapt to the system tint and dark mode automatically.")
                     .font(Theme.Fonts.caption)
                     .foregroundStyle(.secondary)
             }
@@ -44,7 +75,7 @@ public struct GeneralTab: View {
                 LabeledContent {
                     HStack(spacing: Theme.Spacing.xs) {
                         Circle()
-                            .fill(manager.isAwake ? Theme.Colors.accentAwake : Color.secondary)
+                            .fill(manager.isAwake ? environment.coffeeAccent.color : Color.secondary)
                             .frame(width: 8, height: 8)
                         Text(manager.isAwake ? "Awake" : "Asleep")
                             .font(Theme.Fonts.body)

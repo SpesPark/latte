@@ -125,6 +125,7 @@ final class SettingsKeyEnumTests: XCTestCase {
             "latte.activateOnLaunch",
             "latte.launchAtLogin",
             "latte.menuBarIconStyle",
+            "latte.coffeeAccent",
             "latte.calendarTrigger.enabled",
             "latte.calendarTrigger.calendarIDs",
             "latte.calendarTrigger.excludeAllDay",

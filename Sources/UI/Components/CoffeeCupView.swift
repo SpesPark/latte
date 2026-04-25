@@ -15,10 +15,12 @@ public struct CoffeeCupView: View {
 
     public let isAwake: Bool
     public let fillRatio: Double
+    public let liquidColor: Color
 
-    public init(isAwake: Bool, fillRatio: Double = 1.0) {
+    public init(isAwake: Bool, fillRatio: Double = 1.0, liquidColor: Color = CoffeeAccent.default.color) {
         self.isAwake = isAwake
         self.fillRatio = max(0, min(1, fillRatio))
+        self.liquidColor = liquidColor
     }
 
     public var body: some View {
@@ -77,7 +79,7 @@ public struct CoffeeCupView: View {
         guard liquidRect.height > 0.5 else { return }
 
         let liquid = Path(roundedRect: liquidRect, cornerSize: CGSize(width: 4, height: 4))
-        ctx.fill(liquid, with: .color(Theme.Colors.accentAwake))
+        ctx.fill(liquid, with: .color(liquidColor))
 
         if fillRatio > 0.05 {
             var foam = Path()

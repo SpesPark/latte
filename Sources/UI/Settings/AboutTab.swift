@@ -2,6 +2,8 @@ import SwiftUI
 
 public struct AboutTab: View {
 
+    @EnvironmentObject private var environment: AppEnvironment
+
     public init() {}
 
     public var body: some View {
@@ -9,8 +11,12 @@ public struct AboutTab: View {
             Spacer(minLength: Theme.Spacing.lg)
 
             VStack(spacing: Theme.Spacing.md) {
-                CoffeeCupView(isAwake: true, fillRatio: 0.9)
-                    .frame(width: 80, height: 80)
+                CoffeeCupView(
+                    isAwake: true,
+                    fillRatio: 0.9,
+                    liquidColor: environment.coffeeAccent.color
+                )
+                .frame(width: 80, height: 80)
 
                 VStack(spacing: Theme.Spacing.xs) {
                     Text("Latte")

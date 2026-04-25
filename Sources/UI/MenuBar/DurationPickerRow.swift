@@ -6,6 +6,7 @@ public struct DurationPickerRow: View {
     public let isActive: Bool
     public let action: () -> Void
 
+    @EnvironmentObject private var environment: AppEnvironment
     @State private var isHovered: Bool = false
 
     public init(duration: AwakeDuration, isActive: Bool, action: @escaping () -> Void) {
@@ -15,10 +16,11 @@ public struct DurationPickerRow: View {
     }
 
     public var body: some View {
-        Button(action: action) {
+        let accent = environment.coffeeAccent.color
+        return Button(action: action) {
             HStack(spacing: Theme.Spacing.sm) {
                 Rectangle()
-                    .fill(isActive ? Theme.Colors.accentAwake : Color.clear)
+                    .fill(isActive ? accent : Color.clear)
                     .frame(width: 3)
                     .padding(.vertical, 4)
 
@@ -30,7 +32,7 @@ public struct DurationPickerRow: View {
                 if isActive {
                     Image(systemName: "checkmark")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Theme.Colors.accentAwake)
+                        .foregroundStyle(accent)
                 }
             }
             .padding(.horizontal, Theme.Spacing.lg - 3)

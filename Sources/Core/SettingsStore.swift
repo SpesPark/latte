@@ -13,6 +13,7 @@ public enum SettingsKey: String, CaseIterable, Sendable {
     case activateOnLaunch      = "latte.activateOnLaunch"
     case launchAtLogin         = "latte.launchAtLogin"
     case menuBarIconStyle      = "latte.menuBarIconStyle"
+    case coffeeAccent          = "latte.coffeeAccent"
 
     // Calendar trigger
     case calendarTriggerEnabled            = "latte.calendarTrigger.enabled"

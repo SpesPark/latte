@@ -35,6 +35,7 @@ private struct TriggerRow: View {
     let trigger: any Trigger
     let activeVote: TriggerVote?
     @State private var isOn: Bool
+    @EnvironmentObject private var environment: AppEnvironment
 
     init(trigger: any Trigger, activeVote: TriggerVote?) {
         self.trigger = trigger
@@ -43,7 +44,8 @@ private struct TriggerRow: View {
     }
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.sm) {
+        let accent = environment.coffeeAccent.color
+        return HStack(spacing: Theme.Spacing.sm) {
             Image(systemName: trigger.symbol)
                 .frame(width: 22)
                 .foregroundStyle(.secondary)
@@ -55,7 +57,7 @@ private struct TriggerRow: View {
                 if let reason = subtitle {
                     Text(reason)
                         .font(Theme.Fonts.caption)
-                        .foregroundStyle(isVoting ? Theme.Colors.accentAwake : .secondary)
+                        .foregroundStyle(isVoting ? accent : .secondary)
                         .accessibilityIdentifier("trigger.row.subtitle.\(trigger.id)")
                 }
             }
@@ -63,7 +65,9 @@ private struct TriggerRow: View {
             Spacer()
 
             if isVoting {
-                voteIndicator
+                Circle()
+                    .fill(accent)
+                    .frame(width: 8, height: 8)
                     .accessibilityLabel("\(trigger.displayName) is currently voting awake")
             }
 
@@ -94,10 +98,4 @@ private struct TriggerRow: View {
         }
     }
 
-    @ViewBuilder
-    private var voteIndicator: some View {
-        Circle()
-            .fill(Theme.Colors.accentAwake)
-            .frame(width: 8, height: 8)
-    }
 }

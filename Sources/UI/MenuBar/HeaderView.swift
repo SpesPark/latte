@@ -3,6 +3,7 @@ import SwiftUI
 public struct HeaderView: View {
 
     @ObservedObject public var manager: AwakeManager
+    @EnvironmentObject public var environment: AppEnvironment
 
     public init(manager: AwakeManager) {
         self.manager = manager
@@ -10,8 +11,12 @@ public struct HeaderView: View {
 
     public var body: some View {
         HStack(spacing: Theme.Spacing.md) {
-            CoffeeCupView(isAwake: manager.isAwake, fillRatio: 0.8)
-                .frame(width: 36, height: 36)
+            CoffeeCupView(
+                isAwake: manager.isAwake,
+                fillRatio: 0.8,
+                liquidColor: environment.coffeeAccent.color
+            )
+            .frame(width: 36, height: 36)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(statusTitle)

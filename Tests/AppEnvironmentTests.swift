@@ -48,6 +48,45 @@ final class AppEnvironmentTests: XCTestCase {
                      "Equal-value assignment must not re-persist")
     }
 
+    // MARK: - Coffee accent ⇆ SettingsStore mirror
+
+    func testCoffeeAccentDefaultsToEspressoWhenNoneStored() {
+        let store = InMemorySettingsStore()
+        let env = AppEnvironment(settings: store)
+        XCTAssertEqual(env.coffeeAccent, .espresso)
+    }
+
+    func testCoffeeAccentHydratesFromStoredString() {
+        let store = InMemorySettingsStore(initial: [.coffeeAccent: "caramel"])
+        let env = AppEnvironment(settings: store)
+        XCTAssertEqual(env.coffeeAccent, .caramel)
+    }
+
+    func testCoffeeAccentFallsBackToDefaultOnGarbage() {
+        let store = InMemorySettingsStore(initial: [.coffeeAccent: "fluorescent-pink"])
+        let env = AppEnvironment(settings: store)
+        XCTAssertEqual(env.coffeeAccent, .espresso)
+    }
+
+    func testCoffeeAccentAssignmentWritesThroughToStore() {
+        let store = InMemorySettingsStore()
+        let env = AppEnvironment(settings: store)
+
+        env.coffeeAccent = .mocha
+        XCTAssertEqual(store.string(.coffeeAccent), "mocha")
+
+        env.coffeeAccent = .latte
+        XCTAssertEqual(store.string(.coffeeAccent), "latte")
+    }
+
+    func testCoffeeAccentNoOpAssignmentDoesNotTouchStore() {
+        let store = InMemorySettingsStore(initial: [.coffeeAccent: "noir"])
+        let env = AppEnvironment(settings: store)
+        store.remove(.coffeeAccent)
+        env.coffeeAccent = .noir
+        XCTAssertNil(store.string(.coffeeAccent))
+    }
+
     // MARK: - Trigger registration
 
     func testRegistersFourDefaultTriggers() {

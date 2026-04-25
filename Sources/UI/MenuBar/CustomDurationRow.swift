@@ -12,6 +12,7 @@ public struct CustomDurationRow: View {
     let isActive: Bool
     let onStart: () -> Void
 
+    @EnvironmentObject private var environment: AppEnvironment
     @State private var isHovered: Bool = false
 
     public init(
@@ -27,11 +28,12 @@ public struct CustomDurationRow: View {
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
+        let accent = environment.coffeeAccent.color
+        return VStack(spacing: 0) {
             Button(action: { isExpanded.toggle() }) {
                 HStack(spacing: Theme.Spacing.sm) {
                     Rectangle()
-                        .fill(isActive ? Theme.Colors.accentAwake : Color.clear)
+                        .fill(isActive ? accent : Color.clear)
                         .frame(width: 3)
                         .padding(.vertical, 4)
 
@@ -43,7 +45,7 @@ public struct CustomDurationRow: View {
                     if isActive {
                         Image(systemName: "checkmark")
                             .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(Theme.Colors.accentAwake)
+                            .foregroundStyle(accent)
                             .padding(.trailing, 6)
                     }
 

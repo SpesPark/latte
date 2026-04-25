@@ -9,9 +9,9 @@
 | Field | Value |
 |---|---|
 | **Session #** | 6 of ~10 |
-| **Theme** | Build verification + post-build smoke fixes + custom duration α |
+| **Theme** | Build verification + post-build smoke fixes + custom duration α + coffee tone customization |
 | **Date** | 2026-04-26 |
-| **Status** | ✅ Completed. Build/test green (178/178), Settings window opens, design polish iterated to owner approval, custom duration row works. Single commit covering build green + post-build hardening + design polish + custom duration α. |
+| **Status** | ✅ Completed. Build/test green (195/195), Settings window opens, design polish iterated to owner approval, custom duration row works, coffee tone picker (5 presets) with live preview is wired end-to-end through 7 views. Two commits: `feat: session 6 — green build + post-build polish + custom duration α` (3d5839a) and `feat: coffee tone customization — 5 presets + Settings preview` (this session's second commit). |
 
 ### What was accomplished
 
@@ -52,14 +52,33 @@
 
    **Custom duration α** — new [`Sources/UI/MenuBar/CustomDurationRow.swift`](../Sources/UI/MenuBar/CustomDurationRow.swift). Inline expandable row under the 7 presets: collapsed shows "Custom… ⌄"; expanded shows a `Stepper` (1–1440 min, step 5) and a "Start" button. Animation is `.animation(.easeInOut(duration: 0.18), value: isExpanded)` scoped to the row's own `VStack` (initially scoped via `withAnimation` block — fixed after observing sibling rows getting pulled into the layout transaction).
 
-6. **Documentation**
-   - **`ROADMAP.md`** v0.5 → **v0.6** → **v0.7**: session 6 row marked done; v0.7 entry covers the post-build hardening + custom duration. Session 7 = test coverage + QA still next.
-   - **`docs/design/02-architecture.md`** v0.5 → **v0.6** → **v0.7**: §13 changelog has both passes with rationale. New components (`SettingsWindowController`, `CustomDurationRow`, `Theme.Colors.cupStroke`) listed with the *why*, not just the *what*.
+6. **Coffee tone customization** (added at the very end of the session, after the user asked "can the coffee color be a setting?")
+
+   New customization surface — five hand-picked tones (Espresso default / Caramel / Mocha / Latte / Noir), each with light + dark sRGB pairs resolved through `NSColor(name:dynamicProvider:)`:
+
+   - [`Sources/UI/Theme/CoffeeAccent.swift`](../Sources/UI/Theme/CoffeeAccent.swift) — 5-case enum carrying the color matrix. `displayName` + `shortDescription` for the picker. Tolerant `decode(_ raw: String?)` returns `.default` (espresso) on nil/empty/unknown. The previous static `Theme.Colors.accentAwake` is now a compat alias pointing to `.default.color`.
+   - [`Sources/Core/SettingsStore.swift`](../Sources/Core/SettingsStore.swift) — new `SettingsKey.coffeeAccent`.
+   - [`Sources/App/AppEnvironment.swift`](../Sources/App/AppEnvironment.swift) — `@Published var coffeeAccent: CoffeeAccent`, hydrated on init, write-through with equality short-circuit (matches the `menuBarIconStyle` pattern).
+   - **7 views switched from the static accent to `environment.coffeeAccent.color`**: `HeaderView` (passes through), `CoffeeCupView` (now takes a `liquidColor` parameter, default `.default.color`), `DurationPickerRow`, `CustomDurationRow`, `GeneralTab` status dot, `TriggersTab` voting indicator, `AboutTab` hero cup.
+   - [`Sources/UI/Settings/GeneralTab.swift`](../Sources/UI/Settings/GeneralTab.swift) — Appearance section gains:
+     1. A "Preview" `LabeledContent` row at the top with a 36pt `CoffeeCupView` whose liquid is `environment.coffeeAccent.color`. This was the user's specific ask: the menu-bar popover closes when Settings takes focus, so without an in-window preview the user couldn't *see* the live color change while choosing a tone.
+     2. A "Coffee tone" `Picker` (`.menu` style) listing all 5 cases with a 12pt color dot + display name + short description per row.
+
+   **Tests added — 17, all passing (total 195/195)**:
+   - [`Tests/CoffeeAccentTests.swift`](../Tests/CoffeeAccentTests.swift) — 12 tests: case order, raw-value stability, displayName/shortDescription uniqueness + non-empty, default = espresso, tolerant decode (nil / empty / unknown / case-sensitivity), color non-crashing for every case.
+   - [`Tests/AppEnvironmentTests.swift`](../Tests/AppEnvironmentTests.swift) — +5: defaults to espresso, hydrate from store, fallback on garbage, write-through, equal-value didSet short-circuit.
+   - [`Tests/SettingsStoreTests.swift`](../Tests/SettingsStoreTests.swift):119 — required-keys list updated to include `latte.coffeeAccent` (the existing exhaustive-keys assertion would otherwise fail).
+
+7. **Documentation**
+   - **`ROADMAP.md`** v0.5 → **v0.6** → **v0.7** → **v0.8**: each version captures one logical pass (build-green / post-build-hardening / coffee-tone-customization). Session 7 = test coverage + QA still marked next.
+   - **`docs/design/02-architecture.md`** v0.5 → **v0.6** → **v0.7** → **v0.8**: §13 changelog has all three passes with rationale. New types (`SettingsWindowController`, `CustomDurationRow`, `CoffeeAccent`, `Theme.Colors.cupStroke`) all listed with the *why*, not just the *what*.
    - **`docs/SESSION_HANDOFF.md`**: this file, overwritten for session 7 entry.
 
 ### What was *not* done (intentionally deferred)
 
-- **Manual menu-bar smoke checklist** — already walked: menu opens, cup animates (foreground + background), Turn-off works, custom duration starts at user-set minute count, **Settings window opens**, accent bar/checkmark/liquid all caramel/espresso brown, hover state OK, divider subtle, expand animation localized to its own row. Owner approved final color tone.
+- **Manual menu-bar smoke checklist** — already walked: menu opens, cup animates (foreground + background), Turn-off works, custom duration starts at user-set minute count, **Settings window opens**, accent/liquid/checkmark all use the chosen `coffeeAccent`, hover state OK, divider subtle, expand animation localized to its own row, **Coffee tone picker switches the live preview cup and (after re-opening the popover) the menu-bar elements instantly**. Owner approved.
+- **Per-trigger config UI** (calendar/bundle/SSID pickers) — still pending, hand off to S7 or S8.
+- **Static `Theme.Colors.accentAwake` cleanup** — now a 1-line alias to `CoffeeAccent.default.color`. Could be removed entirely with a small refactor pass; not worth doing in S7 (coverage focus).
 - **Coverage report** — we know all tests pass, but `xcodebuild` was not run with `-enableCodeCoverage YES`. The 80% coverage gate (PRD §10) is the S7 entry point.
 - **macOS 13 / 14 / 15 matrix testing** — local box is macOS 26 (Tahoe) only. Multi-version smoke happens in S7.
 - **App icon PNG**, **Apple Developer Program enrollment**, **bundle ID rename**, **filesystem rename** `Caffeinated-Clone/ → Latte/` — all owner-side, not S7-blocking but S8-blocking.
@@ -147,30 +166,34 @@
 
 ## Files changed this session
 
-```
-M  ROADMAP.md                                     (v0.5 → v0.7)
-M  docs/SESSION_HANDOFF.md                        (overwritten with both-pass narrative)
-M  docs/design/02-architecture.md                 (v0.5 → v0.7; §13 has both v0.6 build-fix and v0.7 post-build entries)
+**Commit 1 — `feat: session 6 — green build + post-build polish + custom duration α` (3d5839a)**
 
-# Build green
-M  Sources/Intents/AwakeIntents.swift             (static var → static let; (1, 24*60) → (1, 1440))
-M  Sources/Triggers/WiFiTrigger.swift             (first-OFF silence guard)
-M  Sources/Triggers/FocusTrigger.swift            (first-OFF silence guard)
-M  Tests/AppTriggerTests.swift                    (XCTAssertNil await → do{} block; 4 sites)
-M  Tests/CalendarTriggerTests.swift               (XCTAssertNil await → do{} block; 1 site)
-M  Tests/FocusTriggerTests.swift                  (XCTAssertNil await → do{} block; 3 sites)
-M  Tests/WiFiTriggerTests.swift                   (XCTAssertNil await → do{} block; 6 sites)
+Already documented in the previous version of this file; covers build green (4 fixes + 14 test sites), `SettingsWindowController`, `NSColor`-based dynamic accent + cupStroke, `DurationPickerRow` polish, divider/Turn-off/footer polish, `CustomDurationRow`. ROADMAP v0.5 → v0.7, 02-architecture v0.5 → v0.7.
 
-# Post-build hardening + design polish + custom duration
-M  Resources/Assets.xcassets/AccentColor.colorset/Contents.json  (light + dark variants)
-M  Sources/App/LatteApp.swift                     (removed Settings { } scene)
-M  Sources/UI/MenuBar/MenuBarRoot.swift           (calls SettingsWindowController; custom row integration; @EnvironmentObject)
-M  Sources/UI/MenuBar/DurationPickerRow.swift     (hover state + caramel accent bar)
-M  Sources/UI/Theme/Theme.swift                   (+import AppKit; NSColor dynamic accentAwake; cupStroke)
-M  Sources/UI/Components/CoffeeCupView.swift      (strokes → cupStroke; liquid → accentAwake)
-A  Sources/UI/MenuBar/CustomDurationRow.swift     (inline expandable Stepper + Start)
-A  Sources/UI/Settings/SettingsWindowController.swift  (NSWindow + NSHostingController singleton)
+**Commit 2 — `feat: coffee tone customization — 5 presets + Settings preview` (this commit)**
+
 ```
+M  ROADMAP.md                                     (v0.7 → v0.8)
+M  docs/SESSION_HANDOFF.md                        (this file)
+M  docs/design/02-architecture.md                 (v0.7 → v0.8; §13 coffee-tone entry)
+
+A  Sources/UI/Theme/CoffeeAccent.swift            (5-case enum + sRGB matrix + dynamic NSColor)
+M  Sources/Core/SettingsStore.swift               (+ SettingsKey.coffeeAccent)
+M  Sources/App/AppEnvironment.swift               (+ @Published coffeeAccent mirror)
+M  Sources/UI/Components/CoffeeCupView.swift      (+ liquidColor parameter)
+M  Sources/UI/MenuBar/HeaderView.swift            (passes environment.coffeeAccent.color)
+M  Sources/UI/MenuBar/DurationPickerRow.swift     (accent bar/checkmark via env)
+M  Sources/UI/MenuBar/CustomDurationRow.swift     (accent via env)
+M  Sources/UI/Settings/GeneralTab.swift           (Preview row + Coffee tone Picker; status dot via env)
+M  Sources/UI/Settings/AboutTab.swift             (hero cup liquidColor via env)
+M  Sources/UI/Settings/TriggersTab.swift          (voting indicator + subtitle accent via env)
+
+A  Tests/CoffeeAccentTests.swift                  (12 new tests)
+M  Tests/AppEnvironmentTests.swift                (+5 tests for coffeeAccent mirror)
+M  Tests/SettingsStoreTests.swift                 (added latte.coffeeAccent to required-keys list)
+```
+
+`Latte.xcodeproj/` is regenerated from `project.yml` per session via `xcodegen generate`; ignored via `.gitignore` (`*.xcodeproj`).
 
 `Latte.xcodeproj/` is regenerated from `project.yml` per session via `xcodegen generate`; ignored via `.gitignore` (`*.xcodeproj`).
 

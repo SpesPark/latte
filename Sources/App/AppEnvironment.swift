@@ -16,6 +16,16 @@ public final class AppEnvironment: ObservableObject {
         }
     }
 
+    /// User-selected coffee accent tone. Mirrors `SettingsKey.coffeeAccent`.
+    /// Drives the menu-bar accent bar, checkmark, cup liquid, and Settings
+    /// status dot — change is reflected instantly in every dependent view.
+    @Published public var coffeeAccent: CoffeeAccent {
+        didSet {
+            guard coffeeAccent != oldValue else { return }
+            settings.setString(coffeeAccent.rawValue, for: .coffeeAccent)
+        }
+    }
+
     public init(settings: SettingsStore = UserDefaultsSettingsStore()) {
         self.settings = settings
         // Use AwakeManager.shared so AppIntents (out-of-process) and the in-process app
@@ -23,6 +33,7 @@ public final class AppEnvironment: ObservableObject {
         self.manager = AwakeManager.shared
         self.coordinator = TriggerCoordinator(awakeManager: AwakeManager.shared, settings: settings)
         self.menuBarIconStyle = MenuBarIconStyle.decode(settings.string(.menuBarIconStyle))
+        self.coffeeAccent = CoffeeAccent.decode(settings.string(.coffeeAccent))
         registerDefaultTriggers()
     }
 
