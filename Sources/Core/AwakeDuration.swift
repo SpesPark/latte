@@ -1,14 +1,11 @@
 import Foundation
 
-enum AwakeDuration: Hashable, Identifiable {
+public enum AwakeDuration: Equatable, Hashable, Sendable {
     case minutes(Int)
     case hours(Int)
     case indefinite
 
-    var id: String { label }
-
-    /// Returns nil for indefinite.
-    var seconds: TimeInterval? {
+    public var seconds: TimeInterval? {
         switch self {
         case .minutes(let m): return TimeInterval(m * 60)
         case .hours(let h): return TimeInterval(h * 3600)
@@ -16,7 +13,7 @@ enum AwakeDuration: Hashable, Identifiable {
         }
     }
 
-    var label: String {
+    public var label: String {
         switch self {
         case .minutes(let m): return "\(m) minutes"
         case .hours(let h): return h == 1 ? "1 hour" : "\(h) hours"
@@ -24,15 +21,9 @@ enum AwakeDuration: Hashable, Identifiable {
         }
     }
 
-    var symbol: String {
-        switch self {
-        case .minutes: return "timer"
-        case .hours: return "clock"
-        case .indefinite: return "infinity"
-        }
-    }
+    public var isFinite: Bool { seconds != nil }
 
-    static let presets: [AwakeDuration] = [
+    public static let presets: [AwakeDuration] = [
         .minutes(5),
         .minutes(15),
         .minutes(30),

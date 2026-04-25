@@ -1,0 +1,19 @@
+import Foundation
+import os
+
+public enum LatteLog {
+    public static let subsystem = "com.example.latte"
+
+    public static func logger(_ category: String) -> Logger {
+        Logger(subsystem: subsystem, category: category)
+    }
+
+    public static let awake = logger("awake")
+    public static let triggers = logger("triggers")
+    public static let calendar = logger("trigger.calendar")
+    public static let app = logger("trigger.app")
+    public static let wifi = logger("trigger.wifi")
+    public static let focus = logger("trigger.focus")
+    public static let intents = logger("intents")
+    public static let ui = logger("ui")
+}

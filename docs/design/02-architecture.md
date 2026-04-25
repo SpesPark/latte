@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Document version** | 0.2 |
+| **Document version** | 0.3 |
 | **Status** | Approved (design phase closed at session 2) |
 | **Resolves Open Questions** | OQ-05 (module boundaries), OQ-06 (Observable vs ObservableObject) |
 | **Depends on** | [01-PRD.md](01-PRD.md) |
@@ -468,7 +468,9 @@ What is **explicitly not** designed for now (deferred until iOS app is real):
 
 ## 10. Skeleton ↔ this architecture: gap list
 
-The current `Sources/` skeleton (from session 1's earlier work) has a different folder layout. Migration in session 3 will:
+> **Status (session 3 close)**: The migration described below is **complete**. `Sources/` and `Tests/` now match the target layout. The `current → target` mapping is preserved as historical reference.
+
+The current `Sources/` skeleton (from session 1's earlier work) had a different folder layout. Migration in session 3:
 
 | Current | Target |
 |---|---|
@@ -486,7 +488,7 @@ The current `Sources/` skeleton (from session 1's earlier work) has a different 
 | (none) | `Sources/Triggers/TriggerCoordinator.swift` (new) |
 | (none) | `Sources/UI/Theme/Theme.swift` (new) |
 
-This is the work for **session 3** (Phase 1.0 implementation).
+This is the work for **session 3** (Phase 1.0 implementation). **Completed 2026-04-25.**
 
 ---
 
@@ -530,6 +532,7 @@ Remaining Open Questions (status as of session 2):
 |---|---|---|
 | 0.1 | 2026-04-25 | Initial draft (session 1) |
 | 0.2 | 2026-04-25 | Session 2: marked OQ-01 ~ OQ-04 resolved with cross-references; status flipped to Approved; sign-off checklist confirmed |
+| 0.3 | 2026-04-25 | Session 3: §10 skeleton-rewrite gap marked complete; no contract changes |
 
 ---
 

@@ -412,6 +412,7 @@ App ships to App Store when **all** of the following are true:
 |---|---|---|
 | 0.1 | 2026-04-25 | Initial draft (session 1) |
 | 0.2 | 2026-04-25 | Session 2: marked OQ-01 ~ OQ-04 resolved with cross-references to 03/04 docs; status flipped to Approved; sign-off checklist confirmed |
+| 0.2.1 | 2026-04-25 | Session 3 close: Phase 1.0 implementation completed in `Sources/`; no PRD content changes (entry recorded for traceability) |
 
 ---
 

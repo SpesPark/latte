@@ -1,76 +1,67 @@
-import EventKit
 import Foundation
-import os.log
 
-/// Phase A scaffolding: keeps the Mac awake during in-progress calendar events.
-///
-/// Implementation plan:
-/// 1. Request `EKEventStore` full access.
-/// 2. Subscribe to `.EKEventStoreChanged` notifications.
-/// 3. Every minute (or on change), query events that are happening "now"
-///    (`predicateForEvents(withStart:end:calendars:)`).
-/// 4. If at least one event is in progress, call `awake.activate(for: .indefinite)`.
-///    When all events end, deactivate.
 @MainActor
-final class CalendarTrigger: Trigger {
+public final class CalendarTrigger: Trigger {
 
-    let id = "calendar"
-    let name = "Calendar Events"
+    public let id = "calendar"
+    public let displayName = "Calendar events"
+    public let symbol = "calendar"
+    public let requiresPermission = true
 
-    private static let logger = Logger(subsystem: "com.example.caffeinated", category: "CalendarTrigger")
-
-    var isEnabled: Bool = false {
-        didSet { isEnabled ? start() : stop() }
+    public var isEnabled: Bool {
+        get { settings.bool(.calendarTriggerEnabled, default: false) }
+        set { settings.setBool(newValue, for: .calendarTriggerEnabled) }
     }
 
-    private let store = EKEventStore()
-    private weak var awakeManager: AwakeManager?
-    private var observer: NSObjectProtocol?
-    private var pollTimer: Timer?
+    public private(set) var permissionStatus: TriggerPermissionStatus = .notDetermined
 
-    init(awakeManager: AwakeManager) {
-        self.awakeManager = awakeManager
+    public let voteStream: AsyncStream<TriggerVote>
+    private let continuation: AsyncStream<TriggerVote>.Continuation
+
+    private let settings: SettingsStore
+    private let logger = LatteLog.calendar
+
+    public init(settings: SettingsStore) {
+        self.settings = settings
+        let (stream, continuation) = AsyncStream<TriggerVote>.makeStream()
+        self.voteStream = stream
+        self.continuation = continuation
     }
 
-    /// Requests full calendar access (macOS 14+) with a fallback for macOS 13.
-    func requestAccess() async -> Bool {
-        if #available(macOS 14, *) {
-            do {
-                return try await store.requestFullAccessToEvents()
-            } catch {
-                Self.logger.error("Calendar access denied: \(error.localizedDescription)")
-                return false
-            }
-        } else {
-            return await withCheckedContinuation { continuation in
-                store.requestAccess(to: .event) { granted, _ in
-                    continuation.resume(returning: granted)
-                }
-            }
-        }
+    public func start() async {
+        // Real EventKit wiring lands in session 4.
+        logger.info("CalendarTrigger.start (stub)")
     }
 
-    func start() {
-        // TODO Phase A:
-        // - Subscribe to .EKEventStoreChanged
-        // - Schedule a 60s poll timer that checks current events
-        // - On any in-progress event, call awakeManager?.activate(for: .indefinite)
-        Self.logger.info("CalendarTrigger.start() — not yet implemented")
+    public func stop() {
+        logger.info("CalendarTrigger.stop (stub)")
+        continuation.finish()
     }
 
-    func stop() {
-        if let observer {
-            NotificationCenter.default.removeObserver(observer)
-            self.observer = nil
-        }
-        pollTimer?.invalidate()
-        pollTimer = nil
-        Self.logger.info("CalendarTrigger.stop()")
+    public func requestPermissionIfNeeded() async -> Bool {
+        // Real EKEventStore.requestFullAccessToEvents lands in session 4.
+        return false
+    }
+}
+
+public extension SettingsStore {
+    var calendarTriggerCalendarIDs: [String] {
+        get { decodeStringArray(.calendarTriggerCalendarIDs) }
+        set { encodeStringArray(newValue, for: .calendarTriggerCalendarIDs) }
     }
 
-    deinit {
-        if let observer {
-            NotificationCenter.default.removeObserver(observer)
-        }
+    var calendarTriggerExcludeAllDay: Bool {
+        get { bool(.calendarTriggerExcludeAllDay, default: true) }
+        set { setBool(newValue, for: .calendarTriggerExcludeAllDay) }
+    }
+
+    var calendarTriggerLeadTimeMinutes: Int {
+        get { clampedInteger(.calendarTriggerLeadTimeMinutes, default: 0, range: 0...15) }
+        set { setInteger(max(0, min(15, newValue)), for: .calendarTriggerLeadTimeMinutes) }
+    }
+
+    var calendarTriggerTrailingMinutes: Int {
+        get { clampedInteger(.calendarTriggerTrailingMinutes, default: 0, range: 0...15) }
+        set { setInteger(max(0, min(15, newValue)), for: .calendarTriggerTrailingMinutes) }
     }
 }
