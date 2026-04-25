@@ -2,10 +2,11 @@
 
 | Field | Value |
 |---|---|
-| **Document version** | 0.1 |
-| **Status** | Draft (awaiting review) |
+| **Document version** | 0.2 |
+| **Status** | Approved (design phase closed at session 2) |
 | **Resolves Open Questions** | OQ-05 (module boundaries), OQ-06 (Observable vs ObservableObject) |
-| **Depends on** | 01-PRD.md |
+| **Depends on** | [01-PRD.md](01-PRD.md) |
+| **Successor docs** | [03-state-machine.md](03-state-machine.md), [04-data-model.md](04-data-model.md) |
 | **Last updated** | 2026-04-25 |
 
 ---
@@ -496,16 +497,16 @@ This is the work for **session 3** (Phase 1.0 implementation).
 | OQ-05 (module boundaries — folders or SPM?) | **Resolved**: folders for v1; extract `Core/` to SPM in Phase 2 |
 | OQ-06 (`@Observable` vs `ObservableObject`) | **Resolved**: `ObservableObject` for v1; `@Observable` deferred to post-macOS-13-deprecation |
 
-Remaining Open Questions (to be resolved in 03 / 04):
+Remaining Open Questions (status as of session 2):
 
-| ID | Resolves in |
+| ID | Status |
 |---|---|
-| OQ-01, OQ-02 (trigger priority, manual vs trigger conflict) | 03-state-machine.md |
-| OQ-03, OQ-04 (UserDefaults vs SwiftData; migration) | 04-data-model.md |
-| OQ-07 (onboarding) | 06-ui-spec.md |
-| OQ-08 (app icon direction) | 06-ui-spec.md |
-| OQ-09 (App Store category) | 10-release-plan.md |
-| OQ-10 (Korean copy tone) | 11-localization.md |
+| OQ-01, OQ-02 (trigger priority, manual vs trigger conflict) | ✅ **Resolved (S2)** in [03-state-machine.md](03-state-machine.md) |
+| OQ-03, OQ-04 (UserDefaults vs SwiftData; migration) | ✅ **Resolved (S2)** in [04-data-model.md](04-data-model.md) |
+| OQ-07 (onboarding) | ⚪ Deferred to 06-ui-spec.md |
+| OQ-08 (app icon direction) | ⚪ Deferred to 06-ui-spec.md |
+| OQ-09 (App Store category) | ⚪ Deferred to 10-release-plan.md |
+| OQ-10 (Korean copy tone) | ⚪ Deferred to 11-localization.md |
 
 ---
 
@@ -527,14 +528,17 @@ Remaining Open Questions (to be resolved in 03 / 04):
 
 | Version | Date | Changes |
 |---|---|---|
-| 0.1 | 2026-04-25 | Initial draft |
+| 0.1 | 2026-04-25 | Initial draft (session 1) |
+| 0.2 | 2026-04-25 | Session 2: marked OQ-01 ~ OQ-04 resolved with cross-references; status flipped to Approved; sign-off checklist confirmed |
 
 ---
 
-## 14. Sign-off Checklist (before moving to 03-state-machine.md)
+## 14. Sign-off Checklist
 
-- [ ] Owner accepts module/folder structure (§3)
-- [ ] Owner accepts ObservableObject decision (§5.2)
-- [ ] Owner accepts no-third-party-deps stance (§7.2)
-- [ ] Owner accepts the trigger vote-stream pattern over direct manager calls (§4.4–4.5)
-- [ ] Owner agrees with the gap list in §10 (rewrite work in session 3)
+- [x] Owner accepts module/folder structure (§3)
+- [x] Owner accepts ObservableObject decision (§5.2)
+- [x] Owner accepts no-third-party-deps stance (§7.2)
+- [x] Owner accepts the trigger vote-stream pattern over direct manager calls (§4.4–4.5)
+- [x] Owner agrees with the gap list in §10 (rewrite work in session 3)
+
+Approved 2026-04-25 (session 2 close). Subsequent edits require a version bump and a note in §13.

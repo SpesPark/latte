@@ -5,11 +5,11 @@
 | **Product name** | Latte |
 | **Working folder** | `Caffeinated-Clone/` (will rename to `Latte/` before first commit-push) |
 | **Bundle identifier** | `com.example.latte` (placeholder — replace with owner's reverse-domain) |
-| **Document version** | 0.1 |
-| **Status** | Draft (awaiting review) |
+| **Document version** | 0.2 |
+| **Status** | Approved (design phase closed at session 2) |
 | **Owner** | Project owner |
 | **Last updated** | 2026-04-25 |
-| **Related docs** | 02-architecture.md (next), 03-state-machine.md, 04-data-model.md |
+| **Related docs** | [02-architecture.md](02-architecture.md), [03-state-machine.md](03-state-machine.md), [04-data-model.md](04-data-model.md) |
 
 ---
 
@@ -372,24 +372,22 @@ App ships to App Store when **all** of the following are true:
 
 ---
 
-## 11. Open Questions (to resolve in 02–04 docs and pre-launch)
+## 11. Open Questions (status as of session 2)
 
-These are intentionally deferred to subsequent design docs:
+| ID | Question | Resolves in | Status |
+|---|---|---|---|
+| OQ-01 | What's the priority order when multiple triggers are active? | [03-state-machine.md §5.1–5.2](03-state-machine.md) | ✅ **Resolved (S2)** — any-OR aggregation + 60 s cool-down |
+| OQ-02 | How does manual toggle interact with active triggers? | [03-state-machine.md §5.3](03-state-machine.md) | ✅ **Resolved (S2)** — 5 min snooze on manual-OFF; manual-ON-during-trigger is no-op |
+| OQ-03 | Where do trigger configs live — UserDefaults or SwiftData? | [04-data-model.md §2.1](04-data-model.md) | ✅ **Resolved (S2)** — UserDefaults for v1 |
+| OQ-04 | Migration strategy from UserDefaults → SwiftData for Phase 2 | [04-data-model.md §2.2](04-data-model.md) | ✅ **Resolved (S2)** — first-launch copy, fallback during transition |
+| OQ-05 | Module boundaries — `Triggers/` SPM package or folder? | [02-architecture.md §3.1, §3.3](02-architecture.md) | ✅ **Resolved (S1)** — folders for v1; SPM extraction in Phase 2 |
+| OQ-06 | `AwakeManager` Combine `@Published` vs `@Observable`? | [02-architecture.md §5.2](02-architecture.md) | ✅ **Resolved (S1)** — `ObservableObject` for v1 |
+| OQ-07 | Onboarding screen design and copy | 06-ui-spec.md (future) | ⚪ Deferred |
+| OQ-08 | App icon visual direction — minimal mug, abstract steam, or character? | 06-ui-spec.md (future) | ⚪ Deferred |
+| OQ-09 | App Store category — Utilities or Productivity? | 10-release-plan.md (future) | ⚪ Deferred |
+| OQ-10 | Korean copy tone — formal (-습니다) or casual (-요)? | 11-localization.md (future) | ⚪ Deferred |
 
-| ID | Question | Resolves in |
-|---|---|---|
-| OQ-01 | What's the priority order when multiple triggers are active? | 03-state-machine.md |
-| OQ-02 | How does manual toggle interact with active triggers? (e.g., user turns OFF while calendar trigger is requesting ON) | 03-state-machine.md |
-| OQ-03 | Where do trigger configs live — UserDefaults or SwiftData? | 04-data-model.md |
-| OQ-04 | Migration strategy from UserDefaults → SwiftData when Phase 2 needs iCloud sync | 04-data-model.md |
-| OQ-05 | Module boundaries — is `Triggers/` its own SPM package or in-app folder? | 02-architecture.md |
-| OQ-06 | Should `AwakeManager` use Combine `@Published` or migrate to `@Observable`? (macOS 14+ only) | 02-architecture.md |
-| OQ-07 | Onboarding screen design and copy | 06-ui-spec.md |
-| OQ-08 | App icon visual direction — minimal mug, abstract steam, or character? | 06-ui-spec.md |
-| OQ-09 | App Store category — Utilities or Productivity? | 10-release-plan.md |
-| OQ-10 | Korean copy tone — formal (-습니다) or casual (-요)? | 11-localization.md |
-
-These are tracked here so future docs explicitly close each one.
+**Design phase status as of session 2**: OQ-01 ~ OQ-06 closed. Remaining items (OQ-07 ~ OQ-10) are content/marketing decisions and intentionally do **not** block code work in session 3.
 
 ---
 
@@ -412,14 +410,17 @@ These are tracked here so future docs explicitly close each one.
 
 | Version | Date | Changes |
 |---|---|---|
-| 0.1 | 2026-04-25 | Initial draft |
+| 0.1 | 2026-04-25 | Initial draft (session 1) |
+| 0.2 | 2026-04-25 | Session 2: marked OQ-01 ~ OQ-04 resolved with cross-references to 03/04 docs; status flipped to Approved; sign-off checklist confirmed |
 
 ---
 
-## 14. Sign-off Checklist (before moving to 02-architecture.md)
+## 14. Sign-off Checklist
 
-- [ ] Owner has read sections 1–6 and confirms scope
-- [ ] Owner has read section 7 (NFRs) and accepts targets
-- [ ] Owner has read section 9 (risks) and accepts mitigation plans
-- [ ] Owner agrees with Open Questions list — nothing missing that needs answering before architecture
-- [ ] Decisions Log accurately reflects current understanding
+- [x] Owner has read sections 1–6 and confirms scope
+- [x] Owner has read section 7 (NFRs) and accepts targets
+- [x] Owner has read section 9 (risks) and accepts mitigation plans
+- [x] Owner agrees with Open Questions list — nothing missing that needs answering before architecture
+- [x] Decisions Log accurately reflects current understanding
+
+Approved 2026-04-25 (session 2 close). Subsequent edits require a version bump and a note in §13.

@@ -2,9 +2,9 @@
 
 > Multi-session execution plan for Latte (working folder: `Caffeinated-Clone/`).
 >
-> **Current phase**: Design (Tier 1 docs)
-> **Current session**: 1 of ~10
-> **Next session entry point**: see [docs/SESSION_HANDOFF.md](docs/SESSION_HANDOFF.md)
+> **Current phase**: Design phase **closed** at session 2; ready for code rewrite
+> **Current session**: 2 of ~10 (complete)
+> **Next session entry point**: see [docs/SESSION_HANDOFF.md](docs/SESSION_HANDOFF.md) — Session 3 = Phase 1.0 implementation
 
 ---
 
@@ -27,9 +27,9 @@ Each row is one focused session. Sessions are sequential — earlier ones produc
 
 | # | Session theme | Goals | Deliverables | Status |
 |---|---|---|---|---|
-| 1 | **Foundation: PRD + Architecture** | Lock product scope, lock module/layer structure | `01-PRD.md`, `02-architecture.md`, `ROADMAP.md`, `SESSION_HANDOFF.md` | 🟡 In progress |
-| 2 | **Design close-out** | Resolve all Open Questions before code | `03-state-machine.md`, `04-data-model.md` | ⚪ Pending |
-| 3 | **Phase 1.0 implementation** | Rewrite Sources to match architecture; implement MVP features | All `Sources/**/*.swift`, replaces current skeleton | ⚪ Pending |
+| 1 | **Foundation: PRD + Architecture** | Lock product scope, lock module/layer structure | `01-PRD.md`, `02-architecture.md`, `ROADMAP.md`, `SESSION_HANDOFF.md` | 🟢 Done |
+| 2 | **Design close-out** | Resolve all Open Questions before code | `03-state-machine.md`, `04-data-model.md`, sign-off on 01+02 | 🟢 Done |
+| 3 | **Phase 1.0 implementation** | Rewrite Sources to match architecture; implement MVP features | All `Sources/**/*.swift`, replaces current skeleton | 🟡 Next |
 | 4 | **Phase 1.A — Triggers** | Calendar + App + Wi-Fi + Focus triggers fully implemented | `Sources/Triggers/*.swift`, integration tests | ⚪ Pending |
 | 5 | **Phase 1.C — Design polish** | Coffee cup animation, Liquid Glass + fallback, app icon spec | UI files, asset catalog updates | ⚪ Pending |
 | 6 | **Build verification** *(needs Xcode installed)* | First successful build, fix compile errors, run tests | Working `.app` bundle, all tests passing | 🔴 Blocked: Xcode |
@@ -113,3 +113,4 @@ The HANDOFF doc is **always overwritten** at the end of each session. The ROADMA
 | Version | Date | Notes |
 |---|---|---|
 | 0.1 | 2026-04-25 | Initial draft (session 1) |
+| 0.2 | 2026-04-25 | Session 2 complete; design phase closed; sessions 1–2 marked done, session 3 marked next |
