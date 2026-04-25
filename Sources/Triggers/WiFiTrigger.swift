@@ -160,6 +160,12 @@ public final class WiFiTrigger: Trigger {
         }
     }
 
+    /// Currently joined SSID (or `nil` if disconnected / unauthorized).
+    /// Exposed for the Settings UI's "Add current network" picker.
+    public var currentSSID: String? {
+        source.currentSSID
+    }
+
     /// Test seam — evaluate current SSID against settings and emit if vote changed.
     public func evaluate() {
         guard isEnabled else { return }

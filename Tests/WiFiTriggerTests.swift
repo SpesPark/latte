@@ -188,6 +188,17 @@ final class WiFiTriggerTests: XCTestCase {
         XCTAssertNil(after)
     }
 
+    func testCurrentSSIDPassThrough() {
+        let settings = InMemorySettingsStore()
+        let source = MockWiFiSource(currentSSID: "HomeNet")
+        let trigger = WiFiTrigger(settings: settings, source: source)
+        XCTAssertEqual(trigger.currentSSID, "HomeNet")
+        source.currentSSID = nil
+        XCTAssertNil(trigger.currentSSID)
+        source.currentSSID = "Cafe-WiFi"
+        XCTAssertEqual(trigger.currentSSID, "Cafe-WiFi")
+    }
+
     func testRequestPermissionIfNeededDelegatesToSource() async {
         let settings = InMemorySettingsStore()
 

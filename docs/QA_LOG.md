@@ -78,6 +78,21 @@ Build location after S7 test run: `~/Library/Developer/Xcode/DerivedData/Latte-*
 - [ ] Toggling a trigger OFF does not re-prompt for permission.
 - [ ] Vote indicator (live dot/text) reflects coordinator's last vote per trigger.
 
+#### Per-trigger configuration (Phase 1.5.A — added in S7.5)
+
+- [ ] Tapping a trigger row expands the disclosure and reveals the per-trigger config form.
+- [ ] Toggling a trigger ON auto-expands its config form (so the user sees what they just enabled).
+- [ ] **App** trigger: bundle-ID list shows curated defaults (Zoom / Teams / Webex / Discord / Slack) plus any user additions.
+  - [ ] "Add" button is disabled for empty input and for invalid bundle IDs (e.g. with spaces).
+  - [ ] "Add from running apps" disclosure shows actual running bundle IDs that aren't already in the list. Plus button adds them.
+  - [ ] Minus button removes a bundle ID, change persists across quit + relaunch.
+- [ ] **Wi-Fi** trigger: mode picker (on-list vs inverse) live-updates `wifiTriggerInverseLogic`.
+  - [ ] "Add" button rejects SSIDs longer than 32 UTF-8 bytes and rejects duplicates.
+  - [ ] If currently joined to a non-listed network, "Add current network: <ssid>" button appears and adds it on tap.
+  - [ ] Empty list under inverse mode displays the no-op explanation copy.
+- [ ] **Calendar** trigger: lead/trail steppers clamp to 0–15 (UI Stepper enforces); "Exclude all-day events" toggle defaults to ON.
+- [ ] **Focus** trigger: shows the explanatory paragraph about INFocusStatusCenter limitation; no other UI.
+
 #### Quit & power assertion hygiene
 
 - [ ] Quit via menu → process exits cleanly.

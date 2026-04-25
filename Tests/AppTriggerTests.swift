@@ -137,4 +137,17 @@ final class AppTriggerTests: XCTestCase {
         XCTAssertTrue(granted)
         XCTAssertEqual(trigger.permissionStatus, .notRequired)
     }
+
+    func testRunningBundleIDsPassThrough() {
+        let (trigger, source, _) = makeFixture(running: [
+            "us.zoom.xos",
+            "com.apple.Safari",
+            "com.microsoft.teams2"
+        ])
+        XCTAssertEqual(Set(trigger.runningBundleIDs), Set(source.runningBundleIDs))
+
+        // Lifecycle changes propagate.
+        source.runningBundleIDs.append("com.tinyspeck.slackmacgap")
+        XCTAssertTrue(trigger.runningBundleIDs.contains("com.tinyspeck.slackmacgap"))
+    }
 }

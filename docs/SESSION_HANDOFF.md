@@ -8,10 +8,10 @@
 
 | Field | Value |
 |---|---|
-| **Session #** | 7 of ~10 |
-| **Theme** | Test coverage + QA gate |
+| **Session #** | 7 + 7.5 of ~10 (S7 + Phase 1.5.A bundled into one calendar day) |
+| **Theme** | Test coverage + QA gate (S7); Per-trigger config UI (S7.5) |
 | **Date** | 2026-04-26 |
-| **Status** | ✅ Completed. 227/227 tests passing. All `Sources/Core/**` and `Sources/Triggers/**` files at ≥80% line coverage (lowest 82.8%, several at 100%) once live-system adapter classes (`EKCalendarSource`, `NSWorkspaceSource`, `INFocusSource`, `CoreWLANSource`) are excluded — that exemption is now formally documented in `02-architecture.md` §13 (v0.9) and `docs/QA_LOG.md`. PowerAssertion was promoted off the exemption list because IOKit `IOPMAssertion*` works in any test process without entitlements. |
+| **Status** | ✅ Completed. 229/229 tests passing. S7 cleared the 80% coverage gate on `Sources/Core/**` and `Sources/Triggers/**` (live-system adapter classes excluded; rationale codified in `02-architecture.md` §13 v0.9 + `docs/QA_LOG.md`). S7.5 landed Phase 1.5.A — Settings → Triggers now offers an inline configuration form per trigger (`DisclosureGroup`-driven), reaching the user-facing parity gap that S5 had explicitly deferred. EKCalendar picker and per-Focus selection remain deferred as Phase 1.5.B / Apple-API-blocked respectively. |
 
 ### What was accomplished
 
@@ -54,7 +54,21 @@
 
 ### Test count
 
-178 → 195 → **227** (+32 net since S6 close: 12 SettingsStore parametrized doubles, 6 PowerAssertion, 8 WiFi, 6 Calendar). All passing.
+178 → 195 → 227 → **229** (+34 net since S6 close: 12 SettingsStore parametrized doubles, 6 PowerAssertion, 8 WiFi, 6 Calendar in S7; +1 each for `AppTrigger.runningBundleIDs` and `WiFiTrigger.currentSSID` passthrough in S7.5). All passing.
+
+### S7.5 added (Phase 1.5.A — per-trigger config UI)
+
+5. **Trigger passthrough accessors** — `AppTrigger.runningBundleIDs: [String]` (delegates to `WorkspaceSource.runningBundleIDs`) and `WiFiTrigger.currentSSID: String?` (delegates to `WiFiSource.currentSSID`). Lets the Settings UI offer "Add from running apps" / "Add current network" without reaching past the trigger's public surface.
+
+6. **TriggersTab rewrite** — each row is now a `DisclosureGroup`. Tapping the row expands a per-trigger config form, dispatched on `trigger.id`:
+   - **`AppTriggerConfigForm`** — bundle-ID list with per-row remove, free-form text-field add (sanitized via `AppTriggerDefaults.sanitize`), and a nested `DisclosureGroup` showing current running apps not yet in the watched list.
+   - **`WiFiTriggerConfigForm`** — radio-style mode picker (on-list vs inverse), SSID list with per-row remove, manual add (validated to ≤32 UTF-8 bytes), and a one-tap "Add current network: <ssid>" button when a current SSID exists and isn't already on the list.
+   - **`CalendarTriggerConfigForm`** — lead/trail steppers (0–15 min) + "Exclude all-day events" toggle. Inline note explains that calendar-list selection ships in Phase 1.5.B (needs EventKit live access).
+   - **`FocusTriggerConfigInfo`** — informational paragraph; `INFocusStatusCenter` doesn't expose stable per-Focus IDs to third parties in v1.
+
+7. **Footer copy** updated from "Per-trigger configuration … lands in a future update" to a description of the new capability.
+
+S7.5 architectural note: the `Trigger` protocol stays untouched. The two new accessors are concrete-class extensions, not protocol requirements — `TriggerCoordinator` and other consumers see no change.
 
 ### What's NOT done (intentional)
 
@@ -75,13 +89,15 @@
 
 - **`Theme.Colors.accentAwake` static alias** still lingering as a 1-line forwarder to `CoffeeAccent.default.color`. Drop it in S10 cleanup pass; not worth the diff churn now.
 - **`docs/QA_LOG.md` smoke checklist is unchecked** — see above. This is the only S7→S8 prerequisite.
-- **`Per-trigger config UI`** (calendar/bundle/SSID pickers) — still pending from S5; not on S8 path. Likely lands as a Phase 1.5 follow-up.
+- **EKCalendar list picker (Phase 1.5.B)** — Calendar config form ships with steppers + all-day toggle but no calendar-list selection (would need live `EKEventStore.calendars(for:)` + permission grant). Open as a follow-up; not S8-blocking.
+- **Per-Focus selection** — Apple-API-blocked. Reassess when `INFocusStatusCenter` exposes stable third-party Focus identifiers.
 
 ---
 
 ## Files changed this session
 
 ```
+S7 (commit 8592098):
 A  Tests/PowerAssertionTests.swift
 M  Tests/SettingsStoreTests.swift
 M  Tests/WiFiTriggerTests.swift
@@ -89,8 +105,18 @@ M  Tests/CalendarTriggerTests.swift
 A  docs/QA_LOG.md
 M  docs/design/02-architecture.md   (v0.9, §13 entry)
 M  ROADMAP.md                        (v0.9; row 7 → done, row 8 → next)
-M  docs/SESSION_HANDOFF.md           (this file, overwritten for S8)
-~  Latte.xcodeproj                    (gitignored — re-run `xcodegen generate` after adding files)
+M  docs/SESSION_HANDOFF.md
+
+S7.5 (this commit):
+M  Sources/Triggers/AppTrigger.swift          (+ runningBundleIDs accessor)
+M  Sources/Triggers/WiFiTrigger.swift         (+ currentSSID accessor)
+M  Sources/UI/Settings/TriggersTab.swift      (DisclosureGroup rewrite + 4 config forms)
+M  Tests/AppTriggerTests.swift                (+ testRunningBundleIDsPassThrough)
+M  Tests/WiFiTriggerTests.swift               (+ testCurrentSSIDPassThrough)
+M  ROADMAP.md                                 (v0.10)
+M  docs/design/02-architecture.md             (v0.10)
+M  docs/SESSION_HANDOFF.md                    (this file)
+~  Latte.xcodeproj                             (gitignored — re-run `xcodegen generate` after adding files)
 ```
 
 ---

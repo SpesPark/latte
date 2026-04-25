@@ -161,6 +161,13 @@ public final class AppTrigger: Trigger {
 
     public func requestPermissionIfNeeded() async -> Bool { true }
 
+    /// Snapshot of bundle IDs currently running on the system. Used by the
+    /// Settings UI's "Add from running apps" picker so users can configure
+    /// the trigger from real, in-context candidates.
+    public var runningBundleIDs: [String] {
+        source.runningBundleIDs
+    }
+
     private func handleLaunch(bundleID: String, watched: Set<String>) {
         guard watched.contains(bundleID) else { return }
         let wasEmpty = matchingRunning.isEmpty
