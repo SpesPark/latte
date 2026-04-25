@@ -6,21 +6,30 @@ public struct AboutTab: View {
 
     public var body: some View {
         VStack(spacing: Theme.Spacing.lg) {
-            CoffeeCupView(isAwake: true, fillRatio: 0.9)
-                .frame(width: 80, height: 80)
+            Spacer(minLength: Theme.Spacing.lg)
 
-            VStack(spacing: Theme.Spacing.xs) {
-                Text("Latte")
-                    .font(.title2.bold())
-                Text(version)
-                    .font(Theme.Fonts.caption)
+            VStack(spacing: Theme.Spacing.md) {
+                CoffeeCupView(isAwake: true, fillRatio: 0.9)
+                    .frame(width: 80, height: 80)
+
+                VStack(spacing: Theme.Spacing.xs) {
+                    Text("Latte")
+                        .font(Theme.Fonts.title)
+                        .foregroundStyle(.primary)
+                    Text(version)
+                        .font(Theme.Fonts.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Text("Keep your Mac awake when it matters.")
+                    .font(Theme.Fonts.body)
                     .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             }
-
-            Text("Keep your Mac awake when it matters.")
-                .font(Theme.Fonts.body)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+            .padding(.horizontal, Theme.Spacing.xl)
+            .padding(.vertical, Theme.Spacing.lg)
+            .frame(maxWidth: .infinity)
+            .liquidGlassCard()
 
             Spacer()
 

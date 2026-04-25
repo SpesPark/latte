@@ -2,9 +2,9 @@
 
 > Multi-session execution plan for Latte (working folder: `Caffeinated-Clone/`).
 >
-> **Current phase**: Phase 1.A trigger wiring complete (session 4); ready for UI polish
-> **Current session**: 4 of ~10 (complete)
-> **Next session entry point**: see [docs/SESSION_HANDOFF.md](docs/SESSION_HANDOFF.md) — Session 5 = Phase 1.C design polish
+> **Current phase**: Phase 1.C design polish complete (session 5); ready for build verification
+> **Current session**: 5 of ~10 (complete)
+> **Next session entry point**: see [docs/SESSION_HANDOFF.md](docs/SESSION_HANDOFF.md) — Session 6 = Build verification (owner-blocked on Xcode)
 
 ---
 
@@ -31,8 +31,8 @@ Each row is one focused session. Sessions are sequential — earlier ones produc
 | 2 | **Design close-out** | Resolve all Open Questions before code | `03-state-machine.md`, `04-data-model.md`, sign-off on 01+02 | 🟢 Done |
 | 3 | **Phase 1.0 implementation** | Rewrite Sources to match architecture; implement MVP features | All `Sources/**/*.swift`, replaces current skeleton | 🟢 Done |
 | 4 | **Phase 1.A — Triggers** | Calendar + App + Wi-Fi + Focus triggers fully implemented | `Sources/Triggers/*.swift`, integration tests | 🟢 Done |
-| 5 | **Phase 1.C — Design polish** | Coffee cup animation, Liquid Glass + fallback, app icon spec | UI files, asset catalog updates | 🟡 Next |
-| 6 | **Build verification** *(needs Xcode installed)* | First successful build, fix compile errors, run tests | Working `.app` bundle, all tests passing | 🔴 Blocked: Xcode |
+| 5 | **Phase 1.C — Design polish** | Coffee cup animation, Liquid Glass + fallback, app icon spec | UI files, asset catalog updates | 🟢 Done |
+| 6 | **Build verification** *(needs Xcode installed)* | First successful build, fix compile errors, run tests | Working `.app` bundle, all tests passing | 🟡 Next (Xcode-blocked) |
 | 7 | **Test coverage + QA** | ≥80% coverage, manual smoke test on macOS 13/14/15 | Test files, QA log | ⚪ Pending |
 | 8 | **App Store prep** *(needs Dev Program + icon)* | Metadata, screenshots, Privacy Policy, submission | App Store Connect record, GitHub Pages site | 🔴 Blocked: Dev Program, Icon |
 | 9 | **TestFlight beta launch** | Beta build, recruit ≥10 testers | TestFlight build, beta feedback log | ⚪ Pending |
@@ -116,3 +116,4 @@ The HANDOFF doc is **always overwritten** at the end of each session. The ROADMA
 | 0.2 | 2026-04-25 | Session 2 complete; design phase closed; sessions 1–2 marked done, session 3 marked next |
 | 0.3 | 2026-04-25 | Session 3 complete; Phase 1.0 code + tests landed; sessions 1–3 done, session 4 marked next |
 | 0.4 | 2026-04-26 | Session 4 complete; Phase 1.A trigger real wiring + Source DI pattern + tests; sessions 1–4 done, session 5 marked next |
+| 0.5 | 2026-04-26 | Session 5 complete; Phase 1.C design polish — Canvas+TimelineView coffee cup, Liquid Glass card, menu bar icon variants, Settings typography, TriggersTab vote indicator, `05-icon-spec.md`; sessions 1–5 done, session 6 marked next |

@@ -25,8 +25,16 @@ public enum Theme {
     }
 
     public enum Fonts {
+        /// Hero / About-tab title. Use sparingly.
+        public static let title = Font.system(size: 17, weight: .semibold)
+        /// Section title in the menu bar header and Settings sections.
         public static let header = Font.system(size: 14, weight: .semibold)
+        /// Above-body emphasis (Picker labels, secondary actions).
+        public static let subheadline = Font.system(size: 12, weight: .medium)
+        /// Default body text inside the menu bar window and Settings tabs.
         public static let body = Font.system(size: 13, weight: .regular)
+        /// Timestamps, footnotes, "until …" subtitles. Monospaced digits so
+        /// numbers don't jitter as they tick.
         public static let caption = Font.system(size: 11, weight: .regular).monospacedDigit()
     }
 

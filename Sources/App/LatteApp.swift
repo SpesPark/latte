@@ -10,7 +10,7 @@ struct LatteApp: App {
     }
 
     var body: some Scene {
-        MenuBarExtra("Latte", systemImage: "cup.and.saucer.fill") {
+        MenuBarExtra("Latte", systemImage: environment.menuBarIconStyle.symbolName) {
             MenuBarRoot(manager: environment.manager)
                 .environmentObject(environment)
                 .task {

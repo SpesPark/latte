@@ -2,12 +2,12 @@
 
 | Field | Value |
 |---|---|
-| **Document version** | 0.4 |
+| **Document version** | 0.5 |
 | **Status** | Approved (design phase closed at session 2) |
 | **Resolves Open Questions** | OQ-05 (module boundaries), OQ-06 (Observable vs ObservableObject) |
 | **Depends on** | [01-PRD.md](01-PRD.md) |
-| **Successor docs** | [03-state-machine.md](03-state-machine.md), [04-data-model.md](04-data-model.md) |
-| **Last updated** | 2026-04-25 |
+| **Successor docs** | [03-state-machine.md](03-state-machine.md), [04-data-model.md](04-data-model.md), [05-icon-spec.md](05-icon-spec.md) |
+| **Last updated** | 2026-04-26 |
 
 ---
 
@@ -545,6 +545,7 @@ Remaining Open Questions (status as of session 2):
 | 0.2 | 2026-04-25 | Session 2: marked OQ-01 ~ OQ-04 resolved with cross-references; status flipped to Approved; sign-off checklist confirmed |
 | 0.3 | 2026-04-25 | Session 3: §10 skeleton-rewrite gap marked complete; no contract changes |
 | 0.4 | 2026-04-26 | Session 4: §4.4.1 added — documents `*Source` DI pattern that arrived with real EventKit/NSWorkspace/CoreWLAN/INFocusStatusCenter wiring. `Trigger` protocol unchanged. |
+| 0.5 | 2026-04-26 | Session 5: Phase 1.C UI primitives — `CoffeeCupView` (Canvas + TimelineView, pure `CoffeeCupGeometry` for tests), `LiquidGlassModifier` (`.liquidGlassBackground()` + new `.liquidGlassCard()`), `MenuBarIconStyle` enum mirrored on `AppEnvironment` (@Published). UI module folders unchanged from §3.1. Successor doc [05-icon-spec.md](05-icon-spec.md) added (owner-facing icon brief). |
 
 ---
 

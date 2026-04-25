@@ -5,7 +5,7 @@
 | **Product name** | Latte |
 | **Working folder** | `Caffeinated-Clone/` (will rename to `Latte/` before first commit-push) |
 | **Bundle identifier** | `com.example.latte` (placeholder — replace with owner's reverse-domain) |
-| **Document version** | 0.2 |
+| **Document version** | 0.3 |
 | **Status** | Approved (design phase closed at session 2) |
 | **Owner** | Project owner |
 | **Last updated** | 2026-04-25 |
@@ -192,13 +192,13 @@ Phase 2 (Cross-device)       ← iOS/Watch — separate decision after Year 1 da
 
 | ID | Feature | Notes |
 |---|---|---|
-| F-1.C.01 | Refined coffee-cup animation (steam particles, pulse) | Canvas + TimelineView, 60fps |
-| F-1.C.02 | Liquid Glass treatment on macOS 26+ | `#available(macOS 26, *)` branch |
-| F-1.C.03 | Vibrancy fallback on macOS 13~25 | `.background(.ultraThinMaterial)` |
-| F-1.C.04 | App icon (1024×1024, all required sizes) | Hand-designed; NOT default SF Symbol |
-| F-1.C.05 | Custom menu bar icon variants (filled/outline/with-clock) | User picks in Settings |
-| F-1.C.06 | Light/Dark mode polished | Full vibrancy support |
-| F-1.C.07 | Settings window typography pass | `.headline` / `.body` / `.caption` hierarchy |
+| F-1.C.01 | Refined coffee-cup animation (steam particles, pulse) | Canvas + TimelineView, 60fps — **shipped S5** ([CoffeeCupView.swift](../../Sources/UI/Components/CoffeeCupView.swift)) |
+| F-1.C.02 | Liquid Glass treatment on macOS 26+ | `#available(macOS 26, *)` branch — **shipped S5** ([LiquidGlassModifier.swift](../../Sources/UI/Components/LiquidGlassModifier.swift)) |
+| F-1.C.03 | Vibrancy fallback on macOS 13~25 | `.background(.ultraThinMaterial)` — **shipped S5** |
+| F-1.C.04 | App icon (1024×1024, all required sizes) | Hand-designed; NOT default SF Symbol — **spec written S5** ([05-icon-spec.md](05-icon-spec.md)); PNG owner-side |
+| F-1.C.05 | Custom menu bar icon variants (filled / outline / clock) | User picks in Settings — **shipped S5** ([MenuBarIconStyle.swift](../../Sources/UI/MenuBar/MenuBarIconStyle.swift)) |
+| F-1.C.06 | Light/Dark mode polished | Full vibrancy support — **shipped S5** (system semantic colors throughout) |
+| F-1.C.07 | Settings window typography pass | `.title` / `.header` / `.subheadline` / `.body` / `.caption` hierarchy — **shipped S5** ([Theme.swift](../../Sources/UI/Theme/Theme.swift)) |
 
 ### 6.5 Phase 1.QA — Launch prep
 
@@ -413,6 +413,7 @@ App ships to App Store when **all** of the following are true:
 | 0.1 | 2026-04-25 | Initial draft (session 1) |
 | 0.2 | 2026-04-25 | Session 2: marked OQ-01 ~ OQ-04 resolved with cross-references to 03/04 docs; status flipped to Approved; sign-off checklist confirmed |
 | 0.2.1 | 2026-04-25 | Session 3 close: Phase 1.0 implementation completed in `Sources/`; no PRD content changes (entry recorded for traceability) |
+| 0.3   | 2026-04-26 | Session 5: Phase 1.C feature rows F-1.C.01 ~ F-1.C.07 annotated with shipped-in-S5 / spec-only status; `with-clock` variant clarified to "clock" (cup with steam waves); 05-icon-spec.md cross-referenced |
 
 ---
 

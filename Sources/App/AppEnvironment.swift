@@ -7,12 +7,22 @@ public final class AppEnvironment: ObservableObject {
     public let manager: AwakeManager
     public let coordinator: TriggerCoordinator
 
+    /// User-selected menu bar icon variant. Mirrors `SettingsKey.menuBarIconStyle`
+    /// — writing here persists to the underlying `SettingsStore`.
+    @Published public var menuBarIconStyle: MenuBarIconStyle {
+        didSet {
+            guard menuBarIconStyle != oldValue else { return }
+            settings.setString(menuBarIconStyle.rawValue, for: .menuBarIconStyle)
+        }
+    }
+
     public init(settings: SettingsStore = UserDefaultsSettingsStore()) {
         self.settings = settings
         // Use AwakeManager.shared so AppIntents (out-of-process) and the in-process app
         // operate on the same FSM. Re-creating would split state.
         self.manager = AwakeManager.shared
         self.coordinator = TriggerCoordinator(awakeManager: AwakeManager.shared, settings: settings)
+        self.menuBarIconStyle = MenuBarIconStyle.decode(settings.string(.menuBarIconStyle))
         registerDefaultTriggers()
     }
 
