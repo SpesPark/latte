@@ -8,118 +8,122 @@
 
 | Field | Value |
 |---|---|
-| **Session #** | 3 of ~10 |
-| **Theme** | Phase 1.0 implementation — `Sources/` rewrite + tests |
-| **Date** | 2026-04-25 |
-| **Status** | ✅ Completed as planned. Code matches architecture; FSM is cell-by-cell faithful to 03 §7. |
+| **Session #** | 4 of ~10 |
+| **Theme** | Phase 1.A — real trigger wiring (Calendar, App, Wi-Fi, Focus) |
+| **Date** | 2026-04-26 |
+| **Status** | ✅ Completed as planned. All four triggers now back to real system APIs through a `*Source` DI seam. |
 
 ### What was accomplished
 
-1. **Pre-rewrite housekeeping (Step A)**
-   - `project.yml` target renamed `Caffeinated → Latte`. Bundle ID `com.example.caffeinated → com.example.latte`. Tests target `LatteTests`.
-   - `Configuration/Caffeinated.entitlements` → `Configuration/Latte.entitlements` (`git mv`).
-   - `Resources/Info.plist`: `CFBundleDisplayName` and calendar-usage strings updated to "Latte".
-   - All ten skeleton files in `Sources/` and the skeleton `Tests/AwakeManagerTests.swift` deleted.
-   - Folder layout per [02-architecture.md §3.1](design/02-architecture.md) created (`App/`, `Core/`, `Triggers/`, `Intents/`, `UI/MenuBar`, `UI/Settings`, `UI/Components`, `UI/Theme`).
-   - **Filesystem rename of repo root `Caffeinated-Clone/` → `Latte/` deferred** to before-first-push (cosmetic; would invalidate the active session's CWD mid-flight). Tracked under "Known issues / debt" below.
+1. **`Sources/Triggers/CalendarTrigger.swift`**
+   - Added `CalendarSource` protocol (`permissionStatus`, `requestAccess`, `events(in:calendarIDs:)`).
+   - Added `EKCalendarSource` (real EventKit adapter; uses `requestFullAccessToEvents` on macOS 14+, falls back to `requestAccess(to: .event)` on macOS 13).
+   - Added `MockCalendarSource` for tests.
+   - `CalendarTrigger.start()` polls every 60 s by default, computes the active set per event window `[start − leadTime, end + trailingTime]`, and emits ON/OFF only on set transitions. Honors `calendarTriggerCalendarIDs`, `calendarTriggerExcludeAllDay`, and clamped 0–15 min lead/trailing windows from `04 §4.2`.
+   - `pollOnce()` exposed as a test seam so we don't have to spin a real polling task in tests.
 
-2. **`Sources/Core/` (Step B)** — pure-logic, SwiftUI-free per [02 §3.2](design/02-architecture.md)
-   - [`AwakeDuration.swift`](../Sources/Core/AwakeDuration.swift): `.minutes/.hours/.indefinite`, presets matching PRD F-1.0.04 (5m/15m/30m/1h/2h/5h/indefinite).
-   - [`PowerAssertion.swift`](../Sources/Core/PowerAssertion.swift): `PowerAssertionType` protocol + real `PowerAssertion` (IOKit) + `MockPowerAssertion` (records calls).
-   - [`SettingsStore.swift`](../Sources/Core/SettingsStore.swift): `SettingsStore` protocol + complete `SettingsKey` enum from [04 §5](design/04-data-model.md) (21 keys, all `latte.` prefixed) + `UserDefaultsSettingsStore` + `InMemorySettingsStore` + JSON-array helpers + clamped-int validation.
-   - [`Logging.swift`](../Sources/Core/Logging.swift): `LatteLog.{awake,triggers,calendar,app,wifi,focus,intents,ui}` factories on `os.Logger`.
-   - [`AwakeManager.swift`](../Sources/Core/AwakeManager.swift): the FSM. **Pure `AwakeStateMachine.step(state:pendingVotes:input:now:)` step function** with no I/O, returning `(state, pendingVotes, [SideEffect], reason)`. `AwakeManager` (@MainActor) holds state, applies side effects, owns timers as `Task` handles, exposes `@Published` properties, public API (`toggle`, `activate(for:)`, `deactivate()`, `receiveTriggerVote`), `installSignalHandlers()` for SIGINT/SIGTERM/SIGABRT cleanup. **Implements every cell of the 03 §7 transition table verbatim.**
+2. **`Sources/Triggers/AppTrigger.swift`**
+   - Added `WorkspaceSource` protocol with `runningBundleIDs` snapshot + `observeLifecycle(onLaunch:onTerminate:) -> WorkspaceObservation`.
+   - Added `NSWorkspaceSource` (real `NSWorkspace.shared` + `notificationCenter.didLaunchApplicationNotification` / `didTerminateApplicationNotification`).
+   - Added `MockWorkspaceSource` with `simulateLaunch(_:)` / `simulateTerminate(_:)` test helpers.
+   - `AppTrigger.start()` snapshots running apps, intersects with `appTriggerBundleIDs` (sanitized via `AppTriggerDefaults.sanitize`), and emits ON if any are running. Subsequent launches/terminates are diffed against the watched set; ON is emitted only on `empty → non-empty`, OFF only on `non-empty → empty`. Avoids spurious re-emits.
 
-3. **`Sources/Triggers/` (Step C)** — protocol + 4 stubs + coordinator
-   - [`Trigger.swift`](../Sources/Triggers/Trigger.swift): `Trigger` protocol per [02 §4.4](design/02-architecture.md), `TriggerPermissionStatus` enum, `MockTrigger` for tests with `emit(_:)`.
-   - [`TriggerCoordinator.swift`](../Sources/Triggers/TriggerCoordinator.swift): registry, vote-stream consumer, forwards votes to `AwakeManager`, tracks `activeVotes`.
-   - Stubs: [`CalendarTrigger.swift`](../Sources/Triggers/CalendarTrigger.swift), [`AppTrigger.swift`](../Sources/Triggers/AppTrigger.swift), [`WiFiTrigger.swift`](../Sources/Triggers/WiFiTrigger.swift), [`FocusTrigger.swift`](../Sources/Triggers/FocusTrigger.swift) — each conforms to `Trigger`, reads its enable-flag from `SettingsStore`, has empty `voteStream`. Real EventKit/NSWorkspace/CoreWLAN/AppIntents wiring is **session 4's** scope.
-   - Typed `SettingsStore` extensions per [04 §5.1](design/04-data-model.md): `calendarTriggerCalendarIDs/ExcludeAllDay/LeadTimeMinutes/TrailingMinutes`, `appTriggerBundleIDs` (with curated defaults + bundle-ID regex sanitizer per 04 §4.3.1–4.3.2), `wifiTriggerSSIDs/InverseLogic` (with 1–32 byte SSID validation), `focusTriggerFocusIDs`.
+3. **`Sources/Triggers/WiFiTrigger.swift`**
+   - Added `WiFiSource` protocol with `currentSSID`, `permissionStatus`, `requestAccess()`.
+   - Added `CoreWLANSource` (real `CWWiFiClient.shared().interface()?.ssid()` + `CLLocationManager` for permission). Implements `CLLocationManagerDelegate` to capture authorization-status callbacks.
+   - Added `MockWiFiSource` for tests.
+   - `WiFiTrigger.start()` polls every 30 s by default. `evaluate()` is the test seam: vote ON when `SSID ∈ wifiTriggerSSIDs` (or, with `wifiTriggerInverseLogic = true`, when `SSID ∉ list` AND list non-empty). Empty inverse list is a no-op rather than "always on" — a safer default.
+   - Suppresses repeated identical votes.
 
-4. **`Sources/Intents/` (Step D)** — [`AwakeIntents.swift`](../Sources/Intents/AwakeIntents.swift): `ToggleAwakeIntent`, `StartAwakeIntent(minutes:)`, `StopAwakeIntent`, `LatteShortcuts: AppShortcutsProvider` registers all three with phrases — matches PRD F-1.0.11.
+4. **`Sources/Triggers/FocusTrigger.swift`**
+   - Added `FocusSource` protocol (`permissionStatus`, `isFocusActive`, `requestAccess()`, `observe(onChange:) -> FocusObservation`).
+   - Added `INFocusSource` (real `INFocusStatusCenter.default`, KVO on `focusStatus`, `requestAuthorization()`).
+   - Added `MockFocusSource` for tests.
+   - **v1 limitation**: `INFocusStatusCenter` does not disclose Focus identifiers, only `isFocused: Bool?`. So `FocusTrigger` interprets `focusTriggerFocusIDs` as a presence check (non-empty + `isFocused == true` → vote ON). Per-Focus filtering deferred to Phase 1.5 (documented in [04 §4.5 footnote](design/04-data-model.md#45-focus-mode-trigger)).
 
-5. **`Sources/UI/` (Step E)** — split per [02 §3.1](design/02-architecture.md)
-   - `Theme/Theme.swift` — colors / spacing / radius / fonts / sizes constants.
-   - `Components/CoffeeCupView.swift` — minimal placeholder; real animation = session 5.
-   - `Components/LiquidGlassModifier.swift` — `#available(macOS 26, *)` regularMaterial branch + ultraThinMaterial fallback.
-   - `MenuBar/{MenuBarRoot,HeaderView,DurationPickerRow}.swift` — split into 3 files as required.
-   - `Settings/{SettingsRoot,GeneralTab,TriggersTab,AboutTab}.swift` — TabView shell + per-tab forms.
+5. **`Sources/App/AppEnvironment.swift` + `LatteApp.swift`**
+   - Added `AppEnvironment.bootTriggers()`. For each registered + enabled trigger: if `requiresPermission`, ask first; only call `coordinator.start(...)` if granted.
+   - `LatteApp` invokes `bootTriggers()` from the `MenuBarExtra`'s `.task` modifier on first appearance.
 
-6. **`Sources/App/` (Step F)** — composition root
-   - `AppEnvironment.swift` — wires `SettingsStore`, `AwakeManager`, `TriggerCoordinator`, registers all 4 trigger stubs.
-   - `LatteApp.swift` — `@main`, `MenuBarExtra` + `Settings` scenes, calls `AwakeManager.installSignalHandlers()` in `init`.
+6. **`Resources/Info.plist`**
+   - Kept: `NSCalendarsFullAccessUsageDescription`, `NSCalendarsUsageDescription`.
+   - **Added**: `NSLocationWhenInUseUsageDescription` (Wi-Fi SSID prerequisite per macOS 12+).
+   - **Added**: `NSFocusStatusUsageDescription` (required by `INFocusStatusCenter.requestAuthorization`).
 
-7. **`Tests/` (Step G.1)** — 4 files, ~580 lines of test code
-   - [`AwakeDurationTests.swift`](../Tests/AwakeDurationTests.swift) — preset shape, label, seconds, isFinite.
-   - [`SettingsStoreTests.swift`](../Tests/SettingsStoreTests.swift) — parametrized `SettingsStoreContractTests` base class, run against both `InMemorySettingsStore` and `UserDefaultsSettingsStore` (temp suite); plus `SettingsKeyEnumTests` (every key is `latte.`-prefixed; full set matches 04 §5) and `AppTriggerDefaultsTests` (curated IDs + sanitizer regex).
-   - [`AwakeManagerTests.swift`](../Tests/AwakeManagerTests.swift) — **one `@Test`-equivalent function per non-invariant cell of the 03 §7 transition table**, plus invariant-violation checks, plus integration tests covering all 6 worked examples in 03 §8 (`test81` through `test86`), plus public-API smoke and the any-OR aggregation rule from 03 §5.1.
-   - [`TriggerCoordinatorTests.swift`](../Tests/TriggerCoordinatorTests.swift) — register / duplicate-rejection / start-enabled-only / vote forwarding / multi-trigger aggregation / stop cleans up.
+7. **`Configuration/Latte.entitlements`**
+   - Kept: app-sandbox, calendars, network.client.
+   - **Added**: `com.apple.security.personal-information.location` (sandboxed Wi-Fi SSID access).
 
-8. **Doc updates (Step G.2)**
-   - [`02-architecture.md`](design/02-architecture.md) §10 marked complete; version bumped 0.2 → 0.3 with change log entry.
-   - [`01-PRD.md`](design/01-PRD.md) §13 change log: 0.2.1 traceability entry (no content changes).
-   - [`ROADMAP.md`](../ROADMAP.md) — sessions 1–3 marked 🟢, session 4 marked 🟡 Next; version 0.3.
+8. **`docs/design/02-architecture.md`** v0.3 → **v0.4**
+   - New §4.4.1 documenting the `*Source` DI pattern adopted in this session. Trigger protocol unchanged; only impl strategy changed.
+
+9. **`docs/design/04-data-model.md`** v0.1 → **v0.2**
+   - §4.5 footnote added: documents the `INFocusStatusCenter` ID-opacity limitation and that the existing `focusTriggerFocusIDs` key shape is preserved for future per-Focus filtering.
+
+10. **Tests** — 5 new files, ~750 lines
+    - [`CalendarTriggerTests.swift`](../Tests/CalendarTriggerTests.swift) — 9 tests: active emit, future no-emit, lead/trailing windows, all-day exclude, calendar-ID filter, on→off transition, disabled no-op, permission-status branches.
+    - [`AppTriggerTests.swift`](../Tests/AppTriggerTests.swift) — 10 tests: initial-snapshot ON/no-ON, launch/terminate, second-launch idempotence, partial-terminate keeps ON, stop cleanup, requires-no-permission.
+    - [`WiFiTriggerTests.swift`](../Tests/WiFiTriggerTests.swift) — 9 tests: allowlist hit/miss, on→off transition, inverse logic both directions, empty-inverse no-op, idempotent re-emit, disabled / denied no-ops.
+    - [`FocusTriggerTests.swift`](../Tests/FocusTriggerTests.swift) — 8 tests: active-on-start, inactive-no-emit, flip on/off via mock, default fallback, denied no-op, permission-status branches, stop cleanup.
+    - [`TriggerIntegrationTests.swift`](../Tests/TriggerIntegrationTests.swift) — 2 end-to-end tests (`MockTrigger × TriggerCoordinator × real AwakeManager`) covering 03 §8.1 happy path and §8.2 back-to-back-meetings (assertion never released).
 
 ### What was *not* done (intentionally deferred)
 
-- **Build verification** — Xcode is not installed locally; per the original plan, this is a session 6 prerequisite. Code is written to spec; first compile happens in session 6.
-- **Real trigger wiring** — Calendar/App/Wi-Fi/Focus triggers are stubs whose `voteStream` is empty. EventKit / `NSWorkspace.didLaunchApplicationNotification` / `CWWiFiClient` / Focus AppIntents arrive in **session 4**.
-- **UI polish** — `CoffeeCupView` is a placeholder; real Canvas/TimelineView animation, app icon, and Liquid Glass theming are **session 5**.
-- **Filesystem rename of repo root** `Caffeinated-Clone/ → Latte/`. Owner can do this once before first external push; nothing in the codebase or `project.yml` references the parent folder name.
+- **Build verification** — Xcode is still not installed locally; build still happens in session 6. Code is type-checked from spec.
+- **Per-Focus-mode filtering** — Apple's privacy stance on Focus IDs blocks this. Tracked as Phase 1.5 (see [04 §4.5](design/04-data-model.md#45-focus-mode-trigger)).
+- **Settings UI for trigger configuration** — currently the four `TriggersTab.swift` cells are placeholders; populating with calendar pickers, app-bundle pickers, SSID pickers, etc. lives in session 5 alongside the design polish.
+- **Filesystem rename of repo root** `Caffeinated-Clone/ → Latte/`. Same as before — owner does this once before first push.
 
 ---
 
 ## Next session entry point
 
-**Theme**: Phase 1.A — implement the four real triggers (session 4 of ~10)
+**Theme**: Phase 1.C — design polish (session 5 of ~10)
 
-**Goal**: After this session, all 4 triggers actually emit votes from real system signals; `TriggerCoordinator` orchestrates them; integration tests cover the cross-trigger paths.
+**Goal**: Deliver the visual polish that makes Latte feel like a $2.99 utility rather than an SF-Symbol-default skeleton. Hits PRD F-1.C.01 ~ F-1.C.07.
 
 ### To-do (in order)
 
-#### A. Calendar trigger (~45 min)
+#### A. Coffee cup animation (~60 min) — F-1.C.01
 
-1. Replace `CalendarTrigger.start()` stub. Use `EKEventStore.requestFullAccessToEvents` (macOS 14+) with `requestAccess(to:)` fallback for macOS 13. Honor `permissionStatus`.
-2. Poll for events every 60 s using `EKEventStore.events(matching:)` over `[now - leadTime, now + 24h]`.
-3. For each event whose start ≤ `now + leadTimeMinutes` and end > `now - trailingMinutes`, emit a `wantsAwake = true` vote with `reason = "Calendar: \(event.title)"`. When the event ends + trailing window expires, emit `wantsAwake = false`.
-4. Honor `calendarTriggerCalendarIDs` filter (empty = all granted) and `calendarTriggerExcludeAllDay`.
-5. Tests: integration test with a fake `EKEventStore` adapter (extract a small `CalendarSource` protocol).
+1. Replace `Sources/UI/Components/CoffeeCupView.swift` placeholder with a `Canvas` + `TimelineView` that renders the cup body, handle, and steam particles. Target 60 fps.
+2. Steam particles should drift up and fade. Use a small particle system seeded by `Date().timeIntervalSinceReferenceDate` so animation is deterministic per frame time.
+3. Bind the active/inactive visual state to `AwakeManager.isAwake` — full opacity + steam when awake, dimmed + no steam when asleep.
 
-#### B. App-presence trigger (~30 min)
+#### B. Liquid Glass treatment + fallback (~30 min) — F-1.C.02 / F-1.C.03
 
-6. Use `NSWorkspace.shared.notificationCenter` for `didLaunchApplicationNotification` / `didTerminateApplicationNotification`. Snapshot `runningApplications` on `start()`.
-7. When any app whose `bundleIdentifier ∈ appTriggerBundleIDs` is running, emit `wantsAwake = true`. When all such apps terminate, emit `false`.
-8. Tests: simulate launch/terminate via injected workspace.
+4. Today `Sources/UI/Components/LiquidGlassModifier.swift` already gates with `#available(macOS 26, *)`. Verify the macOS-13~25 fallback uses `.ultraThinMaterial` consistently across `MenuBarRoot`, `HeaderView`, and the Settings tabs.
+5. Apply the modifier where the design calls for it; do **not** apply globally.
 
-#### C. Wi-Fi trigger (~30 min)
+#### C. App icon spec (~30 min) — F-1.C.04
 
-9. Use `CWWiFiClient.shared().interface()?.ssid()` polled every 30 s (or on `interfaceModeDidChange` if available). Requires location permission — request via `CLLocationManager` lazy init.
-10. Emit `wantsAwake = true` when current SSID ∈ `wifiTriggerSSIDs` (or, if `wifiTriggerInverseLogic`, when SSID ∉ list). Emit `false` otherwise.
-11. Tests: integration test with mocked `WiFiSource`.
+6. Owner-facing deliverable: write `docs/design/05-icon-spec.md` describing the icon brief — palette, motif (steaming coffee cup over a half-moon?), required sizes, reference to Apple's Icon Composer guidance. This doc is what the owner hands to a designer/AI tool. **No actual PNG produced this session** — that's owner-side work between sessions.
 
-#### D. Focus trigger (~30 min)
+#### D. Menu bar icon variants (~30 min) — F-1.C.05
 
-12. Implement via `INFocusStatus` / `INFocusStatusCenter.default.requestAuthorization()`. Watch `INFocusStatusCenter.default.focusStatus`.
-13. Emit `wantsAwake = true` when active focus ID ∈ `focusTriggerFocusIDs`.
-14. Tests: mocked `FocusSource`.
+7. In `Resources/Assets.xcassets/` add three SF-Symbol-rendered icon variants (`filled`, `outline`, `clock`). Update `MenuBarExtra` to switch on `menuBarIconStyle` from `SettingsStore`. Wire the General tab picker.
 
-#### E. Wrap (~15 min)
+#### E. Settings typography + dark mode (~30 min) — F-1.C.06 / F-1.C.07
 
-15. Update `LatteApp.swift` so triggers `start()` after permissions are confirmed.
-16. Add an integration test crossing `MockTrigger` × real `AwakeManager` for the 03 §8 examples that previously used pure-mock votes.
-17. Update [`02-architecture.md`](design/02-architecture.md) §10 (no remaining gaps); update [`ROADMAP.md`](../ROADMAP.md) and overwrite this file for session 5 entry.
+8. Audit every `Text(...)` in `Sources/UI/Settings/*.swift` and `Sources/UI/MenuBar/*.swift`. Use `.headline` / `.body` / `.caption` consistently. Verify dark-mode contrast ratios pass WCAG AA at standard text sizes.
+
+#### F. Wrap (~15 min)
+
+9. Update the trigger detail UI in `TriggersTab.swift` so each row shows current vote status from `coordinator.activeVotes`. (Out-of-scope: per-trigger config UI — that's session 7.)
+10. Bump `02-architecture.md` if any new UI primitives shift module boundaries (unlikely). Bump `01-PRD.md` change log to mark F-1.C.01 ~ F-1.C.07 as in-flight.
+11. Overwrite `docs/SESSION_HANDOFF.md` for session 6 entry (build verification — owner-blocked on Xcode).
 
 ### Cannot-start-without checks
 
-- Xcode 15+ is **still not required** for session 4 — the goal remains correct-looking code. EventKit/NSWorkspace/CoreWLAN/Intents APIs are all type-checked from spec; build verification stays in session 6.
-- Re-read [`03-state-machine.md` §5.1](design/03-state-machine.md) (any-OR aggregation) before wiring votes — every trigger emits independent votes; coordination policy is owned by `AwakeManager`.
-- Read [`04-data-model.md` §4.2–4.5](design/04-data-model.md) before adding new keys — all schema must already exist there. **Do not invent new SettingsKey cases without bumping `schemaVersion` per 04 §6.2.**
+- Xcode is **not** required for session 5 either — animation correctness is reviewable in code; visual verification ships in session 6.
+- Re-read [`02-architecture.md` §3.1](design/02-architecture.md) before adding new files — keep `UI/` subfolders intact (`MenuBar/`, `Settings/`, `Components/`, `Theme/`).
+- Read [`PRD §6.4`](design/01-PRD.md) for the F-1.C feature IDs above; cross-check checkbox status in §10.
 
 ---
 
 ## Decisions still pending owner approval
 
-**None for session 4.** All design decisions needed for trigger work are in 02/03/04. Remaining open questions (OQ-07 ~ OQ-10) are content/marketing, unblocked separately for sessions 7–8.
+**None for session 5.** Visual decisions (palette, exact motif) are deferred to the icon-spec doc; that goes to the owner as a brief, not a unilateral commit.
 
 ---
 
@@ -130,64 +134,36 @@
 | Repo root folder still named `Caffeinated-Clone/` | Cosmetic only; nothing in code references it | Owner renames to `Latte/` before first external push |
 | Bundle ID `com.example.latte` is placeholder | Cannot ship | Owner provides real reverse-domain before session 8 |
 | Xcode (full) not installed locally | Cannot build/run | Owner installs before session 6 |
-| No app icon yet | Cannot ship | Owner produces before session 8 |
+| No app icon yet | Cannot ship | Spec written in session 5; owner produces PNG before session 8 |
 | No Apple Developer Program enrollment | Cannot submit | Owner enrolls before session 8 |
-| Stub triggers in session 3 are non-functional | No real auto-on yet | Real wiring is session 4's scope |
-| `AwakeManager.installSignalHandlers()` uses `AwakeManager.shared` from a `@convention(c)` handler | Best-effort cleanup only; cannot fully synchronize on signal | Acceptable for menu-bar utility; revisit if app grows in scope |
+| `INFocusStatusCenter` does not expose Focus IDs | Per-Focus filtering can't ship in v1 | Documented as Phase 1.5 follow-up; key shape preserved |
+| Trigger config UI (calendar/bundle/SSID pickers) not built | Settings → Triggers tab is placeholder rows | Session 7 (test coverage + UI fill-in) |
+| `AwakeManager.installSignalHandlers()` uses `AwakeManager.shared` from a `@convention(c)` handler | Best-effort cleanup only; cannot fully synchronize on signal | Acceptable for menu-bar utility |
 
 ---
 
 ## Files changed this session
 
 ```
-A  Configuration/Latte.entitlements        (renamed from Caffeinated.entitlements)
-M  Resources/Info.plist                    (CFBundleDisplayName + calendar copy → Latte)
-M  project.yml                             (target Caffeinated → Latte; bundle id; entitlements path)
-M  ROADMAP.md                              (v0.2 → v0.3; session 3 done; session 4 next)
-M  docs/SESSION_HANDOFF.md                 (overwritten for session 4 entry)
-M  docs/design/01-PRD.md                   (v0.2 → v0.2.1; change-log traceability entry)
-M  docs/design/02-architecture.md          (v0.2 → v0.3; §10 gap closed)
+M  Configuration/Latte.entitlements        (added location entitlement)
+M  Resources/Info.plist                    (added NSLocation + NSFocusStatus usage strings)
+M  ROADMAP.md                              (v0.3 → v0.4; session 4 done; session 5 next)
+M  docs/SESSION_HANDOFF.md                 (overwritten for session 5 entry)
+M  docs/design/02-architecture.md          (v0.3 → v0.4; §4.4.1 added)
+M  docs/design/04-data-model.md            (v0.1 → v0.2; §4.5 footnote added)
 
-D  Sources/CaffeinatedApp.swift            (skeleton)
-D  Sources/AwakeManager.swift              (skeleton)
-D  Sources/PowerAssertion.swift            (skeleton)
-D  Sources/Duration.swift                  (skeleton)
-D  Sources/MenuBarView.swift               (skeleton)
-D  Sources/SettingsView.swift              (skeleton)
-D  Sources/CoffeeCupView.swift             (skeleton)
-D  Sources/Triggers/CalendarTrigger.swift  (skeleton)
-D  Sources/Triggers/TriggerProtocol.swift  (skeleton)
-D  Sources/Intents/AwakeIntents.swift      (skeleton)
-D  Tests/AwakeManagerTests.swift           (skeleton)
+M  Sources/App/AppEnvironment.swift        (bootTriggers)
+M  Sources/App/LatteApp.swift              (.task → bootTriggers)
+M  Sources/Triggers/CalendarTrigger.swift  (CalendarSource + EKCalendarSource + Mock + real polling)
+M  Sources/Triggers/AppTrigger.swift       (WorkspaceSource + NSWorkspaceSource + Mock + lifecycle observe)
+M  Sources/Triggers/WiFiTrigger.swift      (WiFiSource + CoreWLANSource + Mock + 30s poll)
+M  Sources/Triggers/FocusTrigger.swift     (FocusSource + INFocusSource + Mock + KVO observe)
 
-A  Sources/App/AppEnvironment.swift
-A  Sources/App/LatteApp.swift
-A  Sources/Core/AwakeDuration.swift
-A  Sources/Core/AwakeManager.swift
-A  Sources/Core/Logging.swift
-A  Sources/Core/PowerAssertion.swift
-A  Sources/Core/SettingsStore.swift
-A  Sources/Triggers/AppTrigger.swift
-A  Sources/Triggers/CalendarTrigger.swift
-A  Sources/Triggers/FocusTrigger.swift
-A  Sources/Triggers/Trigger.swift
-A  Sources/Triggers/TriggerCoordinator.swift
-A  Sources/Triggers/WiFiTrigger.swift
-A  Sources/Intents/AwakeIntents.swift
-A  Sources/UI/Components/CoffeeCupView.swift
-A  Sources/UI/Components/LiquidGlassModifier.swift
-A  Sources/UI/MenuBar/DurationPickerRow.swift
-A  Sources/UI/MenuBar/HeaderView.swift
-A  Sources/UI/MenuBar/MenuBarRoot.swift
-A  Sources/UI/Settings/AboutTab.swift
-A  Sources/UI/Settings/GeneralTab.swift
-A  Sources/UI/Settings/SettingsRoot.swift
-A  Sources/UI/Settings/TriggersTab.swift
-A  Sources/UI/Theme/Theme.swift
-A  Tests/AwakeDurationTests.swift
-A  Tests/AwakeManagerTests.swift
-A  Tests/SettingsStoreTests.swift
-A  Tests/TriggerCoordinatorTests.swift
+A  Tests/CalendarTriggerTests.swift
+A  Tests/AppTriggerTests.swift
+A  Tests/WiFiTriggerTests.swift
+A  Tests/FocusTriggerTests.swift
+A  Tests/TriggerIntegrationTests.swift
 ```
 
 ---
@@ -196,9 +172,7 @@ A  Tests/TriggerCoordinatorTests.swift
 
 1. Read [ROADMAP.md](../ROADMAP.md) — orientation (~30 sec).
 2. Read this file — current state (~2 min).
-3. Open the spec docs in tabs:
-   - [02-architecture.md §4.4](design/02-architecture.md) (`Trigger` contract)
-   - [03-state-machine.md §5.1](design/03-state-machine.md) (any-OR aggregation — guides every trigger's vote semantics)
-   - [04-data-model.md §4.2–4.5](design/04-data-model.md) (per-trigger schema; all keys already exist in code)
-4. Open `Sources/Triggers/` — fill in the four stubs in order: Calendar → App → Wi-Fi → Focus.
-5. TDD: write the integration test for each trigger first (mocked source), watch it fail, implement, watch it pass.
+3. Open the spec in tabs:
+   - [01-PRD.md §6.4](design/01-PRD.md) (Phase 1.C feature list)
+   - [02-architecture.md §3.1](design/02-architecture.md) (UI folder layout)
+4. Open `Sources/UI/Components/CoffeeCupView.swift` — start with the animation. Hit each F-1.C ID in order.

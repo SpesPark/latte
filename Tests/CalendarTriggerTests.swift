@@ -1,0 +1,259 @@
+import XCTest
+@testable import Latte
+
+@MainActor
+final class CalendarTriggerTests: XCTestCase {
+
+    // MARK: - Setup helpers
+
+    private func makeFixture(
+        events: [CalendarEventSnapshot] = [],
+        permissionStatus: TriggerPermissionStatus = .granted,
+        nowOverride: Date? = nil
+    ) -> (CalendarTrigger, MockCalendarSource, InMemorySettingsStore, Date) {
+        let settings = InMemorySettingsStore()
+        settings.setBool(true, for: .calendarTriggerEnabled)
+        let source = MockCalendarSource(permissionStatus: permissionStatus, events: events)
+        let now = nowOverride ?? Date(timeIntervalSince1970: 1_750_000_000) // fixed
+        let trigger = CalendarTrigger(
+            settings: settings,
+            source: source,
+            pollInterval: 60,
+            now: { now }
+        )
+        return (trigger, source, settings, now)
+    }
+
+    // MARK: - Tests
+
+    func testActiveEventEmitsOnVote() async {
+        let now = Date(timeIntervalSince1970: 1_750_000_000)
+        let event = CalendarEventSnapshot(
+            id: "ev-active",
+            title: "Standup",
+            startDate: now.addingTimeInterval(-60),
+            endDate: now.addingTimeInterval(600),
+            isAllDay: false,
+            calendarID: "cal-1"
+        )
+        let (trigger, _, _, _) = makeFixture(events: [event], nowOverride: now)
+        await trigger.pollOnce()
+
+        var iterator = trigger.voteStream.makeAsyncIterator()
+        let vote = await iterator.next()
+        XCTAssertNotNil(vote)
+        XCTAssertEqual(vote?.wantsAwake, true)
+        XCTAssertEqual(vote?.reason, "Calendar: Standup")
+    }
+
+    func testEventBeforeStartDoesNotEmit() async {
+        let now = Date(timeIntervalSince1970: 1_750_000_000)
+        let event = CalendarEventSnapshot(
+            id: "ev-future",
+            title: "Future",
+            startDate: now.addingTimeInterval(3600),
+            endDate: now.addingTimeInterval(3600 + 600),
+            isAllDay: false,
+            calendarID: "cal-1"
+        )
+        let (trigger, _, _, _) = makeFixture(events: [event], nowOverride: now)
+        await trigger.pollOnce()
+
+        // Allow a brief window; expect no vote.
+        let task = Task { @MainActor () -> TriggerVote? in
+            var it = trigger.voteStream.makeAsyncIterator()
+            return await it.next()
+        }
+        try? await Task.sleep(nanoseconds: 50_000_000)
+        task.cancel()
+        let vote = await task.value
+        XCTAssertNil(vote)
+    }
+
+    func testLeadTimeBringsVoteOnEarly() async {
+        let now = Date(timeIntervalSince1970: 1_750_000_000)
+        // Event starts 5 min in future, leadTime=5 → should be active now
+        let event = CalendarEventSnapshot(
+            id: "ev-lead",
+            title: "Lead",
+            startDate: now.addingTimeInterval(5 * 60),
+            endDate: now.addingTimeInterval(15 * 60),
+            isAllDay: false,
+            calendarID: "cal-1"
+        )
+        let (trigger, _, settings, _) = makeFixture(events: [event], nowOverride: now)
+        settings.setInteger(5, for: .calendarTriggerLeadTimeMinutes)
+        await trigger.pollOnce()
+
+        var iterator = trigger.voteStream.makeAsyncIterator()
+        let vote = await iterator.next()
+        XCTAssertEqual(vote?.wantsAwake, true)
+    }
+
+    func testTrailingTimeKeepsVoteOnAfterEnd() async {
+        let now = Date(timeIntervalSince1970: 1_750_000_000)
+        // Event ended 3 min ago; trailing=5 → still active
+        let event = CalendarEventSnapshot(
+            id: "ev-tail",
+            title: "Wrap",
+            startDate: now.addingTimeInterval(-30 * 60),
+            endDate: now.addingTimeInterval(-3 * 60),
+            isAllDay: false,
+            calendarID: "cal-1"
+        )
+        let (trigger, _, settings, _) = makeFixture(events: [event], nowOverride: now)
+        settings.setInteger(5, for: .calendarTriggerTrailingMinutes)
+        await trigger.pollOnce()
+
+        var iterator = trigger.voteStream.makeAsyncIterator()
+        let vote = await iterator.next()
+        XCTAssertEqual(vote?.wantsAwake, true)
+    }
+
+    func testAllDayEventExcludedByDefault() async {
+        let now = Date(timeIntervalSince1970: 1_750_000_000)
+        let event = CalendarEventSnapshot(
+            id: "ev-allday",
+            title: "OOO",
+            startDate: now.addingTimeInterval(-3600),
+            endDate: now.addingTimeInterval(3600 * 23),
+            isAllDay: true,
+            calendarID: "cal-1"
+        )
+        let (trigger, _, _, _) = makeFixture(events: [event], nowOverride: now)
+        await trigger.pollOnce()
+
+        let task = Task { @MainActor () -> TriggerVote? in
+            var it = trigger.voteStream.makeAsyncIterator()
+            return await it.next()
+        }
+        try? await Task.sleep(nanoseconds: 50_000_000)
+        task.cancel()
+        let vote = await task.value
+        XCTAssertNil(vote, "all-day event should be excluded by default")
+    }
+
+    func testCalendarIDFilterPassesOnlyMatching() async {
+        let now = Date(timeIntervalSince1970: 1_750_000_000)
+        let work = CalendarEventSnapshot(
+            id: "ev-work",
+            title: "Work meet",
+            startDate: now.addingTimeInterval(-60),
+            endDate: now.addingTimeInterval(600),
+            isAllDay: false,
+            calendarID: "work"
+        )
+        let personal = CalendarEventSnapshot(
+            id: "ev-personal",
+            title: "Personal",
+            startDate: now.addingTimeInterval(-60),
+            endDate: now.addingTimeInterval(600),
+            isAllDay: false,
+            calendarID: "personal"
+        )
+        let (trigger, source, settings, _) = makeFixture(
+            events: [work, personal],
+            nowOverride: now
+        )
+        settings.calendarTriggerCalendarIDs = ["work"]
+
+        await trigger.pollOnce()
+
+        XCTAssertEqual(source.lastQueryCalendarIDs, ["work"])
+        // Only the work event should produce an ON vote.
+        var iterator = trigger.voteStream.makeAsyncIterator()
+        let vote = await iterator.next()
+        XCTAssertEqual(vote?.reason, "Calendar: Work meet")
+    }
+
+    func testEventEndingTransitionsToOff() async {
+        var now = Date(timeIntervalSince1970: 1_750_000_000)
+        let event = CalendarEventSnapshot(
+            id: "ev-trans",
+            title: "Brief",
+            startDate: now.addingTimeInterval(-60),
+            endDate: now.addingTimeInterval(60),
+            isAllDay: false,
+            calendarID: "cal-1"
+        )
+        var nowRef = now
+        let settings = InMemorySettingsStore()
+        settings.setBool(true, for: .calendarTriggerEnabled)
+        let source = MockCalendarSource(events: [event])
+        let trigger = CalendarTrigger(
+            settings: settings,
+            source: source,
+            pollInterval: 60,
+            now: { nowRef }
+        )
+        await trigger.pollOnce()
+        // Move time past event + trailing
+        now = now.addingTimeInterval(120)
+        nowRef = now
+        await trigger.pollOnce()
+
+        var votes: [TriggerVote] = []
+        var iterator = trigger.voteStream.makeAsyncIterator()
+        if let v1 = await iterator.next() { votes.append(v1) }
+        if let v2 = await iterator.next() { votes.append(v2) }
+
+        XCTAssertEqual(votes.count, 2)
+        XCTAssertEqual(votes[0].wantsAwake, true)
+        XCTAssertEqual(votes[1].wantsAwake, false)
+    }
+
+    func testDoesNothingWhenDisabled() async {
+        let now = Date(timeIntervalSince1970: 1_750_000_000)
+        let event = CalendarEventSnapshot(
+            id: "ev",
+            title: "x",
+            startDate: now.addingTimeInterval(-60),
+            endDate: now.addingTimeInterval(600),
+            isAllDay: false,
+            calendarID: "cal-1"
+        )
+        let settings = InMemorySettingsStore()
+        // .calendarTriggerEnabled left false
+        let source = MockCalendarSource(events: [event])
+        let trigger = CalendarTrigger(
+            settings: settings,
+            source: source,
+            pollInterval: 60,
+            now: { now }
+        )
+        await trigger.pollOnce()
+
+        let task = Task { @MainActor () -> TriggerVote? in
+            var it = trigger.voteStream.makeAsyncIterator()
+            return await it.next()
+        }
+        try? await Task.sleep(nanoseconds: 50_000_000)
+        task.cancel()
+        XCTAssertNil(await task.value)
+    }
+
+    func testRequestPermissionIfNeededHonorsStatus() async {
+        let settings = InMemorySettingsStore()
+
+        // .granted → true without asking
+        let granted = MockCalendarSource(permissionStatus: .granted)
+        let g = CalendarTrigger(settings: settings, source: granted)
+        let r1 = await g.requestPermissionIfNeeded()
+        XCTAssertTrue(r1)
+        XCTAssertEqual(granted.requestAccessCalls, 0)
+
+        // .denied → false without asking
+        let denied = MockCalendarSource(permissionStatus: .denied)
+        let d = CalendarTrigger(settings: settings, source: denied)
+        let r2 = await d.requestPermissionIfNeeded()
+        XCTAssertFalse(r2)
+        XCTAssertEqual(denied.requestAccessCalls, 0)
+
+        // .notDetermined → asks
+        let nd = MockCalendarSource(permissionStatus: .notDetermined)
+        let n = CalendarTrigger(settings: settings, source: nd)
+        let r3 = await n.requestPermissionIfNeeded()
+        XCTAssertTrue(r3)
+        XCTAssertEqual(nd.requestAccessCalls, 1)
+    }
+}

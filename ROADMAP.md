@@ -2,9 +2,9 @@
 
 > Multi-session execution plan for Latte (working folder: `Caffeinated-Clone/`).
 >
-> **Current phase**: Phase 1.0 implementation complete (session 3); ready for trigger wiring
-> **Current session**: 3 of ~10 (complete)
-> **Next session entry point**: see [docs/SESSION_HANDOFF.md](docs/SESSION_HANDOFF.md) — Session 4 = Phase 1.A trigger implementations
+> **Current phase**: Phase 1.A trigger wiring complete (session 4); ready for UI polish
+> **Current session**: 4 of ~10 (complete)
+> **Next session entry point**: see [docs/SESSION_HANDOFF.md](docs/SESSION_HANDOFF.md) — Session 5 = Phase 1.C design polish
 
 ---
 
@@ -30,8 +30,8 @@ Each row is one focused session. Sessions are sequential — earlier ones produc
 | 1 | **Foundation: PRD + Architecture** | Lock product scope, lock module/layer structure | `01-PRD.md`, `02-architecture.md`, `ROADMAP.md`, `SESSION_HANDOFF.md` | 🟢 Done |
 | 2 | **Design close-out** | Resolve all Open Questions before code | `03-state-machine.md`, `04-data-model.md`, sign-off on 01+02 | 🟢 Done |
 | 3 | **Phase 1.0 implementation** | Rewrite Sources to match architecture; implement MVP features | All `Sources/**/*.swift`, replaces current skeleton | 🟢 Done |
-| 4 | **Phase 1.A — Triggers** | Calendar + App + Wi-Fi + Focus triggers fully implemented | `Sources/Triggers/*.swift`, integration tests | 🟡 Next |
-| 5 | **Phase 1.C — Design polish** | Coffee cup animation, Liquid Glass + fallback, app icon spec | UI files, asset catalog updates | ⚪ Pending |
+| 4 | **Phase 1.A — Triggers** | Calendar + App + Wi-Fi + Focus triggers fully implemented | `Sources/Triggers/*.swift`, integration tests | 🟢 Done |
+| 5 | **Phase 1.C — Design polish** | Coffee cup animation, Liquid Glass + fallback, app icon spec | UI files, asset catalog updates | 🟡 Next |
 | 6 | **Build verification** *(needs Xcode installed)* | First successful build, fix compile errors, run tests | Working `.app` bundle, all tests passing | 🔴 Blocked: Xcode |
 | 7 | **Test coverage + QA** | ≥80% coverage, manual smoke test on macOS 13/14/15 | Test files, QA log | ⚪ Pending |
 | 8 | **App Store prep** *(needs Dev Program + icon)* | Metadata, screenshots, Privacy Policy, submission | App Store Connect record, GitHub Pages site | 🔴 Blocked: Dev Program, Icon |
@@ -115,3 +115,4 @@ The HANDOFF doc is **always overwritten** at the end of each session. The ROADMA
 | 0.1 | 2026-04-25 | Initial draft (session 1) |
 | 0.2 | 2026-04-25 | Session 2 complete; design phase closed; sessions 1–2 marked done, session 3 marked next |
 | 0.3 | 2026-04-25 | Session 3 complete; Phase 1.0 code + tests landed; sessions 1–3 done, session 4 marked next |
+| 0.4 | 2026-04-26 | Session 4 complete; Phase 1.A trigger real wiring + Source DI pattern + tests; sessions 1–4 done, session 5 marked next |

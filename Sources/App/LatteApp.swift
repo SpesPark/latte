@@ -13,6 +13,9 @@ struct LatteApp: App {
         MenuBarExtra("Latte", systemImage: "cup.and.saucer.fill") {
             MenuBarRoot(manager: environment.manager)
                 .environmentObject(environment)
+                .task {
+                    await environment.bootTriggers()
+                }
         }
         .menuBarExtraStyle(.window)
 

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Document version** | 0.3 |
+| **Document version** | 0.4 |
 | **Status** | Approved (design phase closed at session 2) |
 | **Resolves Open Questions** | OQ-05 (module boundaries), OQ-06 (Observable vs ObservableObject) |
 | **Depends on** | [01-PRD.md](01-PRD.md) |
@@ -300,6 +300,17 @@ public struct TriggerVote: Equatable {
 
 The `voteStream` is an async sequence emitted whenever the trigger's opinion changes (e.g., calendar event starts/ends). `TriggerCoordinator` consumes these streams and aggregates votes per the policy in doc 03.
 
+#### 4.4.1 `*Source` DI pattern (added session 4)
+
+Each concrete trigger (`CalendarTrigger`, `AppTrigger`, `WiFiTrigger`, `FocusTrigger`) wraps its system API behind a small protocol — `CalendarSource`, `WorkspaceSource`, `WiFiSource`, `FocusSource` — injected via the trigger's initializer. Production binds the protocol to a real adapter (`EKCalendarSource`, `NSWorkspaceSource`, `CoreWLANSource`, `INFocusSource`); tests inject `MockCalendarSource`, `MockWorkspaceSource`, etc.
+
+This keeps:
+- Triggers' state machines (which event windows are "active", which apps are running, current SSID/Focus state) **testable without touching real EventKit, NSWorkspace, CoreWLAN, or INFocusStatusCenter**.
+- Source adapters **focused** on translating one OS API surface into our protocol — no business logic.
+- The `Trigger` protocol itself **unchanged** — only the implementation strategy changed.
+
+The pattern matches the rules-style guidance in `swift-protocol-di-testing` (small focused protocols, default-parameter constructor injection).
+
 ### 4.5 `TriggerCoordinator`
 
 ```swift
@@ -533,6 +544,7 @@ Remaining Open Questions (status as of session 2):
 | 0.1 | 2026-04-25 | Initial draft (session 1) |
 | 0.2 | 2026-04-25 | Session 2: marked OQ-01 ~ OQ-04 resolved with cross-references; status flipped to Approved; sign-off checklist confirmed |
 | 0.3 | 2026-04-25 | Session 3: §10 skeleton-rewrite gap marked complete; no contract changes |
+| 0.4 | 2026-04-26 | Session 4: §4.4.1 added — documents `*Source` DI pattern that arrived with real EventKit/NSWorkspace/CoreWLAN/INFocusStatusCenter wiring. `Trigger` protocol unchanged. |
 
 ---
 

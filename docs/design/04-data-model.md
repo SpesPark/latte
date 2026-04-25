@@ -2,11 +2,11 @@
 
 | Field | Value |
 |---|---|
-| **Document version** | 0.1 |
-| **Status** | Draft (awaiting review) |
+| **Document version** | 0.2 |
+| **Status** | Approved (sign-off at session 2 close); §4.5 footnote added at session 4 |
 | **Resolves Open Questions** | OQ-03 (where do trigger configs live?), OQ-04 (UserDefaults → SwiftData migration path) |
 | **Depends on** | 01-PRD.md, 02-architecture.md (esp. §4.3 `SettingsStore`), 03-state-machine.md |
-| **Last updated** | 2026-04-25 |
+| **Last updated** | 2026-04-26 |
 
 ---
 
@@ -182,6 +182,8 @@ SSID strings can be arbitrary UTF-8 bytes (Wi-Fi standard); we don't restrict ch
 | `focusTriggerFocusIDs` | `Data` (JSON `[String]`) | `["work"]` | Focus mode identifiers that, when active, vote ON. |
 
 `focusTriggerFocusIDs` references Apple's Focus identifiers. Common values: `"work"`, `"personal"`, `"do.not.disturb"`. Custom Focus modes use system-generated IDs; we surface them in the picker UI.
+
+> **v1 limitation (added session 4)**: `INFocusStatusCenter` exposes only `focusStatus.isFocused: Bool?` for privacy reasons — it does **not** disclose the active Focus's identifier. Therefore `FocusTrigger` in v1 treats `focusTriggerFocusIDs` as a list-presence flag: if the list is non-empty AND any Focus is active, vote ON. Per-Focus filtering will require either an Apple API change or `INSetFocusStatusIntent` workaround; tracked as **Phase 1.5 follow-up**, not a blocker for v1 launch. The Settings UI will say "Active when any Focus mode is on" rather than offering a Focus-mode picker. Existing key shape is preserved so future per-Focus filtering can ship without a schema bump.
 
 ---
 
@@ -385,6 +387,7 @@ Remaining open questions (OQ-07 onboarding, OQ-08 icon direction, OQ-09 App Stor
 | Version | Date | Changes |
 |---|---|---|
 | 0.1 | 2026-04-25 | Initial draft (session 2) |
+| 0.2 | 2026-04-26 | Session 4: §4.5 footnote — INFocusStatusCenter does not disclose Focus IDs; v1 uses list-presence semantic; key shape preserved for future per-Focus filtering. |
 
 ---
 

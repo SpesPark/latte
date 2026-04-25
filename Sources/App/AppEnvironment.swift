@@ -22,4 +22,18 @@ public final class AppEnvironment: ObservableObject {
         coordinator.register(WiFiTrigger(settings: settings))
         coordinator.register(FocusTrigger(settings: settings))
     }
+
+    /// Boot path: request permission for each enabled trigger that requires it,
+    /// then start the trigger's vote stream. Triggers whose permission is denied
+    /// stay registered but inactive — user can re-enable via System Settings,
+    /// the next launch will pick them up.
+    public func bootTriggers() async {
+        for trigger in coordinator.triggers where trigger.isEnabled {
+            if trigger.requiresPermission {
+                let granted = await trigger.requestPermissionIfNeeded()
+                if !granted { continue }
+            }
+            await coordinator.start(trigger)
+        }
+    }
 }
