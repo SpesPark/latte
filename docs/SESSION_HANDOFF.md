@@ -8,10 +8,10 @@
 
 | Field | Value |
 |---|---|
-| **Session #** | 7 + 7.5 of ~10 (S7 + Phase 1.5.A bundled into one calendar day) |
-| **Theme** | Test coverage + QA gate (S7); Per-trigger config UI (S7.5) |
+| **Session #** | 7 + 7.5 + 7.6 of ~10 (three S7-family sessions same calendar day) |
+| **Theme** | Test coverage + QA gate (S7); Per-trigger config UI (S7.5); UX rewrite after owner smoke (S7.6) |
 | **Date** | 2026-04-26 |
-| **Status** | ✅ Completed. 229/229 tests passing. S7 cleared the 80% coverage gate on `Sources/Core/**` and `Sources/Triggers/**` (live-system adapter classes excluded; rationale codified in `02-architecture.md` §13 v0.9 + `docs/QA_LOG.md`). S7.5 landed Phase 1.5.A — Settings → Triggers now offers an inline configuration form per trigger (`DisclosureGroup`-driven), reaching the user-facing parity gap that S5 had explicitly deferred. EKCalendar picker and per-Focus selection remain deferred as Phase 1.5.B / Apple-API-blocked respectively. |
+| **Status** | ✅ Completed. 229/229 tests passing. S7 cleared the 80% coverage gate on `Sources/Core/**` and `Sources/Triggers/**` (live-system adapter classes excluded; rationale codified in `02-architecture.md` §13 v0.9 + `docs/QA_LOG.md`). S7.5 landed Phase 1.5.A — Settings → Triggers now offers an inline configuration form per trigger. **S7.6 owner smoke surfaced two defects (P1 state-mismatch + P2 UX); both fixed by retiring the DisclosureGroup-with-Toggle-in-label structure in favor of a Section-per-trigger layout.** EKCalendar picker and per-Focus selection remain deferred as Phase 1.5.B / Apple-API-blocked respectively. |
 
 ### What was accomplished
 
@@ -70,6 +70,24 @@
 
 S7.5 architectural note: the `Trigger` protocol stays untouched. The two new accessors are concrete-class extensions, not protocol requirements — `TriggerCoordinator` and other consumers see no change.
 
+### S7.6 added (UX rewrite — fix-first after owner smoke)
+
+8. **`TriggersTab` rewritten end-to-end** — DisclosureGroup-with-Toggle-in-label retired; replaced with `Form { ForEach { TriggerSection } }`. Each `TriggerSection` is a standard macOS `Section` with:
+   - **header**: icon + name + (live voting dot when applicable)
+   - **single Toggle("Enable") row** — standalone control, no click-target collision possible
+   - **inline config form** rendered conditionally on `isOn` (no separate `isExpanded` state)
+   - **footer**: live "Voting awake — …" reason or permission-status hint copy
+
+   Net effect: the P1 subtitle/Toggle state-sync bug logged as `S75-DEF-01` becomes structurally impossible (the Toggle is the only UI carrying enabled-state — there is no longer a parallel `subtitle` reading `trigger.isEnabled` from a different source).
+
+9. **`AppTriggerConfigForm`** — "Add from running apps" went from a nested `DisclosureGroup` to a SwiftUI `Menu` (each candidate bundle ID is a `Button`). Eliminates the second nested-disclosure hit-target ambiguity.
+
+10. **`WiFiTriggerConfigForm`** — mode picker upgraded from `.radioGroup` to `.segmented` style for a clearer binary on-list / inverse choice.
+
+11. **Outer ForEach** — `id: \.offset` → `id: \.id`. SwiftUI now tracks each `TriggerSection` by trigger identifier rather than ordinal position; safer if the trigger registration order ever changes.
+
+S7.6 has zero protocol or model changes. `Sources/Core/**`, `Sources/Triggers/**`, `Trigger`, `TriggerCoordinator`, `AppEnvironment`, `SettingsStore` — all untouched. Pure SwiftUI restructure of one file.
+
 ### What's NOT done (intentional)
 
 - **Owner-side manual smoke checklist** in `docs/QA_LOG.md` is checked-in but unchecked — Claude cannot drive the menu-bar UI. Owner runs through this and ticks lines (or logs defects in the same doc) before S8 starts in earnest. Gate for S8 is: zero P1 items in QA_LOG.
@@ -107,7 +125,7 @@ M  docs/design/02-architecture.md   (v0.9, §13 entry)
 M  ROADMAP.md                        (v0.9; row 7 → done, row 8 → next)
 M  docs/SESSION_HANDOFF.md
 
-S7.5 (this commit):
+S7.5 (commit c9042c0):
 M  Sources/Triggers/AppTrigger.swift          (+ runningBundleIDs accessor)
 M  Sources/Triggers/WiFiTrigger.swift         (+ currentSSID accessor)
 M  Sources/UI/Settings/TriggersTab.swift      (DisclosureGroup rewrite + 4 config forms)
@@ -115,6 +133,13 @@ M  Tests/AppTriggerTests.swift                (+ testRunningBundleIDsPassThrough
 M  Tests/WiFiTriggerTests.swift               (+ testCurrentSSIDPassThrough)
 M  ROADMAP.md                                 (v0.10)
 M  docs/design/02-architecture.md             (v0.10)
+M  docs/SESSION_HANDOFF.md
+
+S7.6 (this commit):
+M  Sources/UI/Settings/TriggersTab.swift      (Section-per-trigger rewrite — DisclosureGroup retired)
+M  ROADMAP.md                                 (v0.11)
+M  docs/design/02-architecture.md             (v0.11)
+M  docs/QA_LOG.md                              (logged S75-DEF-01 + S75-DEF-02, both fixed-in-S7.6)
 M  docs/SESSION_HANDOFF.md                    (this file)
 ~  Latte.xcodeproj                             (gitignored — re-run `xcodegen generate` after adding files)
 ```

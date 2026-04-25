@@ -121,6 +121,31 @@ _None recorded as of 2026-04-26 (smoke owed by owner)._
 
 ---
 
+## S7.5 → S7.6 — TriggersTab UX defects logged + fixed (2026-04-26)
+
+Owner ran the S7.5 smoke and surfaced two related defects in the per-trigger config UI. Both were resolved in S7.6 the same day; the original DisclosureGroup-based TriggersTab no longer exists.
+
+#### S75-DEF-01 — TriggersTab subtitle / Toggle state visibly out of sync
+
+- **Severity**: P1
+- **Repro**: open Settings → Triggers, tap a trigger row's Toggle several times in succession.
+- **Expected**: Toggle ON ↔ subtitle reads "Idle" or active vote reason; Toggle OFF ↔ subtitle reads "Disabled".
+- **Actual**: After a few clicks, Toggle and subtitle would show contradictory states (Toggle ON while subtitle said "Disabled", or vice versa).
+- **Root cause**: `DisclosureGroup` label contained both the row HStack and the Toggle, so SwiftUI's hit testing was firing the disclosure-expand and the Toggle's onTap on overlapping click regions. `subtitle` read `trigger.isEnabled` (via `SettingsStore` round-trip) while the Toggle UI bound to a local `@State var isOn` — any race where one updated before the other left the two visibly inconsistent. The `if newValue { isExpanded = true }` side-effect inside the Toggle's `onChange` added a second state mutation in the same transaction, making the race more visible.
+- **Status**: **fixed-in-S7.6** (commit pending in this session). DisclosureGroup retired in favor of `Section` per trigger; standalone Toggle row removes click-target collision; `subtitle` helper deleted (Toggle is now the sole UI for enabled-state).
+
+#### S75-DEF-02 — Per-trigger config UI feels "복잡하고 직관적이지 않음"
+
+- **Severity**: P2 (UX)
+- **Repro**: open Settings → Triggers → tap a row.
+- **Expected**: clear, macOS-native config layout.
+- **Actual**: row had 6+ elements packed (icon / name / subtitle / voting dot / Toggle / disclosure chevron); nested `Form > Section > DisclosureGroup > VStack > Stepper/Picker` produced inconsistent paddings; "Add from running apps" was another nested DisclosureGroup inside the App config form.
+- **Status**: **fixed-in-S7.6**. Section-per-trigger reduces visual density; "Add from running apps" replaced with a `Menu` (standard macOS dropdown); WiFi mode picker switched to `.segmented` for a cleaner binary choice.
+
+> Re-run the **Per-trigger configuration** smoke checklist above against the S7.6 build before opening S8 — that's the only outstanding S7→S8 prerequisite.
+
+---
+
 ## Adapter exemption rationale
 
 The following classes are excluded from the 80% coverage gate because they wrap live system services and require an interactive user / permission grant / hardware to exercise:

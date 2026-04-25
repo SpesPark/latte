@@ -11,19 +11,11 @@ public struct TriggersTab: View {
 
     public var body: some View {
         Form {
-            Section {
-                ForEach(Array(coordinator.triggers.enumerated()), id: \.offset) { _, trigger in
-                    TriggerRow(
-                        trigger: trigger,
-                        activeVote: coordinator.activeVotes[trigger.id]
-                    )
-                }
-            } header: {
-                Text("Automatic triggers").font(Theme.Fonts.subheadline)
-            } footer: {
-                Text("Enable a trigger to let Latte wake your Mac automatically. Tap a row to configure which calendars, apps, or networks count as “awake-worthy.”")
-                    .font(Theme.Fonts.caption)
-                    .foregroundStyle(.secondary)
+            ForEach(coordinator.triggers, id: \.id) { trigger in
+                TriggerSection(
+                    trigger: trigger,
+                    activeVote: coordinator.activeVotes[trigger.id]
+                )
             }
         }
         .formStyle(.grouped)
@@ -31,14 +23,13 @@ public struct TriggersTab: View {
     }
 }
 
-// MARK: - TriggerRow + DisclosureGroup body
+// MARK: - TriggerSection (one Section per trigger)
 
-private struct TriggerRow: View {
+private struct TriggerSection: View {
 
     let trigger: any Trigger
     let activeVote: TriggerVote?
     @State private var isOn: Bool
-    @State private var isExpanded: Bool = false
     @EnvironmentObject private var environment: AppEnvironment
 
     init(trigger: any Trigger, activeVote: TriggerVote?) {
@@ -48,49 +39,63 @@ private struct TriggerRow: View {
     }
 
     var body: some View {
-        DisclosureGroup(isExpanded: $isExpanded) {
-            configBody
-                .padding(.top, Theme.Spacing.xs)
-                .padding(.bottom, Theme.Spacing.xs)
-        } label: {
-            header
+        Section {
+            Toggle("Enable", isOn: $isOn)
+                .onChange(of: isOn) { newValue in
+                    trigger.isEnabled = newValue
+                }
+
+            if isOn {
+                configBody
+            }
+        } header: {
+            sectionHeader
+        } footer: {
+            sectionFooter
         }
     }
 
-    private var header: some View {
-        let accent = environment.coffeeAccent.color
-        return HStack(spacing: Theme.Spacing.sm) {
+    private var sectionHeader: some View {
+        HStack(spacing: Theme.Spacing.sm) {
             Image(systemName: trigger.symbol)
-                .frame(width: 22)
+                .frame(width: 18)
                 .foregroundStyle(.secondary)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(trigger.displayName)
-                    .font(Theme.Fonts.body)
-                    .foregroundStyle(.primary)
-                if let reason = subtitle {
-                    Text(reason)
-                        .font(Theme.Fonts.caption)
-                        .foregroundStyle(isVoting ? accent : .secondary)
-                        .accessibilityIdentifier("trigger.row.subtitle.\(trigger.id)")
-                }
-            }
-
+            Text(trigger.displayName)
+                .font(Theme.Fonts.subheadline)
             Spacer()
-
             if isVoting {
                 Circle()
-                    .fill(accent)
+                    .fill(environment.coffeeAccent.color)
                     .frame(width: 8, height: 8)
                     .accessibilityLabel("\(trigger.displayName) is currently voting awake")
             }
+        }
+    }
 
-            Toggle("", isOn: $isOn)
-                .labelsHidden()
-                .onChange(of: isOn) { newValue in
-                    trigger.isEnabled = newValue
-                    if newValue { isExpanded = true }
-                }
+    @ViewBuilder
+    private var sectionFooter: some View {
+        if let reason = activeVote?.reason, isVoting, !reason.isEmpty {
+            Text("Voting awake — \(reason)")
+                .font(Theme.Fonts.caption)
+                .foregroundStyle(environment.coffeeAccent.color)
+                .accessibilityIdentifier("trigger.row.subtitle.\(trigger.id)")
+        } else if isOn {
+            switch trigger.permissionStatus {
+            case .denied:
+                Text("Permission denied. Grant access in System Settings → Privacy & Security.")
+                    .font(Theme.Fonts.caption)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("trigger.row.subtitle.\(trigger.id)")
+            case .notDetermined:
+                Text("Permission will be requested the first time the trigger fires.")
+                    .font(Theme.Fonts.caption)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("trigger.row.subtitle.\(trigger.id)")
+            case .granted, .notRequired:
+                EmptyView()
+            }
+        } else {
+            EmptyView()
         }
     }
 
@@ -114,24 +119,7 @@ private struct TriggerRow: View {
         }
     }
 
-    private var isVoting: Bool {
-        activeVote?.wantsAwake == true
-    }
-
-    private var subtitle: String? {
-        if let reason = activeVote?.reason, !reason.isEmpty {
-            return "Voting awake — \(reason)"
-        }
-        if !trigger.isEnabled {
-            return "Disabled"
-        }
-        switch trigger.permissionStatus {
-        case .denied:       return "Permission denied — open System Settings"
-        case .notDetermined: return "Permission not yet requested"
-        case .granted:      return "Idle"
-        case .notRequired:  return "Idle"
-        }
-    }
+    private var isVoting: Bool { activeVote?.wantsAwake == true }
 }
 
 // MARK: - App config form
@@ -143,7 +131,6 @@ private struct AppTriggerConfigForm: View {
 
     @State private var watched: [String]
     @State private var draftBundleID: String = ""
-    @State private var pickerVisible: Bool = false
 
     init(trigger: AppTrigger, settings: SettingsStore) {
         self.trigger = trigger
@@ -152,14 +139,14 @@ private struct AppTriggerConfigForm: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+        Group {
             ForEach(watched, id: \.self) { bundleID in
                 HStack {
                     Image(systemName: "app.fill")
                         .foregroundStyle(.secondary)
                         .frame(width: 16)
                     Text(bundleID)
-                        .font(Theme.Fonts.caption.monospacedDigit())
+                        .font(Theme.Fonts.caption)
                         .lineLimit(1)
                         .truncationMode(.middle)
                     Spacer()
@@ -180,24 +167,15 @@ private struct AppTriggerConfigForm: View {
                     .foregroundStyle(.secondary)
             }
 
-            Divider().padding(.vertical, 2)
-
             HStack(spacing: Theme.Spacing.xs) {
                 TextField("e.g. us.zoom.xos", text: $draftBundleID)
                     .textFieldStyle(.roundedBorder)
-                    .font(Theme.Fonts.caption.monospacedDigit())
+                    .font(Theme.Fonts.caption)
                 Button("Add") { addCustom() }
                     .disabled(!isDraftValid)
             }
 
-            DisclosureGroup(isExpanded: $pickerVisible) {
-                runningAppsPicker
-                    .padding(.top, 4)
-            } label: {
-                Label("Add from running apps", systemImage: "appclip")
-                    .font(Theme.Fonts.caption)
-                    .foregroundStyle(.secondary)
-            }
+            runningAppsMenu
         }
     }
 
@@ -208,33 +186,24 @@ private struct AppTriggerConfigForm: View {
             && !watched.contains(trimmed)
     }
 
-    @ViewBuilder
-    private var runningAppsPicker: some View {
+    private var runningAppsMenu: some View {
         let candidates = trigger.runningBundleIDs
             .filter { !watched.contains($0) }
             .sorted()
-        if candidates.isEmpty {
-            Text("No new candidates running.")
-                .font(Theme.Fonts.caption)
-                .foregroundStyle(.secondary)
-        } else {
-            ForEach(candidates, id: \.self) { id in
-                HStack {
-                    Text(id)
-                        .font(Theme.Fonts.caption.monospacedDigit())
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                    Spacer()
-                    Button {
-                        addExisting(id)
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
+        return Menu {
+            if candidates.isEmpty {
+                Text("No new candidates running.")
+            } else {
+                ForEach(candidates, id: \.self) { id in
+                    Button(id) { addExisting(id) }
                 }
             }
+        } label: {
+            Label("Add from running apps", systemImage: "plus.circle")
+                .font(Theme.Fonts.caption)
         }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
     }
 
     private func addCustom() {
@@ -280,15 +249,15 @@ private struct WiFiTriggerConfigForm: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+        Group {
             Picker("Mode", selection: $inverse) {
-                Text("Stay awake on these networks").tag(false)
-                Text("Stay awake when not on these").tag(true)
+                Text("On these networks").tag(false)
+                Text("Off these networks").tag(true)
             }
-            .pickerStyle(.radioGroup)
-            .onChange(of: inverse) { settings.wifiTriggerInverseLogic = $0 }
-
-            Divider().padding(.vertical, 2)
+            .pickerStyle(.segmented)
+            .onChange(of: inverse) { newValue in
+                settings.wifiTriggerInverseLogic = newValue
+            }
 
             ForEach(ssids, id: \.self) { ssid in
                 HStack {
@@ -385,29 +354,35 @@ private struct CalendarTriggerConfigForm: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+        Group {
             Stepper(value: $leadMinutes, in: 0...15) {
                 LabeledContent("Wake before event") {
                     Text("\(leadMinutes) min")
-                        .font(Theme.Fonts.caption.monospacedDigit())
+                        .font(Theme.Fonts.caption)
                         .foregroundStyle(.secondary)
                 }
             }
-            .onChange(of: leadMinutes) { settings.calendarTriggerLeadTimeMinutes = $0 }
+            .onChange(of: leadMinutes) { newValue in
+                settings.calendarTriggerLeadTimeMinutes = newValue
+            }
 
             Stepper(value: $trailingMinutes, in: 0...15) {
                 LabeledContent("Stay awake after event") {
                     Text("\(trailingMinutes) min")
-                        .font(Theme.Fonts.caption.monospacedDigit())
+                        .font(Theme.Fonts.caption)
                         .foregroundStyle(.secondary)
                 }
             }
-            .onChange(of: trailingMinutes) { settings.calendarTriggerTrailingMinutes = $0 }
+            .onChange(of: trailingMinutes) { newValue in
+                settings.calendarTriggerTrailingMinutes = newValue
+            }
 
             Toggle("Exclude all-day events", isOn: $excludeAllDay)
-                .onChange(of: excludeAllDay) { settings.calendarTriggerExcludeAllDay = $0 }
+                .onChange(of: excludeAllDay) { newValue in
+                    settings.calendarTriggerExcludeAllDay = newValue
+                }
 
-            Text("Calendar selection (which calendars to watch) ships in a follow-up update. Today, Latte watches every calendar you've granted access to.")
+            Text("Calendar selection ships in a follow-up update. Today, Latte watches every calendar you've granted access to.")
                 .font(Theme.Fonts.caption)
                 .foregroundStyle(.secondary)
         }
@@ -418,10 +393,8 @@ private struct CalendarTriggerConfigForm: View {
 
 private struct FocusTriggerConfigInfo: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-            Text("Latte stays awake whenever any Focus filter is active. macOS does not expose individual Focus identifiers to third-party apps in a stable way, so per-Focus selection is deferred until Apple opens that API.")
-                .font(Theme.Fonts.caption)
-                .foregroundStyle(.secondary)
-        }
+        Text("Latte stays awake whenever any Focus filter is active. macOS does not expose individual Focus identifiers to third-party apps in a stable way, so per-Focus selection is deferred until Apple opens that API.")
+            .font(Theme.Fonts.caption)
+            .foregroundStyle(.secondary)
     }
 }
