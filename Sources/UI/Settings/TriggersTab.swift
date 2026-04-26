@@ -131,6 +131,7 @@ private struct AppTriggerConfigForm: View {
 
     @State private var watched: [String]
     @State private var draftBundleID: String = ""
+    @State private var showAdvanced: Bool = false
 
     init(trigger: AppTrigger, settings: SettingsStore) {
         self.trigger = trigger
@@ -140,25 +141,17 @@ private struct AppTriggerConfigForm: View {
 
     var body: some View {
         Group {
+            Text("Latte stays awake while any of these apps are running. Add the apps that must keep your Mac active — video meetings, presentations, long-running tools.")
+                .font(Theme.Fonts.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
             ForEach(watched, id: \.self) { bundleID in
-                HStack {
-                    Image(systemName: "app.fill")
-                        .foregroundStyle(.secondary)
-                        .frame(width: 16)
-                    Text(bundleID)
-                        .font(Theme.Fonts.caption)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                    Spacer()
-                    Button {
-                        remove(bundleID)
-                    } label: {
-                        Image(systemName: "minus.circle.fill")
-                            .foregroundStyle(.tertiary)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Remove \(bundleID)")
-                }
+                AppRow(
+                    bundleID: bundleID,
+                    info: trigger.displayInfo(for: bundleID),
+                    onRemove: { remove(bundleID) }
+                )
             }
 
             if watched.isEmpty {
@@ -167,15 +160,28 @@ private struct AppTriggerConfigForm: View {
                     .foregroundStyle(.secondary)
             }
 
-            HStack(spacing: Theme.Spacing.xs) {
-                TextField("e.g. us.zoom.xos", text: $draftBundleID)
-                    .textFieldStyle(.roundedBorder)
-                    .font(Theme.Fonts.caption)
-                Button("Add") { addCustom() }
-                    .disabled(!isDraftValid)
-            }
-
             runningAppsMenu
+
+            DisclosureGroup(isExpanded: $showAdvanced) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    Text("Type a bundle identifier (e.g. us.zoom.xos) to watch an app that isn't currently running.")
+                        .font(Theme.Fonts.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    HStack(spacing: Theme.Spacing.xs) {
+                        TextField("us.zoom.xos", text: $draftBundleID)
+                            .textFieldStyle(.roundedBorder)
+                            .font(Theme.Fonts.caption)
+                        Button("Add") { addCustom() }
+                            .disabled(!isDraftValid)
+                    }
+                }
+                .padding(.top, Theme.Spacing.xs)
+            } label: {
+                Label("Advanced — add by bundle ID", systemImage: "wrench.adjustable")
+                    .font(Theme.Fonts.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -189,13 +195,17 @@ private struct AppTriggerConfigForm: View {
     private var runningAppsMenu: some View {
         let candidates = trigger.runningBundleIDs
             .filter { !watched.contains($0) }
-            .sorted()
+            .map { id -> (id: String, label: String) in
+                let name = trigger.displayInfo(for: id)?.displayName ?? id
+                return (id, name)
+            }
+            .sorted { $0.label.localizedCaseInsensitiveCompare($1.label) == .orderedAscending }
         return Menu {
             if candidates.isEmpty {
-                Text("No new candidates running.")
+                Text("No new running apps to add.")
             } else {
-                ForEach(candidates, id: \.self) { id in
-                    Button(id) { addExisting(id) }
+                ForEach(candidates, id: \.id) { candidate in
+                    Button(candidate.label) { addExisting(candidate.id) }
                 }
             }
         } label: {
@@ -227,6 +237,65 @@ private struct AppTriggerConfigForm: View {
     private func commit(_ next: [String]) {
         watched = next
         settings.appTriggerBundleIDs = next
+    }
+}
+
+// MARK: - AppRow (icon + friendly name + bundle ID secondary)
+
+private struct AppRow: View {
+    let bundleID: String
+    let info: AppDisplayInfo?
+    let onRemove: () -> Void
+
+    private var resolvedName: String {
+        info?.displayName ?? bundleID
+    }
+
+    private var showsBundleIDSecondary: Bool {
+        guard let info else { return false }
+        return info.displayName != bundleID
+    }
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            iconView
+                .frame(width: 22, height: 22)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(resolvedName)
+                    .font(Theme.Fonts.body)
+                    .lineLimit(1)
+                if showsBundleIDSecondary {
+                    Text(bundleID)
+                        .font(Theme.Fonts.caption)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+            }
+            Spacer()
+            Button {
+                onRemove()
+            } label: {
+                Image(systemName: "minus.circle.fill")
+                    .foregroundStyle(.tertiary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Remove \(resolvedName)")
+        }
+    }
+
+    @ViewBuilder
+    private var iconView: some View {
+        if let data = info?.iconImageData, let nsImage = NSImage(data: data) {
+            Image(nsImage: nsImage)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+        } else {
+            Image(systemName: "app.fill")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .foregroundStyle(.secondary)
+        }
     }
 }
 

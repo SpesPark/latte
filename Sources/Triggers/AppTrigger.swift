@@ -3,6 +3,23 @@ import Foundation
 import AppKit
 #endif
 
+// MARK: - AppDisplayInfo
+
+/// Friendly display data for a watched bundle ID. `iconImageData` is PNG bytes
+/// (typically a downsampled 64×64 raster) so the type stays `Sendable` and the
+/// protocol stays platform-agnostic; the UI renders via `NSImage(data:)`.
+public struct AppDisplayInfo: Equatable, Sendable {
+    public let bundleID: String
+    public let displayName: String
+    public let iconImageData: Data?
+
+    public init(bundleID: String, displayName: String, iconImageData: Data? = nil) {
+        self.bundleID = bundleID
+        self.displayName = displayName
+        self.iconImageData = iconImageData
+    }
+}
+
 // MARK: - WorkspaceSource protocol
 
 /// Subset of `NSWorkspace` we depend on. Mockable.
@@ -10,6 +27,13 @@ import AppKit
 public protocol WorkspaceSource: AnyObject {
     /// Snapshot of currently running apps' bundle IDs (filtered to non-nil).
     var runningBundleIDs: [String] { get }
+
+    /// Resolve a friendly display name + optional icon for a bundle ID.
+    ///
+    /// Real implementations resolve in priority order: running app metadata →
+    /// installed-app metadata via `urlForApplication(withBundleIdentifier:)` →
+    /// `AppTriggerDefaults.displayName(for:)` curated table → `nil`.
+    func displayInfo(for bundleID: String) -> AppDisplayInfo?
 
     /// Subscribe to launch / terminate events. Each callback is invoked on the main actor with
     /// the affected bundle identifier (nil-safe; callers may ignore unrecognized launches).
@@ -50,6 +74,74 @@ public final class NSWorkspaceSource: WorkspaceSource {
 
     public var runningBundleIDs: [String] {
         workspace.runningApplications.compactMap { $0.bundleIdentifier }
+    }
+
+    public func displayInfo(for bundleID: String) -> AppDisplayInfo? {
+        // Priority 1: currently running — use NSRunningApplication metadata.
+        if let app = workspace.runningApplications
+            .first(where: { $0.bundleIdentifier == bundleID })
+        {
+            let name = app.localizedName
+                ?? AppTriggerDefaults.displayName(for: bundleID)
+                ?? bundleID
+            let iconData = app.icon.flatMap { Self.pngData(from: $0) }
+            return AppDisplayInfo(
+                bundleID: bundleID,
+                displayName: name,
+                iconImageData: iconData
+            )
+        }
+
+        // Priority 2: installed but not running — resolve via bundle URL.
+        if let url = workspace.urlForApplication(withBundleIdentifier: bundleID) {
+            let bundle = Bundle(url: url)
+            let name = (bundle?.localizedInfoDictionary?["CFBundleDisplayName"] as? String)
+                ?? (bundle?.infoDictionary?["CFBundleDisplayName"] as? String)
+                ?? (bundle?.infoDictionary?["CFBundleName"] as? String)
+                ?? AppTriggerDefaults.displayName(for: bundleID)
+                ?? bundleID
+            let iconImage = workspace.icon(forFile: url.path)
+            let iconData = Self.pngData(from: iconImage)
+            return AppDisplayInfo(
+                bundleID: bundleID,
+                displayName: name,
+                iconImageData: iconData
+            )
+        }
+
+        // Priority 3: curated default name only (no icon).
+        if let curated = AppTriggerDefaults.displayName(for: bundleID) {
+            return AppDisplayInfo(bundleID: bundleID, displayName: curated)
+        }
+
+        // Priority 4: unknown.
+        return nil
+    }
+
+    /// Downsample to ~64pt so the encoded PNG stays small (a few KB).
+    /// Settings rows render at 20pt — 64pt covers @2x retina with margin.
+    private static func pngData(from image: NSImage) -> Data? {
+        let maxDimension: CGFloat = 64
+        let originalSize = image.size
+        guard originalSize.width > 0, originalSize.height > 0 else { return nil }
+        let scale = min(maxDimension / max(originalSize.width, originalSize.height), 1.0)
+        let targetSize = NSSize(
+            width: max(1, originalSize.width * scale),
+            height: max(1, originalSize.height * scale)
+        )
+        let resized = NSImage(size: targetSize)
+        resized.lockFocus()
+        image.draw(
+            in: NSRect(origin: .zero, size: targetSize),
+            from: .zero,
+            operation: .sourceOver,
+            fraction: 1.0
+        )
+        resized.unlockFocus()
+        guard let cgImage = resized.cgImage(forProposedRect: nil, context: nil, hints: nil)
+        else { return nil }
+        let rep = NSBitmapImageRep(cgImage: cgImage)
+        return rep.representation(using: .png, properties: [:])
     }
 
     public func observeLifecycle(
@@ -168,6 +260,12 @@ public final class AppTrigger: Trigger {
         source.runningBundleIDs
     }
 
+    /// Resolve friendly display info for a watched bundle ID. The Settings UI
+    /// uses this to show app names + icons in place of raw bundle IDs.
+    public func displayInfo(for bundleID: String) -> AppDisplayInfo? {
+        source.displayInfo(for: bundleID)
+    }
+
     private func handleLaunch(bundleID: String, watched: Set<String>) {
         guard watched.contains(bundleID) else { return }
         let wasEmpty = matchingRunning.isEmpty
@@ -193,6 +291,11 @@ public final class AppTrigger: Trigger {
 @MainActor
 final class NoopWorkspaceSource: WorkspaceSource {
     var runningBundleIDs: [String] { [] }
+    func displayInfo(for bundleID: String) -> AppDisplayInfo? {
+        AppTriggerDefaults.displayName(for: bundleID).map {
+            AppDisplayInfo(bundleID: bundleID, displayName: $0)
+        }
+    }
     func observeLifecycle(
         onLaunch: @escaping @MainActor (String) -> Void,
         onTerminate: @escaping @MainActor (String) -> Void
@@ -211,8 +314,20 @@ public final class MockWorkspaceSource: WorkspaceSource {
     private var onLaunch: (@MainActor (String) -> Void)?
     private var onTerminate: (@MainActor (String) -> Void)?
 
+    /// Explicit display-info overrides keyed by bundle ID. When set, takes
+    /// priority over `AppTriggerDefaults.displayName(for:)` fallback.
+    public var displayInfoLookup: [String: AppDisplayInfo] = [:]
+
     public init(runningBundleIDs: [String] = []) {
         self.runningBundleIDs = runningBundleIDs
+    }
+
+    public func displayInfo(for bundleID: String) -> AppDisplayInfo? {
+        if let override = displayInfoLookup[bundleID] { return override }
+        if let curated = AppTriggerDefaults.displayName(for: bundleID) {
+            return AppDisplayInfo(bundleID: bundleID, displayName: curated)
+        }
+        return nil
     }
 
     public func observeLifecycle(
@@ -252,6 +367,22 @@ public enum AppTriggerDefaults {
         "com.tinyspeck.slackmacgap",
         "com.google.Chrome.helper.meet"
     ]
+
+    /// Friendly fallback names for the curated default IDs. Used when the
+    /// system has no live or installed-bundle metadata to draw from (e.g. a
+    /// curated default app the user hasn't installed yet).
+    private static let displayNames: [String: String] = [
+        "us.zoom.xos": "Zoom",
+        "com.microsoft.teams2": "Microsoft Teams",
+        "com.cisco.webex.meetings": "Webex",
+        "com.hnc.Discord": "Discord",
+        "com.tinyspeck.slackmacgap": "Slack",
+        "com.google.Chrome.helper.meet": "Google Meet"
+    ]
+
+    public static func displayName(for bundleID: String) -> String? {
+        displayNames[bundleID]
+    }
 
     /// Drops invalid entries silently per 04 §4.3.2.
     public static func sanitize(_ ids: [String]) -> [String] {

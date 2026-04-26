@@ -150,4 +150,53 @@ final class AppTriggerTests: XCTestCase {
         source.runningBundleIDs.append("com.tinyspeck.slackmacgap")
         XCTAssertTrue(trigger.runningBundleIDs.contains("com.tinyspeck.slackmacgap"))
     }
+
+    // MARK: - DisplayInfo (S7.7)
+
+    func testCuratedDefaultsDisplayNameMapping() {
+        XCTAssertEqual(AppTriggerDefaults.displayName(for: "us.zoom.xos"), "Zoom")
+        XCTAssertEqual(AppTriggerDefaults.displayName(for: "com.microsoft.teams2"), "Microsoft Teams")
+        XCTAssertEqual(AppTriggerDefaults.displayName(for: "com.cisco.webex.meetings"), "Webex")
+        XCTAssertEqual(AppTriggerDefaults.displayName(for: "com.hnc.Discord"), "Discord")
+        XCTAssertEqual(AppTriggerDefaults.displayName(for: "com.tinyspeck.slackmacgap"), "Slack")
+        XCTAssertEqual(AppTriggerDefaults.displayName(for: "com.google.Chrome.helper.meet"), "Google Meet")
+    }
+
+    func testCuratedDefaultsDisplayNameUnknownReturnsNil() {
+        XCTAssertNil(AppTriggerDefaults.displayName(for: "com.unknown.app"))
+        XCTAssertNil(AppTriggerDefaults.displayName(for: ""))
+    }
+
+    func testMockDisplayInfoFallsBackToCuratedTable() {
+        let source = MockWorkspaceSource()
+        let info = source.displayInfo(for: "us.zoom.xos")
+        XCTAssertEqual(info?.displayName, "Zoom")
+        XCTAssertEqual(info?.bundleID, "us.zoom.xos")
+        XCTAssertNil(info?.iconImageData)
+    }
+
+    func testMockDisplayInfoExplicitOverrideTakesPrecedence() {
+        let source = MockWorkspaceSource()
+        source.displayInfoLookup["us.zoom.xos"] = AppDisplayInfo(
+            bundleID: "us.zoom.xos",
+            displayName: "Zoom Workplace"
+        )
+        XCTAssertEqual(source.displayInfo(for: "us.zoom.xos")?.displayName, "Zoom Workplace")
+    }
+
+    func testMockDisplayInfoNilForUnmappedID() {
+        let source = MockWorkspaceSource()
+        XCTAssertNil(source.displayInfo(for: "com.unknown.app"))
+    }
+
+    func testAppTriggerDisplayInfoPassThroughToSource() {
+        let (trigger, source, _) = makeFixture()
+        source.displayInfoLookup["com.example.foo"] = AppDisplayInfo(
+            bundleID: "com.example.foo",
+            displayName: "Foo"
+        )
+        XCTAssertEqual(trigger.displayInfo(for: "com.example.foo")?.displayName, "Foo")
+        XCTAssertEqual(trigger.displayInfo(for: "us.zoom.xos")?.displayName, "Zoom") // curated fallback
+        XCTAssertNil(trigger.displayInfo(for: "com.unknown.app"))
+    }
 }

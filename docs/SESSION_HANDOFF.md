@@ -8,10 +8,10 @@
 
 | Field | Value |
 |---|---|
-| **Session #** | 7 + 7.5 + 7.6 of ~10 (three S7-family sessions same calendar day) |
-| **Theme** | Test coverage + QA gate (S7); Per-trigger config UI (S7.5); UX rewrite after owner smoke (S7.6) |
+| **Session #** | 7 + 7.5 + 7.6 + 7.7 of ~10 (four S7-family sessions same calendar day) |
+| **Theme** | Test coverage + QA gate (S7); Per-trigger config UI (S7.5); UX rewrite after owner smoke (S7.6); App trigger friendly names after second smoke (S7.7) |
 | **Date** | 2026-04-26 |
-| **Status** | ✅ Completed. 229/229 tests passing. S7 cleared the 80% coverage gate on `Sources/Core/**` and `Sources/Triggers/**` (live-system adapter classes excluded; rationale codified in `02-architecture.md` §13 v0.9 + `docs/QA_LOG.md`). S7.5 landed Phase 1.5.A — Settings → Triggers now offers an inline configuration form per trigger. **S7.6 owner smoke surfaced two defects (P1 state-mismatch + P2 UX); both fixed by retiring the DisclosureGroup-with-Toggle-in-label structure in favor of a Section-per-trigger layout.** EKCalendar picker and per-Focus selection remain deferred as Phase 1.5.B / Apple-API-blocked respectively. |
+| **Status** | ✅ Completed. 235/235 tests passing. S7 cleared the 80% coverage gate on `Sources/Core/**` and `Sources/Triggers/**` (live-system adapter classes excluded; rationale codified in `02-architecture.md` §13 v0.9 + `docs/QA_LOG.md`). S7.5 landed Phase 1.5.A — Settings → Triggers now offers an inline configuration form per trigger. S7.6 owner smoke surfaced two defects (P1 state-mismatch + P2 UX); both fixed by retiring the DisclosureGroup-with-Toggle-in-label structure in favor of a Section-per-trigger layout. **S7.7 owner re-smoke against S7.6 build surfaced one more defect (P2: App trigger row showed raw bundle IDs + had no purpose copy); fixed by extending `WorkspaceSource` with `displayInfo(for:)`, adding a curated displayName table, and rewriting `AppTriggerConfigForm` to render real app icons + friendly names with bundle ID demoted to a muted secondary line, plus collapsing manual bundle-ID entry behind an "Advanced" disclosure.** EKCalendar picker and per-Focus selection remain deferred as Phase 1.5.B / Apple-API-blocked respectively. |
 
 ### What was accomplished
 
@@ -88,9 +88,37 @@ S7.5 architectural note: the `Trigger` protocol stays untouched. The two new acc
 
 S7.6 has zero protocol or model changes. `Sources/Core/**`, `Sources/Triggers/**`, `Trigger`, `TriggerCoordinator`, `AppEnvironment`, `SettingsStore` — all untouched. Pure SwiftUI restructure of one file.
 
+### S7.7 added (App trigger UX friendly names — fix-first after second owner smoke)
+
+12. **`AppDisplayInfo` Sendable struct** — bundle ID + display name + optional PNG-encoded icon data. Defined alongside `WorkspaceSource` in `Sources/Triggers/AppTrigger.swift`. PNG bytes (not `NSImage`) so the type stays `Sendable` and the protocol stays platform-agnostic; the UI converts via `NSImage(data:)` at render time.
+
+13. **`WorkspaceSource.displayInfo(for:)` requirement** — new method on the existing live-system adapter abstraction. Mockable by all consumers; the `Trigger` protocol itself is unchanged.
+
+14. **`NSWorkspaceSource.displayInfo(for:)`** — real adapter implementation. Resolution priority:
+    1. Currently running → `NSRunningApplication.localizedName` + `.icon` (downsampled to 64pt via private `pngData(from:)`).
+    2. Installed bundle → `NSWorkspace.urlForApplication(withBundleIdentifier:)` + `Bundle.localizedInfoDictionary` / `infoDictionary` for the name + `NSWorkspace.icon(forFile:)` for the icon.
+    3. Curated default name → `AppTriggerDefaults.displayName(for:)` (covers Zoom, Microsoft Teams, Webex, Discord, Slack, Google Meet — the same 6 IDs already in `AppTriggerDefaults.bundleIDs`).
+    4. `nil`.
+
+    Sits inside the `NSWorkspaceSource` class which is already on the adapter exemption list (§13 v0.9), so the new method + its inner closures + the private `pngData(from:)` helper are also exempt from the 80% gate.
+
+15. **`MockWorkspaceSource.displayInfoLookup: [String: AppDisplayInfo]`** — stubbable per-bundle-ID override dict for tests; falls through to the curated table when no override is set, matches `nil` for unknown IDs.
+
+16. **`AppTrigger.displayInfo(for:)` passthrough** — thin wrapper so `Sources/UI/Settings/TriggersTab` never reaches into the source layer directly.
+
+17. **`AppTriggerConfigForm` rewrite** —
+    - **Purpose copy** at the top: "Latte stays awake while any of these apps are running. Add the apps that must keep your Mac active — video meetings, presentations, long-running tools."
+    - Each row uses new private `AppRow` view: real app icon (22pt) + friendly display name (body font, top) + bundle ID (caption font, tertiary, bottom — only shown when distinct from displayName).
+    - "Add from running apps" Menu items now show display names sorted case-insensitively rather than raw bundle IDs.
+    - Manual bundle-ID textfield collapsed under a `DisclosureGroup` labelled "Advanced — add by bundle ID" (closed by default). The DisclosureGroup label is purely a non-interactive caption + icon (S7.6 lesson respected — no Toggles or other tappable controls in the label).
+
+18. **Tests** — `Tests/AppTriggerTests.swift` gains 6 new tests covering: the curated displayName mapping (all 6 entries), unknown ID returns nil, Mock fallback to curated table, Mock explicit override priority, Mock nil for unmapped IDs, AppTrigger passthrough composition. **229 → 235 tests, all pass. Coverage gate still PASS.**
+
+S7.7 introduces one small additive protocol extension (`displayInfo(for:)` on `WorkspaceSource`); the `Trigger` protocol, `TriggerCoordinator`, persistence, and all other architecture layers are unchanged. Friendly resolution is purely a render-time concern — `SettingsStore.appTriggerBundleIDs` still stores `[String]` of bundle IDs.
+
 ### What's NOT done (intentional)
 
-- **Owner-side manual smoke checklist** in `docs/QA_LOG.md` is checked-in but unchecked — Claude cannot drive the menu-bar UI. Owner runs through this and ticks lines (or logs defects in the same doc) before S8 starts in earnest. Gate for S8 is: zero P1 items in QA_LOG.
+- **Owner-side manual smoke checklist** in `docs/QA_LOG.md` is checked-in but unchecked — Claude cannot drive the menu-bar UI. Owner runs through this (including the §S7.7 addendum smoke for the new App-trigger friendly-name surface) and ticks lines (or logs defects in the same doc) before S8 starts in earnest. Gate for S8 is: zero P1 items in QA_LOG.
 - **macOS 13/14/15 matrix smoke** — deferred to S9 (TestFlight). Dev box is macOS 26 only.
 - **`AwakeManager` coverage** sits at 94.1% — the remaining 6% is mostly the two log-only paths in the IOKit power-source observer; not worth contorting tests to chase. Documented in 02 §13 v0.9.
 - **`Trigger` protocol file** at 82.8% — the 5 missed lines are default-impl fallbacks for protocols that are always overridden by concrete types. Right at the gate; do not "improve" with pointless override tests.
@@ -135,13 +163,30 @@ M  ROADMAP.md                                 (v0.10)
 M  docs/design/02-architecture.md             (v0.10)
 M  docs/SESSION_HANDOFF.md
 
-S7.6 (this commit):
+S7.6 (commit 47fc8ab):
 M  Sources/UI/Settings/TriggersTab.swift      (Section-per-trigger rewrite — DisclosureGroup retired)
 M  ROADMAP.md                                 (v0.11)
 M  docs/design/02-architecture.md             (v0.11)
 M  docs/QA_LOG.md                              (logged S75-DEF-01 + S75-DEF-02, both fixed-in-S7.6)
 M  docs/SESSION_HANDOFF.md                    (this file)
 ~  Latte.xcodeproj                             (gitignored — re-run `xcodegen generate` after adding files)
+
+S7.7 (this commit):
+M  Sources/Triggers/AppTrigger.swift          (+ AppDisplayInfo struct, + WorkspaceSource.displayInfo,
+                                                + NSWorkspaceSource.displayInfo + pngData helper,
+                                                + Mock.displayInfoLookup, + AppTrigger.displayInfo passthrough,
+                                                + AppTriggerDefaults.displayName mapping)
+M  Sources/UI/Settings/TriggersTab.swift      (AppTriggerConfigForm rewrite — purpose copy + AppRow with
+                                                icon + display name + bundle ID secondary; running-apps Menu
+                                                shows display names; manual input collapsed under Advanced
+                                                DisclosureGroup)
+M  Tests/AppTriggerTests.swift                (+ 6 displayInfo / curated-mapping / passthrough tests;
+                                                229 → 235 tests)
+M  ROADMAP.md                                 (v0.12)
+M  docs/design/02-architecture.md             (v0.12, §13 entry)
+M  docs/QA_LOG.md                              (logged S76-DEF-01 fixed-in-S7.7 + S7.7 smoke checklist
+                                                addendum + post-S7.7 coverage snapshot)
+M  docs/SESSION_HANDOFF.md                    (this file)
 ```
 
 ---

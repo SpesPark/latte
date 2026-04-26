@@ -146,6 +146,60 @@ Owner ran the S7.5 smoke and surfaced two related defects in the per-trigger con
 
 ---
 
+## S7.6 → S7.7 — App trigger UX rewrite to friendly app names (2026-04-26)
+
+Owner ran the S7.6 smoke and surfaced one defect in the App trigger config UI. Resolved in S7.7 the same day.
+
+#### S76-DEF-01 — App trigger row shows raw bundle IDs + no purpose copy
+
+- **Severity**: P2 (UX)
+- **Repro**: Settings → Triggers → enable App trigger → expand config form.
+- **Expected**: human-readable app names (e.g. "Zoom", "Microsoft Teams") with familiar icons; clear explanation of what the trigger does.
+- **Actual**: each watched row rendered a generic `app.fill` SF Symbol + raw bundle ID (`us.zoom.xos`, `com.microsoft.teams2`, …). No purpose copy. The "Add from running apps" Menu also listed raw bundle IDs. Owner: "앱 이름들이 com.xxxxx.xxxxx 다 이런식으로 나와서 직관적으로 이해하기 좀 어렵고, 이 트리거가 무슨 용도로 사용되는지도 직관적으로 이해가 잘 안돼."
+- **Root cause**: `AppTriggerConfigForm` rendered `Text(bundleID)` directly with no resolution layer. The underlying `WorkspaceSource` protocol had no facility to resolve a friendly name or icon for a bundle ID.
+- **Status**: **fixed-in-S7.7** (this session).
+  - `WorkspaceSource` extended with `displayInfo(for: String) -> AppDisplayInfo?` returning a Sendable struct of `displayName` + optional PNG-encoded icon data.
+  - `NSWorkspaceSource.displayInfo(for:)` resolves in priority order: running app (`NSRunningApplication.localizedName`/`icon`) → installed bundle (`NSWorkspace.urlForApplication(...)` + `Bundle` metadata) → curated default name table → `nil`.
+  - `AppTriggerDefaults.displayName(for:)` provides fallback names for the 6 curated default IDs (Zoom, Microsoft Teams, Webex, Discord, Slack, Google Meet).
+  - `MockWorkspaceSource.displayInfoLookup` stubbable; falls back to `AppTriggerDefaults.displayName(for:)`.
+  - `AppTriggerConfigForm` rewritten: each row uses new `AppRow` view (icon + display name + bundle ID secondary line). Purpose-explaining caption added at the top of the form. "Add from running apps" Menu items now show display names. Manual bundle-ID input collapsed into a `DisclosureGroup` labelled "Advanced — add by bundle ID" (closed by default, label is non-interactive caption per S7.6 lesson).
+  - `Tests/AppTriggerTests.swift`: 6 new tests (curated mapping, mock fallback, mock override priority, AppTrigger passthrough). 229 → 235 tests.
+  - **Architecture / persistence changes**: none. `SettingsStore.appTriggerBundleIDs` still stores `[String]` of bundle IDs; the friendly resolution is purely a render-time concern.
+
+### Additional smoke checklist for S7.7 (owner)
+
+Append to the §S7 "Per-trigger configuration" section. Run on the S7.7 build before opening S8.
+
+- [ ] App trigger Section header copy reads roughly "Latte stays awake while any of these apps are running. Add the apps that must keep your Mac active — video meetings, presentations, long-running tools."
+- [ ] Each watched-app row shows: real app icon (left) + friendly display name (top, body font) + bundle ID (bottom, muted caption).
+  - For curated defaults that aren't installed (e.g. Webex if you don't have it): displays the curated name ("Webex") with a generic `app.fill` icon and the bundle ID below.
+  - For installed apps that are currently running: real icon + system-localized display name.
+- [ ] "Add from running apps" Menu lists running apps by display name (sorted alphabetically), not by bundle ID.
+- [ ] "Advanced — add by bundle ID" disclosure is **collapsed** by default. Expanding it reveals the manual TextField + Add button (unchanged behaviour from S7.6).
+- [ ] Adding an app via the Menu / Advanced TextField makes it appear in the list with the resolved friendly name on the next render.
+
+### Coverage gate snapshot (post-S7.7)
+
+Per-file coverage on `Sources/Core/**` and `Sources/Triggers/**` after S7.7, with the 4 adapter classes (`NSWorkspaceSource`, `EKCalendarSource`, `INFocusSource`, `CoreWLANSource`) and their inner closures excluded:
+
+| File | Cov% | Status |
+|---|---|---|
+| Core/AwakeDuration | 100.00% | ✅ |
+| Core/AwakeManager | 94.12% | ✅ |
+| Core/Logging | 100.00% | ✅ |
+| Core/PowerAssertion | 87.32% | ✅ |
+| Core/SettingsStore | 100.00% | ✅ |
+| Triggers/Trigger | 82.76% | ✅ |
+| Triggers/TriggerCoordinator | 92.31% | ✅ |
+| Triggers/AppTrigger | 98.68% | ✅ |
+| Triggers/CalendarTrigger | 98.75% | ✅ |
+| Triggers/FocusTrigger | 97.94% | ✅ |
+| Triggers/WiFiTrigger | 96.55% | ✅ |
+
+**GATE: PASS** (235/235 tests, lowest 82.76%).
+
+---
+
 ## Adapter exemption rationale
 
 The following classes are excluded from the 80% coverage gate because they wrap live system services and require an interactive user / permission grant / hardware to exercise:
