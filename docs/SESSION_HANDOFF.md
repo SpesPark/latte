@@ -8,10 +8,10 @@
 
 | Field | Value |
 |---|---|
-| **Session #** | 7 + 7.5 + 7.6 + 7.7 + 7.8 + 7.9 of ~10 (six S7-family sessions same calendar day) |
-| **Theme** | Test coverage + QA gate (S7); Per-trigger config UI (S7.5); UX rewrite after owner smoke (S7.6); App trigger friendly names (S7.7); pickable filter + installed-only seed (S7.8); trigger lifecycle / watched-list reevaluate (S7.9) |
+| **Session #** | 7 + 7.5 + 7.6 + 7.7 + 7.8 + 7.9 + 7.10 of ~10 (seven S7-family sessions same calendar day) |
+| **Theme** | Test coverage + QA gate (S7); Per-trigger config UI (S7.5); UX rewrite after owner smoke (S7.6); App trigger friendly names (S7.7); pickable filter + installed-only seed (S7.8); trigger lifecycle / watched-list reevaluate (S7.9); per-trigger grace replaces 60 s cool-down (S7.10) |
 | **Date** | 2026-04-26 |
-| **Status** | ✅ Completed. 255/255 tests passing. S7 cleared the 80% coverage gate on `Sources/Core/**` and `Sources/Triggers/**` (live-system adapter classes excluded; rationale codified in `02-architecture.md` §13 v0.9 + `docs/QA_LOG.md`). S7.5 landed Phase 1.5.A — Settings → Triggers now offers an inline configuration form per trigger. S7.6 owner smoke surfaced two defects (P1 state-mismatch + P2 UX); both fixed by retiring the DisclosureGroup-with-Toggle-in-label structure in favor of a Section-per-trigger layout. S7.7 owner re-smoke against S7.6 build surfaced one defect (P2: App trigger row showed raw bundle IDs + no purpose copy); fixed by extending `WorkspaceSource` with `displayInfo(for:)`, curated displayName table, and rewriting `AppTriggerConfigForm` to render real app icons + friendly names. **S7.8 owner re-smoke against S7.7 build surfaced three connected complaints — pre-loaded curated defaults populate apps the owner doesn't have installed; "Add from running apps" Menu items show names without icons; the same Menu lists every running process. Fixed at the root: `WorkspaceSource` gains `pickableRunningBundleIDs` (filters `.regular` activation policy + excludes self) and `isInstalled(_:)`; `AppTrigger.init` runs a one-shot installed-only curated seed gated on the new `hasSeededAppDefaults` flag (idempotent across re-launches, respects users who explicitly cleared their list); legacy "fall back to all 6 curated when raw is empty" getter behaviour removed; UI Menu items render with real app icons or SF Symbol category fallback (`video.fill` / `bubble.left.and.bubble.right.fill`).** EKCalendar picker and per-Focus selection remain deferred as Phase 1.5.B / Apple-API-blocked respectively. |
+| **Status** | ✅ Completed. 261/261 tests passing. S7 cleared the 80% coverage gate on `Sources/Core/**` and `Sources/Triggers/**` (live-system adapter classes excluded; rationale codified in `02-architecture.md` §13 v0.9 + `docs/QA_LOG.md`). S7.5 landed Phase 1.5.A — Settings → Triggers now offers an inline configuration form per trigger. S7.6 owner smoke surfaced two defects (P1 state-mismatch + P2 UX); both fixed by retiring the DisclosureGroup-with-Toggle-in-label structure in favor of a Section-per-trigger layout. S7.7 owner re-smoke against S7.6 build surfaced one defect (P2: App trigger row showed raw bundle IDs + no purpose copy); fixed by extending `WorkspaceSource` with `displayInfo(for:)`, curated displayName table, and rewriting `AppTriggerConfigForm` to render real app icons + friendly names. **S7.8 owner re-smoke against S7.7 build surfaced three connected complaints — pre-loaded curated defaults populate apps the owner doesn't have installed; "Add from running apps" Menu items show names without icons; the same Menu lists every running process. Fixed at the root: `WorkspaceSource` gains `pickableRunningBundleIDs` (filters `.regular` activation policy + excludes self) and `isInstalled(_:)`; `AppTrigger.init` runs a one-shot installed-only curated seed gated on the new `hasSeededAppDefaults` flag (idempotent across re-launches, respects users who explicitly cleared their list); legacy "fall back to all 6 curated when raw is empty" getter behaviour removed; UI Menu items render with real app icons or SF Symbol category fallback (`video.fill` / `bubble.left.and.bubble.right.fill`).** EKCalendar picker and per-Focus selection remain deferred as Phase 1.5.B / Apple-API-blocked respectively. |
 
 ### What was accomplished
 
@@ -157,9 +157,31 @@ S7.8 introduces two additive protocol requirements + one persistence flag. The `
 
 S7.9 introduces one small public method addition (`AppTrigger.reevaluateWatched()`) and one UI rewiring (Toggle → coordinator). The `Trigger` protocol surface, `TriggerCoordinator`, `AwakeManager`, persistence, and other layers are unchanged. WiFi / Calendar / Focus likely have the same "watched-list mutation doesn't reach the live trigger" pattern; deferred to S7.10 if owner re-smoke surfaces it. The Toggle fix already covers "disable this trigger entirely" universally.
 
+### S7.10 added (Per-trigger grace replaces blanket 60 s cool-down — fix-first after fifth owner smoke)
+
+34. **`Trigger.graceSecondsAfterOff: TimeInterval` (default 0 via protocol extension)** — each trigger declares how long the awake assertion should be held after its last organic OFF vote, before releasing it. v1 default for all 4 triggers (App / Calendar / WiFi / Focus): 0 = release immediately.
+
+35. **`TriggerVote.graceSecondsAfterOff: TimeInterval` (default 0)** — Sendable struct field. Carries the trigger's declared grace through the stream → coordinator → manager pipeline so the state machine can branch on it at the moment of vote-OFF. Default 0 means existing call sites compile unchanged.
+
+36. **`AwakeInput.triggerVoteOff(id:graceSeconds:)`** — extended from `(id: String)` to `(id: String, graceSeconds: TimeInterval)`. State machine's `(.awakeTriggered, .triggerVoteOff(id, grace))` arm forks: `grace == 0` returns `.asleep` + `.releaseAssertion` (no timer); `grace > 0` returns `.coolingDown(now + grace, lastVotes: votes)` + `.scheduleTimer(.coolDown, until)` (existing path). Other states' `.triggerVoteOff` arms add `, _` to ignore grace (irrelevant when not in `.awakeTriggered`).
+
+37. **`AwakeManager.receiveTriggerVote`** — extracts `grace` from the vote and forwards `process(.triggerVoteOff(id, graceSeconds: vote.graceSecondsAfterOff))`.
+
+38. **`TriggerCoordinator.stop`** — synthesizes its vote-OFF with `graceSecondsAfterOff: 0` explicitly. User-explicit Toggle OFF always bypasses any per-trigger grace, regardless of what value the trigger declared.
+
+39. **`AppTrigger.reevaluateWatched`** — does the same when the watched-list edit transitions to OFF (user edited the list, expects immediate effect). `AppTrigger.handleTerminate` (organic — system reported the watched app died) emits with `self.graceSecondsAfterOff` (currently 0 by default), preserving the path for triggers that ever override it.
+
+40. **§8 worked-example tests updated** — the cool-down-behavior tests in `AwakeStateMachineWorkedExampleTests` and `TriggerIntegrationTests` now pass `graceSecondsAfterOff: 30` explicitly to exercise the cool-down path. They still verify that path is correct; they just no longer rely on a global 60 s default. New test pair covers both forks: `testAwakeTriggered_triggerVoteOff_lastVote_grace0_goesToAsleepImmediately` (v1 default) + `testAwakeTriggered_triggerVoteOff_lastVote_gracePositive_goesToCoolingDown` (legacy preserved). Two AwakeManager-level integration tests verify `receiveTriggerVote` correctly dispatches grace into the state machine. The S7.9 owner-scenario integration tests in `TriggerCoordinatorTests` were tightened from "coolingDown OR asleep" to strict "asleep" since coordinator.stop now sends grace = 0 deterministically.
+
+41. **Design docs revised** — `03-state-machine.md` v0.2 rewrote §5.2 (the cool-down decision) with the revised rationale: empirical evidence from competitor apps (Amphetamine, Owly, KeepingYouAwake, Caffeinated, Theine, Lungo) showing none use a hidden cool-down, plus the structural observation that Latte's `.asleep` only releases the IOPMAssertion (macOS still respects its own 5–15 min idle timeout before actually sleeping, so the cool-down was largely working invisibly underneath the OS timer with no perceptible benefit). `02-architecture.md` v0.15 §13 captures the architectural surgery. The legacy `AwakeManagerConstants.coolDownSeconds = 60` constant is no longer consulted by the state machine — grace is sourced from each individual OFF vote.
+
+42. **255 → 261 tests, all pass.** Coverage gate: AwakeManager 94.26% (up from 94.12%), AppTrigger 98.62%, TriggerCoordinator 92.96%, Trigger 83.33% — all above 80%.
+
+S7.10 is the largest of the S7-family iterations: 1 protocol extension, 1 input signature change, 1 state machine arm forked, 6 emit-site adjustments, 7 test sites updated. The `Trigger` surface stays default-impl-friendly so any external implementer is unaffected. The `Trigger` protocol, `TriggerCoordinator`, and persistence shapes are unchanged for v1; WiFi / Calendar / Focus stay at grace = 0.
+
 ### What's NOT done (intentional)
 
-- **Owner-side manual smoke checklist** in `docs/QA_LOG.md` is checked-in but unchecked — Claude cannot drive the menu-bar UI. Owner runs through this (including the §S7.7 + §S7.8 + §S7.9 addendums covering App-trigger friendly names, pickable filter, installed-only seed, and trigger lifecycle / watched-list edit) and ticks lines (or logs defects in the same doc) before S8 starts in earnest. Gate for S8 is: zero P1 items in QA_LOG.
+- **Owner-side manual smoke checklist** in `docs/QA_LOG.md` is checked-in but unchecked — Claude cannot drive the menu-bar UI. Owner runs through this (including the §S7.7 + §S7.8 + §S7.9 + §S7.10 addendums covering App-trigger friendly names, pickable filter, installed-only seed, watched-list reevaluate, and per-trigger grace replacing the 60 s cool-down) and ticks lines (or logs defects in the same doc) before S8 starts in earnest. Gate for S8 is: zero P1 items in QA_LOG.
 - **macOS 13/14/15 matrix smoke** — deferred to S9 (TestFlight). Dev box is macOS 26 only.
 - **`AwakeManager` coverage** sits at 94.1% — the remaining 6% is mostly the two log-only paths in the IOKit power-source observer; not worth contorting tests to chase. Documented in 02 §13 v0.9.
 - **`Trigger` protocol file** at 82.8% — the 5 missed lines are default-impl fallbacks for protocols that are always overridden by concrete types. Right at the gate; do not "improve" with pointless override tests.
@@ -255,7 +277,7 @@ M  docs/QA_LOG.md                              (logged S77-DEF-01..03 all fixed-
                                                 checklist addendum + post-S7.8 coverage snapshot)
 M  docs/SESSION_HANDOFF.md
 
-S7.9 (this commit):
+S7.9 (commit c6ca287):
 M  Sources/Triggers/AppTrigger.swift          (+ private var watchedSet — instance var replaces
                                                   closure-captured `let watched` in start();
                                                 + public func reevaluateWatched() with ON/OFF/re-emit
@@ -278,6 +300,44 @@ M  docs/design/02-architecture.md             (v0.14, §13 entry)
 M  docs/QA_LOG.md                              (logged S78-DEF-01..02 fixed-in-S7.9 + S7.9 smoke
                                                 checklist addendum + post-S7.9 coverage snapshot +
                                                 S7.10 candidate note)
+M  docs/SESSION_HANDOFF.md
+
+S7.10 (this commit):
+M  Sources/Triggers/Trigger.swift             (+ var graceSecondsAfterOff: TimeInterval requirement
+                                                  on the Trigger protocol, with default-impl extension
+                                                  returning 0 — every trigger inherits v1 immediate-OFF)
+M  Sources/Core/AwakeManager.swift            (+ TriggerVote.graceSecondsAfterOff field (Sendable, default 0);
+                                                ~ AwakeInput.triggerVoteOff(id) → (id, graceSeconds);
+                                                ~ AwakeStateMachine.step (.awakeTriggered, .triggerVoteOff)
+                                                  forks on grace == 0 (direct .asleep + releaseAssertion)
+                                                  vs grace > 0 (.coolingDown(now+grace) — existing path);
+                                                ~ other states' .triggerVoteOff arms ignore grace;
+                                                ~ AwakeManager.receiveTriggerVote extracts grace from vote
+                                                  and forwards to .triggerVoteOff(id, graceSeconds:))
+M  Sources/Triggers/TriggerCoordinator.swift  (~ stop() synthesizes vote-OFF with graceSecondsAfterOff: 0
+                                                  explicitly — user Toggle OFF always bypasses any
+                                                  per-trigger grace)
+M  Sources/Triggers/AppTrigger.swift          (~ reevaluateWatched yields with graceSecondsAfterOff: 0
+                                                  on the user-explicit transition-to-OFF;
+                                                  ~ handleTerminate yields with self.graceSecondsAfterOff
+                                                    so future triggers can opt into a grace period)
+M  Tests/AwakeManagerTests.swift              (~ 7 .triggerVoteOff sites updated to new signature;
+                                                ~ test81/82/85 worked-example tests now pass grace=30
+                                                  explicitly to exercise cool-down path;
+                                                + testAwakeTriggered_triggerVoteOff_lastVote_grace0_*
+                                                  + testAwakeTriggered_triggerVoteOff_lastVote_gracePositive_*
+                                                + 2 AwakeManager-level tests for receiveTriggerVote dispatch
+                                                + test81_v1Default for documenting the new default)
+M  Tests/TriggerIntegrationTests.swift        (~ test82_BackToBackMeetings now passes grace=30 explicitly
+                                                  to exercise the cooling-absorbs-gap behaviour)
+M  Tests/TriggerCoordinatorTests.swift        (~ S7.9 owner-scenario tests tightened — strict .asleep
+                                                  expectation since coordinator.stop now sends grace=0)
+M  ROADMAP.md                                 (v0.15)
+M  docs/design/02-architecture.md             (v0.15, §13 entry)
+M  docs/design/03-state-machine.md            (v0.2 — §5.2 rewritten with revised rationale;
+                                                input table + change log updated)
+M  docs/QA_LOG.md                              (logged S79-DEF-01 fixed-in-S7.10 + S7.10 smoke checklist
+                                                addendum + post-S7.10 coverage snapshot)
 M  docs/SESSION_HANDOFF.md                    (this file)
 ```
 

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Document version** | 0.1 |
+| **Document version** | 0.2 |
 | **Status** | Draft (awaiting review) |
 | **Resolves Open Questions** | OQ-01 (multi-trigger priority), OQ-02 (manual vs trigger conflict) |
 | **Depends on** | 01-PRD.md, 02-architecture.md (esp. §4.1 `AwakeManager`, §4.4 `Trigger`, §4.5 `TriggerCoordinator`) |
@@ -97,7 +97,7 @@ The machine reacts to a closed set of inputs. Anything outside this list is unde
 | `userActivate(duration)` | UI duration picker, AppIntents `Start(minutes:)` | `AwakeDuration` |
 | `userDeactivate` | UI "Off" button, AppIntents `Stop` | none |
 | `triggerVoteOn(id, vote)` | `TriggerCoordinator` | `TriggerVote` (wantsAwake = true) |
-| `triggerVoteOff(id)` | `TriggerCoordinator` | trigger id |
+| `triggerVoteOff(id, graceSeconds)` | `TriggerCoordinator` | trigger id + grace seconds (0 = immediate sleep, >0 = honor cool-down for that duration) |
 | `timerExpired` | internal `AwakeManager` timer | none |
 | `coolDownExpired` | internal timer | none |
 | `snoozeExpired` | internal timer | none |
@@ -135,14 +135,19 @@ extension AwakeState {
 
 **Question**: When the last trigger drops its vote, do we deactivate immediately?
 
-**Decision**: **No. Wait 60 seconds** in `CoolingDown`. If any trigger re-votes ON within that window, return to `AwakeTriggered` without ever releasing the assertion. Only after 60 s of zero votes do we transition to `Asleep`.
+**Decision (v0.2 — S7.10 revision)**: **Per-trigger grace.** Each `Trigger` declares a `graceSecondsAfterOff: TimeInterval` (default `0`). When the last vote goes OFF, the state machine reads the grace from the OFF vote and either:
+- `grace == 0` → transition `AwakeTriggered → Asleep` immediately, releasing the assertion. **This is the v1 default for all 4 triggers** (App, Calendar, WiFi, Focus).
+- `grace > 0` → transition `AwakeTriggered → CoolingDown(now + grace)`, holding the assertion until the timer fires. Subsequent `triggerVoteOn` cancels the timer and returns to `AwakeTriggered`.
 
-**Rationale**:
-- A 30-second gap between back-to-back Zoom calls is common ("call ends 14:30, next starts 14:31"). Without cool-down the Mac would sleep for ~60 s and wake up flapping the display, which is jarring on a MacBook lid-up.
-- Calendar trigger fires `voteOff` at the *exact end time* of an event; if the next event starts in 1 minute the user shouldn't see any visible state change.
-- 60 s is long enough to absorb back-to-back events, short enough that battery isn't meaningfully affected.
+User-explicit OFF actions (Toggle OFF in Settings, removing the last matching watched app) **always bypass** the trigger's declared grace by sending `grace = 0` — the user expects immediate effect from a UI edit, regardless of how the trigger normally behaves.
 
-**Configurable?** Not in v1. The constant `CoolDownDuration = 60` lives in `Sources/Core/AwakeManager.swift`. If a user complains in TestFlight that 60 s is wrong, we revisit before launch.
+**Rationale (revised)**:
+- The original v0.1 spec mandated a global 60 s cool-down for graceful trigger handoff. Owner smoke testing in S7.9 surfaced that this delay reads as "the OFF button is broken" — a 60 s wait between toggling a trigger off and seeing the cup deactivate is significantly worse than the flicker the cool-down was meant to prevent.
+- Empirically: leading sleep-prevention apps (Amphetamine, Owly, KeepingYouAwake, Caffeinated, Theine) all use immediate transitions on trigger state changes. There is no industry precedent for a hidden cool-down, and no documented user complaint about flicker in those apps.
+- "Sleep" in Latte's state machine = release the IOPMAssertion. macOS still respects the system's idle timeout (typically 5–15 min) before actually sleeping, so even with grace=0, an active user keeps their Mac awake — the cool-down was largely working *underneath* the OS idle timer where it had no perceptible effect.
+- Per-trigger grace preserves the architectural option to opt back into cool-down if production telemetry surfaces a real flicker problem (e.g., WiFi blips during network-switch). Adding it later is a 1-line change in the trigger's `graceSecondsAfterOff` override; no state machine surgery needed.
+
+**Configurable?** Not user-facing in v1; per-trigger as a code-level constant. v1 defaults are all 0. The historical `AwakeManagerConstants.coolDownSeconds = 60` constant is no longer consulted by the state machine — grace is sourced from the OFF vote.
 
 ### 5.3 OQ-02 — Manual interaction with active triggers
 
@@ -384,7 +389,7 @@ For random input sequences of length 20:
 
 | ID | Status |
 |---|---|
-| OQ-01 | **Resolved**: any-OR aggregation; 60 s cool-down before `Asleep`. |
+| OQ-01 | **Resolved**: any-OR aggregation; per-trigger grace controls the OFF transition (default 0 = immediate sleep, opt-in cool-down for triggers that declare grace>0). Revised in S7.10 from the original blanket 60 s cool-down — see §5.2. |
 | OQ-02 | **Resolved**: user-OFF during trigger-ON → 5 min `Snoozed`; user-ON during trigger-ON → no-op; user-ON with no votes → indefinite. |
 
 Remaining open questions stay deferred per their original target docs (see 01-PRD.md §11).
@@ -410,6 +415,7 @@ Remaining open questions stay deferred per their original target docs (see 01-PR
 | Version | Date | Changes |
 |---|---|---|
 | 0.1 | 2026-04-25 | Initial draft (session 2) |
+| 0.2 | 2026-04-26 | Session 7.10 — replaced the blanket 60 s cool-down with **per-trigger grace** (§5.2 rewritten). `Trigger` protocol gains `graceSecondsAfterOff: TimeInterval` (default 0). `TriggerVote` carries `graceSecondsAfterOff` so the OFF transition reads grace from the vote that triggered it. `AwakeInput.triggerVoteOff` gains a `graceSeconds` parameter; the state machine's `(.awakeTriggered, .triggerVoteOff)` arm forks on grace == 0 (direct `.asleep` + release assertion) vs grace > 0 (existing `.coolingDown` path with the requested duration). User-explicit OFF actions (`coordinator.stop`, `AppTrigger.reevaluateWatched`) always force grace = 0 so UI edits feel instant. v1 default for all 4 triggers is grace = 0 — Toggle OFF / list edits / organic OFF all release immediately, matching how Amphetamine / Owly / KeepingYouAwake behave. The legacy `AwakeManagerConstants.coolDownSeconds = 60` constant is no longer consulted by the state machine; the worked examples in §8 that depended on cool-down behavior were retained but now require explicit `graceSecondsAfterOff: 30` on the votes to exercise the cooling path. |
 
 ---
 

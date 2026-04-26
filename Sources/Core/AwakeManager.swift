@@ -16,11 +16,23 @@ public struct TriggerVote: Equatable, Sendable {
     public let wantsAwake: Bool
     public let reason: String
     public let until: Date?
+    /// Cool-down period (seconds) the state machine should hold the awake
+    /// assertion before releasing it, when this vote turns OFF the last
+    /// active trigger. 0 = release immediately (the v1 default for all
+    /// triggers — see `Trigger.graceSecondsAfterOff`). Only meaningful on
+    /// `wantsAwake == false` votes; ignored on ON votes.
+    public let graceSecondsAfterOff: TimeInterval
 
-    public init(wantsAwake: Bool, reason: String, until: Date? = nil) {
+    public init(
+        wantsAwake: Bool,
+        reason: String,
+        until: Date? = nil,
+        graceSecondsAfterOff: TimeInterval = 0
+    ) {
         self.wantsAwake = wantsAwake
         self.reason = reason
         self.until = until
+        self.graceSecondsAfterOff = graceSecondsAfterOff
     }
 }
 
@@ -58,7 +70,12 @@ public enum AwakeInput: Equatable, Sendable {
     case userDeactivate
     case userToggle
     case triggerVoteOn(id: String, vote: TriggerVote)
-    case triggerVoteOff(id: String)
+    /// `graceSeconds` controls the post-OFF cool-down. 0 = release the
+    /// assertion immediately and transition `.awakeTriggered → .asleep`
+    /// when this is the last vote; >0 = honor the cool-down period before
+    /// going to sleep. Sourced from the `TriggerVote` that wraps this
+    /// transition (or 0 for user-explicit Toggle OFF / list edits).
+    case triggerVoteOff(id: String, graceSeconds: TimeInterval)
     case timerExpired
     case coolDownExpired
     case snoozeExpired
@@ -145,7 +162,7 @@ public enum AwakeStateMachine {
             newPending[id] = vote
             return noChange(state: state, pendingVotes: newPending, reason: .user)
 
-        case (.awakeUserIndefinite, .triggerVoteOff(let id)):
+        case (.awakeUserIndefinite, .triggerVoteOff(let id, _)):
             var newPending = pendingVotes
             newPending.removeValue(forKey: id)
             return noChange(state: state, pendingVotes: newPending, reason: .user)
@@ -169,7 +186,7 @@ public enum AwakeStateMachine {
             newPending[id] = vote
             return noChange(state: state, pendingVotes: newPending, reason: .user)
 
-        case (.awakeUserTimed, .triggerVoteOff(let id)):
+        case (.awakeUserTimed, .triggerVoteOff(let id, _)):
             var newPending = pendingVotes
             newPending.removeValue(forKey: id)
             return noChange(state: state, pendingVotes: newPending, reason: .user)
@@ -201,18 +218,30 @@ public enum AwakeStateMachine {
                 activeReason: voteReason
             )
 
-        case (.awakeTriggered(let votes), .triggerVoteOff(let id)):
-            let snapshot = votes
+        case (.awakeTriggered(let votes), .triggerVoteOff(let id, let graceSeconds)):
             var newVotes = votes
             newVotes.removeValue(forKey: id)
             if newVotes.isEmpty {
-                let until = now.addingTimeInterval(AwakeManagerConstants.coolDownSeconds)
-                return AwakeStepResult(
-                    state: .coolingDown(until: until, lastVotes: snapshot),
-                    pendingVotes: pendingVotes,
-                    effects: [.scheduleTimer(kind: .coolDown, fireAt: until)],
-                    activeReason: lastReason(votes: snapshot)
-                )
+                if graceSeconds <= 0 {
+                    // Per-trigger grace = 0 (the v1 default for all triggers): release
+                    // the assertion immediately. User-explicit OFF actions also flow
+                    // through this branch with graceSeconds=0.
+                    return AwakeStepResult(
+                        state: .asleep,
+                        pendingVotes: [:],
+                        effects: [.releaseAssertion],
+                        activeReason: .none
+                    )
+                } else {
+                    // Honor the trigger's declared grace period via cool-down.
+                    let until = now.addingTimeInterval(graceSeconds)
+                    return AwakeStepResult(
+                        state: .coolingDown(until: until, lastVotes: votes),
+                        pendingVotes: pendingVotes,
+                        effects: [.scheduleTimer(kind: .coolDown, fireAt: until)],
+                        activeReason: lastReason(votes: votes)
+                    )
+                }
             } else {
                 return AwakeStepResult(
                     state: .awakeTriggered(votes: newVotes),
@@ -276,7 +305,7 @@ public enum AwakeStateMachine {
             newPending[id] = vote
             return noChange(state: state, pendingVotes: newPending, reason: .user)
 
-        case (.snoozed, .triggerVoteOff(let id)):
+        case (.snoozed, .triggerVoteOff(let id, _)):
             var newPending = pendingVotes
             newPending.removeValue(forKey: id)
             return noChange(state: state, pendingVotes: newPending, reason: .user)
@@ -550,7 +579,7 @@ public final class AwakeManager: ObservableObject {
         if vote.wantsAwake {
             process(.triggerVoteOn(id: triggerId, vote: vote))
         } else {
-            process(.triggerVoteOff(id: triggerId))
+            process(.triggerVoteOff(id: triggerId, graceSeconds: vote.graceSecondsAfterOff))
         }
     }
 

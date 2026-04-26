@@ -334,6 +334,68 @@ The same "watched-list mutation doesn't reach the live trigger" pattern likely a
 
 ---
 
+## S7.9 → S7.10 — Per-trigger grace replaces blanket 60 s cool-down (2026-04-26)
+
+Owner re-smoke against the S7.9 build:
+
+> "1. 컵 비활성 안되고
+> 2. 재활성 확인할 수 없었고 (1번 안 됐으니까)
+> 3. 비활성 안됨
+> 4. 비활성 안됨"
+>
+> "지금 비활성이 안돼서 점검 불가"
+
+Diagnosis: S7.9's wiring (Toggle → coordinator.stop → vote-off; reevaluateWatched → vote-off via stream) was correct, and the integration tests confirmed the vote-off transitioned `.awakeTriggered → .coolingDown(60s)`. But `.coolingDown` is `isAwake = true` — the cup stays activated for the full 60 seconds before the timer fires and we transition to `.asleep`. Owner read this as "OFF doesn't work" rather than "OFF, but with a 60 s grace period."
+
+#### S79-DEF-01 — 60 s cool-down reads as broken to users
+
+- **Severity**: P1 (the OFF action's perceived behavior)
+- **Repro**: Enable App trigger with a running watched app → cup ON. Toggle OFF. Cup stays ON for the next 60 seconds, then deactivates.
+- **Original design intent (`docs/design/03-state-machine.md` §5.2 v0.1)**: a 60 s grace period to absorb back-to-back triggers (e.g., Zoom call ends 14:30, next call starts 14:30:45) so the cup wouldn't flicker between sessions.
+- **Why the original intent didn't hold up**:
+  - Empirically, leading sleep-prevention apps (Amphetamine, Owly, KeepingYouAwake, Caffeinated, Theine, Lungo) all transition immediately on trigger state changes. There is no industry precedent for a hidden cool-down, and no documented user complaint about flicker in those apps.
+  - Latte's `.asleep` only releases the IOPMAssertion. macOS still respects its own idle timeout (typically 5–15 min) before actually sleeping. So even with `grace=0`, an active user keeps the Mac awake — the 60 s cool-down was largely working *underneath* the OS idle timer where it had no perceptible effect.
+  - Real user workflows rarely hit the back-to-back gap the cool-down was designed for (Zoom usually stays open between meetings; calendar gaps are minutes, not seconds; WiFi blips resolve in 1–2 s).
+- **Status**: **fixed-in-S7.10**.
+  - Replaced blanket cool-down with **per-trigger grace**. `Trigger.graceSecondsAfterOff: TimeInterval` (default 0 via protocol extension). `TriggerVote.graceSecondsAfterOff: TimeInterval` (Sendable, default 0). `AwakeInput.triggerVoteOff` carries grace; state machine forks on `grace == 0` (direct `.asleep` + release assertion) vs `grace > 0` (existing `.coolingDown` path).
+  - User-explicit OFF actions (`coordinator.stop`, `AppTrigger.reevaluateWatched`) always force `grace = 0` — UI edits feel instant regardless of the trigger's declared value.
+  - **v1 default for all 4 triggers: 0.** Toggle OFF / list edit / organic OFF (app-terminate, calendar-end, WiFi-leave, Focus-off) all release the assertion immediately, matching how Amphetamine / Owly / KeepingYouAwake behave.
+  - Cool-down infrastructure preserved for future opt-in (1-line `graceSecondsAfterOff` override on a specific trigger if production telemetry surfaces a real flicker problem).
+  - Design doc `03-state-machine.md` v0.2 rewrote §5.2 with the revised rationale; architecture doc v0.15 §13 captured the architectural surgery.
+
+### Additional smoke checklist for S7.10 (owner)
+
+Re-run the §S7.9 cases. With per-trigger grace = 0 in v1, all of them must now show **immediate** cup deactivation:
+
+- [ ] Toggle OFF → cup deactivates **within one frame** (no 60 s wait).
+- [ ] Toggle OFF → ON cycle → cup re-activates if the watched app is still running.
+- [ ] Removing the last watched app → cup deactivates immediately.
+- [ ] Removing one of multiple watched apps → cup stays ON (the other still matches).
+- [ ] Closing the watched app while the trigger is enabled (organic OFF) → cup deactivates immediately. (S7.10 v1 default; if WiFiTrigger ever opts into grace > 0 in the future, that case will pause briefly before deactivating.)
+- [ ] Same applies to Calendar / WiFi / Focus Toggle and their natural OFF events.
+
+Note on macOS sleep: cup deactivating ≠ Mac sleeping. Latte just releases the IOPMAssertion; macOS still follows the system idle timeout (System Settings → Lock Screen → Display sleep). If you're actively typing or moving the mouse, Mac stays awake regardless of cup state.
+
+### Coverage gate snapshot (post-S7.10)
+
+| File | Cov% | Status |
+|---|---|---|
+| Core/AwakeDuration | 100.00% | ✅ |
+| Core/AwakeManager | 94.26% | ✅ |
+| Core/Logging | 100.00% | ✅ |
+| Core/PowerAssertion | 87.32% | ✅ |
+| Core/SettingsStore | 100.00% | ✅ |
+| Triggers/Trigger | 83.33% | ✅ |
+| Triggers/TriggerCoordinator | 92.96% | ✅ |
+| Triggers/AppTrigger | 98.62% | ✅ |
+| Triggers/CalendarTrigger | 98.75% | ✅ |
+| Triggers/FocusTrigger | 97.94% | ✅ |
+| Triggers/WiFiTrigger | 96.55% | ✅ |
+
+**GATE: PASS** (261/261 tests, lowest 83.33%).
+
+---
+
 ## Adapter exemption rationale
 
 The following classes are excluded from the 80% coverage gate because they wrap live system services and require an interactive user / permission grant / hardware to exercise:

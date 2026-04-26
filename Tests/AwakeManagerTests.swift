@@ -68,7 +68,7 @@ final class AwakeStateMachineTests: XCTestCase {
     }
 
     func testAsleep_triggerVoteOff_isNoop() {
-        let result = step(state: .asleep, input: .triggerVoteOff(id: "cal"))
+        let result = step(state: .asleep, input: .triggerVoteOff(id: "cal", graceSeconds: 0))
         XCTAssertEqual(result.state, .asleep)
         XCTAssertTrue(result.effects.isEmpty)
     }
@@ -125,7 +125,7 @@ final class AwakeStateMachineTests: XCTestCase {
         let result = step(
             state: .awakeUserIndefinite,
             pending: ["cal": voteOn],
-            input: .triggerVoteOff(id: "cal")
+            input: .triggerVoteOff(id: "cal", graceSeconds: 0)
         )
         XCTAssertEqual(result.state, .awakeUserIndefinite)
         XCTAssertNil(result.pendingVotes["cal"])
@@ -176,7 +176,7 @@ final class AwakeStateMachineTests: XCTestCase {
         let result = step(
             state: .awakeUserTimed(endsAt: now.addingTimeInterval(60)),
             pending: ["cal": voteOn],
-            input: .triggerVoteOff(id: "cal")
+            input: .triggerVoteOff(id: "cal", graceSeconds: 0)
         )
         XCTAssertNil(result.pendingVotes["cal"])
     }
@@ -249,24 +249,44 @@ final class AwakeStateMachineTests: XCTestCase {
         XCTAssertTrue(result.effects.isEmpty, "no acquire/release; assertion already held")
     }
 
-    func testAwakeTriggered_triggerVoteOff_lastVote_goesToCoolingDown() {
+    func testAwakeTriggered_triggerVoteOff_lastVote_grace0_goesToAsleepImmediately() {
+        // S7.10: per-trigger grace. v1 default grace=0 → release assertion immediately.
         let result = step(
             state: .awakeTriggered(votes: ["cal": voteOn]),
-            input: .triggerVoteOff(id: "cal")
+            input: .triggerVoteOff(id: "cal", graceSeconds: 0)
+        )
+        XCTAssertEqual(result.state, .asleep)
+        XCTAssertTrue(result.effects.contains(.releaseAssertion))
+        XCTAssertTrue(result.pendingVotes.isEmpty)
+    }
+
+    func testAwakeTriggered_triggerVoteOff_lastVote_gracePositive_goesToCoolingDown() {
+        // S7.10: triggers may declare a non-zero grace (e.g., a future WiFi
+        // trigger with 30s grace to absorb network blips). State machine
+        // honors that by entering cool-down for the requested duration.
+        let result = step(
+            state: .awakeTriggered(votes: ["cal": voteOn]),
+            input: .triggerVoteOff(id: "cal", graceSeconds: 30)
         )
         if case .coolingDown(let until, let lastVotes) = result.state {
-            XCTAssertEqual(until.timeIntervalSinceReferenceDate, now.addingTimeInterval(60).timeIntervalSinceReferenceDate, accuracy: 0.001)
+            XCTAssertEqual(until.timeIntervalSinceReferenceDate,
+                           now.addingTimeInterval(30).timeIntervalSinceReferenceDate,
+                           accuracy: 0.001,
+                           "cool-down `until` should reflect the trigger's declared grace")
             XCTAssertEqual(lastVotes["cal"], voteOn,
                            "lastVotes captures pre-removal snapshot per §8.1 example")
-        } else { XCTFail() }
+        } else { XCTFail("expected coolingDown(30s), got \(result.state)") }
         XCTAssertFalse(result.effects.contains(.releaseAssertion),
                        "assertion stays held during cool-down")
+        XCTAssertTrue(result.effects.contains(where: {
+            if case .scheduleTimer(.coolDown, _) = $0 { return true } else { return false }
+        }))
     }
 
     func testAwakeTriggered_triggerVoteOff_remainingVote_staysAwakeTriggered() {
         let result = step(
             state: .awakeTriggered(votes: ["cal": voteOn, "app": voteOn]),
-            input: .triggerVoteOff(id: "cal")
+            input: .triggerVoteOff(id: "cal", graceSeconds: 0)
         )
         if case .awakeTriggered(let votes) = result.state {
             XCTAssertEqual(votes.count, 1)
@@ -322,7 +342,7 @@ final class AwakeStateMachineTests: XCTestCase {
     func testCoolingDown_triggerVoteOff_isNoop() {
         let result = step(
             state: .coolingDown(until: now.addingTimeInterval(30), lastVotes: ["cal": voteOn]),
-            input: .triggerVoteOff(id: "cal")
+            input: .triggerVoteOff(id: "cal", graceSeconds: 0)
         )
         if case .coolingDown = result.state {} else { XCTFail() }
         XCTAssertTrue(result.effects.isEmpty)
@@ -383,7 +403,7 @@ final class AwakeStateMachineTests: XCTestCase {
         let result = step(
             state: .snoozed(until: now.addingTimeInterval(60)),
             pending: ["cal": voteOn],
-            input: .triggerVoteOff(id: "cal")
+            input: .triggerVoteOff(id: "cal", graceSeconds: 0)
         )
         XCTAssertNil(result.pendingVotes["cal"])
     }
@@ -435,6 +455,57 @@ final class AwakeStateMachineTests: XCTestCase {
             if case .logFault = $0 { return true } else { return false }
         }))
     }
+
+    // MARK: - S7.10: receiveTriggerVote dispatch by grace
+
+    /// Live AwakeManager test (not pure step). Verifies the grace from the
+    /// incoming TriggerVote flows into the state machine input. grace=0 vote
+    /// → straight to .asleep; grace>0 vote → .coolingDown for that duration.
+    @MainActor
+    func testManager_voteOff_grace0_goesAsleepImmediately() async {
+        let assertion = MockPowerAssertion()
+        let settings = InMemorySettingsStore()
+        let manager = AwakeManager(assertion: assertion, settings: settings)
+
+        manager.receiveTriggerVote(
+            TriggerVote(wantsAwake: true, reason: "on", graceSecondsAfterOff: 0),
+            from: "t"
+        )
+        XCTAssertTrue(manager.isAwake)
+
+        manager.receiveTriggerVote(
+            TriggerVote(wantsAwake: false, reason: "off", graceSecondsAfterOff: 0),
+            from: "t"
+        )
+        XCTAssertEqual(manager.state, .asleep)
+        XCTAssertFalse(manager.isAwake)
+        XCTAssertFalse(assertion.isActive)
+    }
+
+    @MainActor
+    func testManager_voteOff_gracePositive_goesCoolingDown() async {
+        let assertion = MockPowerAssertion()
+        let settings = InMemorySettingsStore()
+        let manager = AwakeManager(assertion: assertion, settings: settings)
+
+        manager.receiveTriggerVote(
+            TriggerVote(wantsAwake: true, reason: "on", graceSecondsAfterOff: 30),
+            from: "t"
+        )
+        XCTAssertTrue(manager.isAwake)
+
+        manager.receiveTriggerVote(
+            TriggerVote(wantsAwake: false, reason: "off", graceSecondsAfterOff: 30),
+            from: "t"
+        )
+        if case .coolingDown = manager.state {
+            // expected
+        } else {
+            XCTFail("expected coolingDown after grace>0 vote-off, got \(manager.state)")
+        }
+        XCTAssertTrue(manager.isAwake, "still awake during cool-down (assertion held)")
+        XCTAssertTrue(assertion.isActive)
+    }
 }
 
 // MARK: - Worked examples from 03 §8 — integration on AwakeManager.
@@ -463,27 +534,56 @@ final class AwakeManagerWorkedExampleTests: XCTestCase {
         } else { XCTFail() }
     }
 
-    /// §8.1 cont — voteOff → coolingDown (not asleep yet).
-    func test81_lastVoteOffEntersCooling() {
+    /// §8.1 cont — voteOff with non-zero grace → coolingDown (not asleep yet).
+    /// S7.10: cool-down only triggers when the trigger declares grace>0;
+    /// v1 default is 0 (immediate sleep). This test exercises the legacy path
+    /// for triggers that may opt into grace in the future.
+    func test81_lastVoteOffWithGraceEntersCooling() {
         let (manager, assertion, _) = makeManager()
-        manager.receiveTriggerVote(TriggerVote(wantsAwake: true, reason: "Zoom"), from: "cal")
-        manager.receiveTriggerVote(TriggerVote(wantsAwake: false, reason: "Zoom ended"), from: "cal")
+        manager.receiveTriggerVote(
+            TriggerVote(wantsAwake: true, reason: "Zoom", graceSecondsAfterOff: 30),
+            from: "cal"
+        )
+        manager.receiveTriggerVote(
+            TriggerVote(wantsAwake: false, reason: "Zoom ended", graceSecondsAfterOff: 30),
+            from: "cal"
+        )
         if case .coolingDown = manager.state {} else { XCTFail("expected coolingDown, got \(manager.state)") }
         XCTAssertTrue(assertion.isActive, "assertion must remain held during cool-down")
     }
 
     /// §8.2 back-to-back: vote on B during cooling cancels cool-down, no flapping.
+    /// S7.10: only relevant when triggers opt into grace>0; v1 default skips this.
     func test82_backToBackMeetingsAbsorbedByCooling() {
         let (manager, assertion, _) = makeManager()
-        manager.receiveTriggerVote(TriggerVote(wantsAwake: true, reason: "A"), from: "cal")
-        manager.receiveTriggerVote(TriggerVote(wantsAwake: false, reason: "A end"), from: "cal")
+        manager.receiveTriggerVote(
+            TriggerVote(wantsAwake: true, reason: "A", graceSecondsAfterOff: 30),
+            from: "cal"
+        )
+        manager.receiveTriggerVote(
+            TriggerVote(wantsAwake: false, reason: "A end", graceSecondsAfterOff: 30),
+            from: "cal"
+        )
         XCTAssertTrue(assertion.isActive)
-        manager.receiveTriggerVote(TriggerVote(wantsAwake: true, reason: "B"), from: "cal")
+        manager.receiveTriggerVote(
+            TriggerVote(wantsAwake: true, reason: "B", graceSecondsAfterOff: 30),
+            from: "cal"
+        )
         if case .awakeTriggered(let votes) = manager.state {
             XCTAssertEqual(votes["cal"]?.reason, "B")
         } else { XCTFail() }
         // Critical: assertion was never released during the gap.
         XCTAssertEqual(assertion.deactivationCount, 0, "no release during back-to-back")
+    }
+
+    /// §8.1 v1-default — grace=0 (current production default for all triggers).
+    /// Vote-off transitions directly to .asleep; assertion released immediately.
+    func test81_v1Default_lastVoteOff_grace0_releasesImmediately() {
+        let (manager, assertion, _) = makeManager()
+        manager.receiveTriggerVote(TriggerVote(wantsAwake: true, reason: "Zoom"), from: "cal")
+        manager.receiveTriggerVote(TriggerVote(wantsAwake: false, reason: "Zoom ended"), from: "cal")
+        XCTAssertEqual(manager.state, .asleep)
+        XCTAssertFalse(assertion.isActive, "v1 default releases the assertion immediately")
     }
 
     /// §8.3 user snoozes during a call; new vote goes to shadow; expiry promotes.
@@ -511,11 +611,18 @@ final class AwakeManagerWorkedExampleTests: XCTestCase {
     }
 
     /// §8.5 user force-off during cool-down → snoozed (not asleep).
+    /// Requires grace>0 to actually enter cooling-down state.
     func test85_userForceOffDuringCooling_goesSnoozed() {
         let (manager, _, _) = makeManager()
-        manager.receiveTriggerVote(TriggerVote(wantsAwake: true, reason: "A"), from: "cal")
-        manager.receiveTriggerVote(TriggerVote(wantsAwake: false, reason: "A end"), from: "cal")
-        if case .coolingDown = manager.state {} else { XCTFail() }
+        manager.receiveTriggerVote(
+            TriggerVote(wantsAwake: true, reason: "A", graceSecondsAfterOff: 30),
+            from: "cal"
+        )
+        manager.receiveTriggerVote(
+            TriggerVote(wantsAwake: false, reason: "A end", graceSecondsAfterOff: 30),
+            from: "cal"
+        )
+        if case .coolingDown = manager.state {} else { XCTFail("expected coolingDown, got \(manager.state)") }
 
         manager.deactivate()
         if case .snoozed = manager.state {} else { XCTFail() }

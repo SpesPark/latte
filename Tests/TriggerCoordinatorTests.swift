@@ -85,6 +85,85 @@ final class TriggerCoordinatorTests: XCTestCase {
         }
     }
 
+    // MARK: - S7.9 owner-scenario integration
+
+    /// Reproduces the exact UI flow:
+    ///   1. App launches, AppTrigger seeded with one running watched app, started by coordinator.
+    ///   2. Cup activates from the initial-snapshot ON vote.
+    ///   3. User toggles OFF in Settings → coordinator.stop("app").
+    /// Manager state must transition out of `.awakeTriggered` (to `.coolingDown` or `.asleep`).
+    /// If this test passes but real-app behavior doesn't deactivate, the bug is in the SwiftUI
+    /// Toggle wiring layer (TriggersTab.swift) — not in coordinator/manager/trigger logic.
+    func testOwnerScenarioToggleOffDeactivatesViaRealAppTrigger() async throws {
+        let assertion = MockPowerAssertion()
+        let settings = InMemorySettingsStore()
+        settings.setBool(true, for: .appTriggerEnabled)
+        settings.appTriggerBundleIDs = ["us.zoom.xos"]
+        settings.setBool(true, for: .hasSeededAppDefaults)
+
+        let manager = AwakeManager(assertion: assertion, settings: settings)
+        let coordinator = TriggerCoordinator(awakeManager: manager, settings: settings)
+        let source = MockWorkspaceSource(runningBundleIDs: ["us.zoom.xos"])
+        let trigger = AppTrigger(settings: settings, source: source)
+        coordinator.register(trigger)
+
+        await coordinator.start(trigger)
+        try await Task.sleep(nanoseconds: 100_000_000)
+
+        XCTAssertTrue(manager.isAwake, "trigger ON vote must activate manager")
+        XCTAssertTrue(assertion.isActive, "power assertion must be held")
+        if case .awakeTriggered = manager.state { } else {
+            XCTFail("expected .awakeTriggered, got \(manager.state)")
+        }
+
+        // User flips Toggle OFF — UI calls trigger.isEnabled=false then coordinator.stop.
+        // S7.10: coordinator.stop now sends a grace=0 vote-off, so the state machine
+        // skips cool-down and releases the assertion immediately.
+        trigger.isEnabled = false
+        coordinator.stop(trigger.id)
+        try await Task.sleep(nanoseconds: 100_000_000)
+
+        XCTAssertEqual(manager.state, .asleep,
+                       "S7.10: Toggle OFF must release assertion immediately (grace=0)")
+        XCTAssertFalse(manager.isAwake)
+        XCTAssertFalse(assertion.isActive)
+    }
+
+    /// Same scenario but owner removes the only watched app instead of toggling OFF.
+    /// Verifies AppTrigger.reevaluateWatched() pushes a vote-OFF through the coordinator.
+    func testOwnerScenarioRemovingLastWatchedAppDeactivates() async throws {
+        let assertion = MockPowerAssertion()
+        let settings = InMemorySettingsStore()
+        settings.setBool(true, for: .appTriggerEnabled)
+        settings.appTriggerBundleIDs = ["us.zoom.xos"]
+        settings.setBool(true, for: .hasSeededAppDefaults)
+
+        let manager = AwakeManager(assertion: assertion, settings: settings)
+        let coordinator = TriggerCoordinator(awakeManager: manager, settings: settings)
+        let source = MockWorkspaceSource(runningBundleIDs: ["us.zoom.xos"])
+        let trigger = AppTrigger(settings: settings, source: source)
+        coordinator.register(trigger)
+
+        await coordinator.start(trigger)
+        try await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertTrue(manager.isAwake)
+        if case .awakeTriggered = manager.state { } else {
+            XCTFail("expected .awakeTriggered, got \(manager.state)")
+        }
+
+        // User removes Zoom from watched list via Settings UI:
+        // S7.10: reevaluateWatched yields a grace=0 vote-off (user-explicit edit),
+        // so the state machine skips cool-down.
+        settings.appTriggerBundleIDs = []
+        trigger.reevaluateWatched()
+        try await Task.sleep(nanoseconds: 100_000_000)
+
+        XCTAssertEqual(manager.state, .asleep,
+                       "S7.10: removing the last matching watched app must release immediately")
+        XCTAssertFalse(manager.isAwake)
+        XCTAssertFalse(assertion.isActive)
+    }
+
     func testMultipleTriggersAllVotedOnAggregateAwake() async throws {
         let (coordinator, manager, _, _) = makeCoordinator()
         let calTrigger = MockTrigger(id: "cal")

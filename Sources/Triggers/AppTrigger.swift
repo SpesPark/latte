@@ -340,6 +340,11 @@ public final class AppTrigger: Trigger {
     /// reflects the new contents. Idempotent — no-op if the watched set
     /// hasn't actually changed, and a no-op when the trigger is stopped
     /// (the next `start()` will read fresh data from settings anyway).
+    ///
+    /// The OFF vote emitted here is treated as **user-explicit** (the user
+    /// edited their watched list), so it carries `graceSecondsAfterOff = 0`
+    /// regardless of the trigger's declared grace period — the user expects
+    /// immediate effect from a UI edit.
     public func reevaluateWatched() {
         guard observation != nil else { return }
         let newWatched = Set(settings.appTriggerBundleIDs)
@@ -352,7 +357,11 @@ public final class AppTrigger: Trigger {
         if prevMatching.isEmpty && !matchingRunning.isEmpty {
             emitOn()
         } else if !prevMatching.isEmpty && matchingRunning.isEmpty {
-            continuation.yield(TriggerVote(wantsAwake: false, reason: "App: no watched apps running"))
+            continuation.yield(TriggerVote(
+                wantsAwake: false,
+                reason: "App: no watched apps running",
+                graceSecondsAfterOff: 0  // user-explicit list edit → no grace
+            ))
         } else if prevMatching != matchingRunning && !matchingRunning.isEmpty {
             emitOn()
         }
@@ -369,7 +378,14 @@ public final class AppTrigger: Trigger {
         guard watchedSet.contains(bundleID) else { return }
         matchingRunning.remove(bundleID)
         if matchingRunning.isEmpty {
-            continuation.yield(TriggerVote(wantsAwake: false, reason: "App: no watched apps running"))
+            // Organic OFF (the system reported that the last matching app
+            // terminated). Use the trigger's declared grace period so a
+            // brief crash-and-relaunch can keep the assertion held.
+            continuation.yield(TriggerVote(
+                wantsAwake: false,
+                reason: "App: no watched apps running",
+                graceSecondsAfterOff: graceSecondsAfterOff
+            ))
         }
     }
 

@@ -52,17 +52,20 @@ final class TriggerIntegrationTests: XCTestCase {
         await coordinator.start(calendar)
 
         // 14:00 — meeting A on
-        calendar.emit(TriggerVote(wantsAwake: true, reason: "A"))
+        // S7.10: cool-down only engages when the trigger declares grace>0.
+        // To exercise the back-to-back absorption scenario, we emit votes
+        // with an explicit 30s grace (a hypothetical future trigger config).
+        calendar.emit(TriggerVote(wantsAwake: true, reason: "A", graceSecondsAfterOff: 30))
         try await Task.sleep(nanoseconds: 50_000_000)
         XCTAssertTrue(assertion.isActive)
         let initialActivations = assertion.activations.count
         let initialDeactivations = assertion.deactivationCount
 
-        // 14:30 — meeting A off (enters cool-down)
-        calendar.emit(TriggerVote(wantsAwake: false, reason: "A ended"))
+        // 14:30 — meeting A off (enters cool-down because grace=30)
+        calendar.emit(TriggerVote(wantsAwake: false, reason: "A ended", graceSecondsAfterOff: 30))
         try await Task.sleep(nanoseconds: 30_000_000)
         // 14:30:30 — meeting B on (within cool-down window)
-        calendar.emit(TriggerVote(wantsAwake: true, reason: "B"))
+        calendar.emit(TriggerVote(wantsAwake: true, reason: "B", graceSecondsAfterOff: 30))
         try await Task.sleep(nanoseconds: 50_000_000)
 
         // Assertion must remain held throughout — never released.

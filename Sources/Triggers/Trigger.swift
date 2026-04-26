@@ -22,6 +22,19 @@ public protocol Trigger: AnyObject {
     func requestPermissionIfNeeded() async -> Bool
 
     var voteStream: AsyncStream<TriggerVote> { get }
+
+    /// How long (seconds) to keep the awake assertion held after this
+    /// trigger's last organic OFF vote, before releasing it. 0 = release
+    /// immediately. Used to absorb brief trigger-condition flapping (e.g.,
+    /// a transient WiFi blip) without flickering the cup off-on. **User-
+    /// explicit OFF actions** (Toggle OFF in Settings, removing the last
+    /// matching watched app) always bypass this and release immediately.
+    /// Default impl returns 0.
+    var graceSecondsAfterOff: TimeInterval { get }
+}
+
+public extension Trigger {
+    var graceSecondsAfterOff: TimeInterval { 0 }
 }
 
 @MainActor

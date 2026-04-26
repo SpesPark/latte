@@ -49,8 +49,14 @@ public final class TriggerCoordinator: ObservableObject {
         consumerTasks[triggerId]?.cancel()
         consumerTasks[triggerId] = nil
         if activeVotes.removeValue(forKey: triggerId) != nil {
+            // User-explicit OFF (Toggle in Settings, etc.) — bypass any
+            // per-trigger grace period and release the assertion immediately.
             awakeManager.receiveTriggerVote(
-                TriggerVote(wantsAwake: false, reason: "trigger stopped"),
+                TriggerVote(
+                    wantsAwake: false,
+                    reason: "trigger stopped",
+                    graceSecondsAfterOff: 0
+                ),
                 from: triggerId
             )
         }
