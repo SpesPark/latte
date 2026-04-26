@@ -8,10 +8,10 @@
 
 | Field | Value |
 |---|---|
-| **Session #** | 7 + 7.5 + 7.6 + 7.7 of ~10 (four S7-family sessions same calendar day) |
-| **Theme** | Test coverage + QA gate (S7); Per-trigger config UI (S7.5); UX rewrite after owner smoke (S7.6); App trigger friendly names after second smoke (S7.7) |
+| **Session #** | 7 + 7.5 + 7.6 + 7.7 + 7.8 of ~10 (five S7-family sessions same calendar day) |
+| **Theme** | Test coverage + QA gate (S7); Per-trigger config UI (S7.5); UX rewrite after owner smoke (S7.6); App trigger friendly names after second smoke (S7.7); App trigger pickable filter + installed-only seed after third smoke (S7.8) |
 | **Date** | 2026-04-26 |
-| **Status** | ✅ Completed. 235/235 tests passing. S7 cleared the 80% coverage gate on `Sources/Core/**` and `Sources/Triggers/**` (live-system adapter classes excluded; rationale codified in `02-architecture.md` §13 v0.9 + `docs/QA_LOG.md`). S7.5 landed Phase 1.5.A — Settings → Triggers now offers an inline configuration form per trigger. S7.6 owner smoke surfaced two defects (P1 state-mismatch + P2 UX); both fixed by retiring the DisclosureGroup-with-Toggle-in-label structure in favor of a Section-per-trigger layout. **S7.7 owner re-smoke against S7.6 build surfaced one more defect (P2: App trigger row showed raw bundle IDs + had no purpose copy); fixed by extending `WorkspaceSource` with `displayInfo(for:)`, adding a curated displayName table, and rewriting `AppTriggerConfigForm` to render real app icons + friendly names with bundle ID demoted to a muted secondary line, plus collapsing manual bundle-ID entry behind an "Advanced" disclosure.** EKCalendar picker and per-Focus selection remain deferred as Phase 1.5.B / Apple-API-blocked respectively. |
+| **Status** | ✅ Completed. 249/249 tests passing. S7 cleared the 80% coverage gate on `Sources/Core/**` and `Sources/Triggers/**` (live-system adapter classes excluded; rationale codified in `02-architecture.md` §13 v0.9 + `docs/QA_LOG.md`). S7.5 landed Phase 1.5.A — Settings → Triggers now offers an inline configuration form per trigger. S7.6 owner smoke surfaced two defects (P1 state-mismatch + P2 UX); both fixed by retiring the DisclosureGroup-with-Toggle-in-label structure in favor of a Section-per-trigger layout. S7.7 owner re-smoke against S7.6 build surfaced one defect (P2: App trigger row showed raw bundle IDs + no purpose copy); fixed by extending `WorkspaceSource` with `displayInfo(for:)`, curated displayName table, and rewriting `AppTriggerConfigForm` to render real app icons + friendly names. **S7.8 owner re-smoke against S7.7 build surfaced three connected complaints — pre-loaded curated defaults populate apps the owner doesn't have installed; "Add from running apps" Menu items show names without icons; the same Menu lists every running process. Fixed at the root: `WorkspaceSource` gains `pickableRunningBundleIDs` (filters `.regular` activation policy + excludes self) and `isInstalled(_:)`; `AppTrigger.init` runs a one-shot installed-only curated seed gated on the new `hasSeededAppDefaults` flag (idempotent across re-launches, respects users who explicitly cleared their list); legacy "fall back to all 6 curated when raw is empty" getter behaviour removed; UI Menu items render with real app icons or SF Symbol category fallback (`video.fill` / `bubble.left.and.bubble.right.fill`).** EKCalendar picker and per-Focus selection remain deferred as Phase 1.5.B / Apple-API-blocked respectively. |
 
 ### What was accomplished
 
@@ -116,9 +116,36 @@ S7.6 has zero protocol or model changes. `Sources/Core/**`, `Sources/Triggers/**
 
 S7.7 introduces one small additive protocol extension (`displayInfo(for:)` on `WorkspaceSource`); the `Trigger` protocol, `TriggerCoordinator`, persistence, and all other architecture layers are unchanged. Friendly resolution is purely a render-time concern — `SettingsStore.appTriggerBundleIDs` still stores `[String]` of bundle IDs.
 
+### S7.8 added (App trigger pickable filter + installed-only seed — fix-first after third owner smoke)
+
+19. **`WorkspaceSource.pickableRunningBundleIDs: [String]`** — second protocol extension (alongside `displayInfo(for:)` from S7.7). UI-only filter: real impl filters `runningApplications` to `activationPolicy == .regular` (Dock-visible apps) and excludes the current process via `Bundle.main.bundleIdentifier`. The unfiltered `runningBundleIDs` stays as-is — trigger lifecycle (start-snapshot intersection + `observeLifecycle` notifications) keeps tracking `.accessory` apps if the user manually adds one via Advanced.
+
+20. **`WorkspaceSource.isInstalled(_:) -> Bool`** — third protocol extension. Real impl checks `NSWorkspace.urlForApplication(withBundleIdentifier:) != nil`. Used by `AppTriggerDefaults.installedDefaults(in:)` to filter the seed list.
+
+21. **`SettingsKey.hasSeededAppDefaults`** — new persistence flag. Once set (after first-launch seed), prevents re-seeding even if the user clears their watched list — explicit-empty stays empty.
+
+22. **`AppTrigger.seedInstalledDefaultsIfNeeded()`** — runs in `AppTrigger.init` (one place; not a public API). Logic: if flag unset and raw watched list is empty, write `AppTriggerDefaults.installedDefaults(in: source)` (curated 6 filtered to those `isInstalled`) and set the flag. If raw is non-empty (existing user, or test fixture set the list directly), skip seeding and just set the flag. Fully idempotent.
+
+23. **Removed legacy fallback** — `SettingsStore.appTriggerBundleIDs` getter no longer returns all 6 curated IDs when raw is empty. Empty raw now means "watch nothing." The seeding mechanism is the single source of curated default population.
+
+24. **`AppTriggerDefaults.symbolHint(for:)`** — new SF Symbol category mapping (video-call apps → `video.fill`, chat apps → `bubble.left.and.bubble.right.fill`). Fallback when neither a running-app icon nor an installed-bundle icon resolves.
+
+25. **`AppTriggerDefaults.installedDefaults(in:)`** — `@MainActor` helper filtering `bundleIDs` by `source.isInstalled(_:)`.
+
+26. **TriggersTab UI**:
+    - `AppTriggerConfigForm.runningAppsMenu` uses `pickableRunningBundleIDs` (was `runningBundleIDs`). Items render via SwiftUI `Label { Text(name) } icon: { Image(nsImage:) }` when icon data is available; falls back to `Label(name, systemImage: symbolHint)` for curated category match; falls back to `Text(name)` only when neither icon nor symbol hint is available.
+    - `AppRow.iconView` gains the same SF Symbol fallback layer (real icon → symbolHint → generic `app.fill`).
+    - Empty-state copy refreshed: "No apps configured yet. Use 'Add from running apps' below to add the apps you want Latte to keep awake — or use 'Advanced' for an app that isn't running right now."
+
+27. **Mock helpers**: `MockWorkspaceSource.pickableOverride: [String]?` and `installedOverride: Set<String>?` for explicit test control. Both default to using `runningBundleIDs` when nil.
+
+28. **Tests** — 14 new tests covering: `symbolHint(for:)` × 2 (curated mapping + nil for unknown), Mock `isInstalled` × 3 (default to running, displayInfoLookup keys, override), `installedDefaults` × 2 (filter + empty when none installed), first-launch seeding × 4 (installed-only seed, empty seed sets flag, second-launch no-op, existing config skip), pickable × 3 (Mock default, override, AppTrigger passthrough). `testRequiredKeysExist` extended with the new SettingsKey. **235 → 249 tests, all pass. Coverage gate still PASS (AppTrigger 98.89% — up from 98.68% in S7.7 because the new tests cover the seeding logic; all gated files ≥80%).**
+
+S7.8 introduces two additive protocol requirements + one persistence flag. The `Trigger` protocol itself, `TriggerCoordinator`, `AwakeManager`, and other architecture layers are unchanged.
+
 ### What's NOT done (intentional)
 
-- **Owner-side manual smoke checklist** in `docs/QA_LOG.md` is checked-in but unchecked — Claude cannot drive the menu-bar UI. Owner runs through this (including the §S7.7 addendum smoke for the new App-trigger friendly-name surface) and ticks lines (or logs defects in the same doc) before S8 starts in earnest. Gate for S8 is: zero P1 items in QA_LOG.
+- **Owner-side manual smoke checklist** in `docs/QA_LOG.md` is checked-in but unchecked — Claude cannot drive the menu-bar UI. Owner runs through this (including the §S7.7 + §S7.8 addendums for App-trigger friendly-name + pickable-filter + installed-only-seed surfaces) and ticks lines (or logs defects in the same doc) before S8 starts in earnest. Gate for S8 is: zero P1 items in QA_LOG.
 - **macOS 13/14/15 matrix smoke** — deferred to S9 (TestFlight). Dev box is macOS 26 only.
 - **`AwakeManager` coverage** sits at 94.1% — the remaining 6% is mostly the two log-only paths in the IOKit power-source observer; not worth contorting tests to chase. Documented in 02 §13 v0.9.
 - **`Trigger` protocol file** at 82.8% — the 5 missed lines are default-impl fallbacks for protocols that are always overridden by concrete types. Right at the gate; do not "improve" with pointless override tests.
@@ -171,7 +198,7 @@ M  docs/QA_LOG.md                              (logged S75-DEF-01 + S75-DEF-02, 
 M  docs/SESSION_HANDOFF.md                    (this file)
 ~  Latte.xcodeproj                             (gitignored — re-run `xcodegen generate` after adding files)
 
-S7.7 (this commit):
+S7.7 (commit 9130ccc):
 M  Sources/Triggers/AppTrigger.swift          (+ AppDisplayInfo struct, + WorkspaceSource.displayInfo,
                                                 + NSWorkspaceSource.displayInfo + pngData helper,
                                                 + Mock.displayInfoLookup, + AppTrigger.displayInfo passthrough,
@@ -186,6 +213,32 @@ M  ROADMAP.md                                 (v0.12)
 M  docs/design/02-architecture.md             (v0.12, §13 entry)
 M  docs/QA_LOG.md                              (logged S76-DEF-01 fixed-in-S7.7 + S7.7 smoke checklist
                                                 addendum + post-S7.7 coverage snapshot)
+M  docs/SESSION_HANDOFF.md
+
+S7.8 (this commit):
+M  Sources/Core/SettingsStore.swift           (+ SettingsKey.hasSeededAppDefaults)
+M  Sources/Triggers/AppTrigger.swift          (+ WorkspaceSource.pickableRunningBundleIDs,
+                                                + WorkspaceSource.isInstalled,
+                                                + NSWorkspaceSource real impls (.regular filter, urlForApplication),
+                                                + Mock.pickableOverride / installedOverride,
+                                                + AppTriggerDefaults.symbolHint mapping,
+                                                + AppTriggerDefaults.installedDefaults helper,
+                                                + AppTrigger.init seed-on-first-launch,
+                                                + AppTrigger.pickableRunningBundleIDs passthrough,
+                                                ~ SettingsStore.appTriggerBundleIDs getter — removed
+                                                  legacy "fall back to all 6 curated when empty" branch)
+M  Sources/UI/Settings/TriggersTab.swift      (Menu uses pickableRunningBundleIDs + Label icon w/ SF Symbol
+                                                fallback; AppRow iconView SF Symbol fallback; refreshed
+                                                empty-state copy)
+M  Tests/AppTriggerTests.swift                (+ 14 tests: symbol hint × 2, isInstalled × 3,
+                                                installedDefaults × 2, first-launch seed × 4, pickable × 3;
+                                                refreshed testDisabledTriggerNoOpOnStart comment;
+                                                235 → 249 tests)
+M  Tests/SettingsStoreTests.swift             (testRequiredKeysExist — added new SettingsKey rawValue)
+M  ROADMAP.md                                 (v0.13)
+M  docs/design/02-architecture.md             (v0.13, §13 entry)
+M  docs/QA_LOG.md                              (logged S77-DEF-01..03 all fixed-in-S7.8 + S7.8 smoke
+                                                checklist addendum + post-S7.8 coverage snapshot)
 M  docs/SESSION_HANDOFF.md                    (this file)
 ```
 

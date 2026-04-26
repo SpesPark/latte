@@ -171,6 +171,7 @@ final class SettingsKeyEnumTests: XCTestCase {
             "latte.calendarTrigger.trailingMinutes",
             "latte.appTrigger.enabled",
             "latte.appTrigger.bundleIDs",
+            "latte.appTrigger.hasSeededDefaults",
             "latte.wifiTrigger.enabled",
             "latte.wifiTrigger.ssids",
             "latte.wifiTrigger.inverseLogic",

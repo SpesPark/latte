@@ -200,6 +200,77 @@ Per-file coverage on `Sources/Core/**` and `Sources/Triggers/**` after S7.7, wit
 
 ---
 
+## S7.7 → S7.8 — App trigger UX iteration #2: pickable filter + installed-only seed (2026-04-26)
+
+Owner re-smoke against the S7.7 build surfaced three related complaints:
+
+1. *Pre-loaded curated defaults (Zoom / Teams / Discord etc.) show no icon on owner's machine because owner has none of them installed.*
+2. *"Add from running apps" Menu items show app names without icons — names alone are hard to scan.*
+3. *"Add from running apps" Menu lists "별의별 것들이 다 떠있어" — every running process including system daemons, menu-bar utilities, and Latte itself.*
+
+The root of #1 is structural: pre-populating curated defaults for users who don't have those apps installed creates a confusing list of unfamiliar entries. Fixing the icon visual (S7.7 attempted this with NSWorkspace resolution) helps users who *have* the apps but doesn't help users who *don't*. So S7.8 fixes the root by no longer pre-populating apps the user doesn't own.
+
+#### S77-DEF-01 — Pre-loaded curated defaults populate apps the user doesn't have
+
+- **Severity**: P2 (UX)
+- **Repro**: Fresh install of Latte → Settings → Triggers → enable App trigger.
+- **Expected**: a list of apps relevant to *this user*, or a friendly empty state that invites them to add their own.
+- **Actual**: list pre-populated with all 6 curated defaults (Zoom, Microsoft Teams, Webex, Discord, Slack, Google Meet) regardless of which are actually installed. For owners with none installed, the list looks broken (generic icons, no apparent reason these apps are there).
+- **Status**: **fixed-in-S7.8**.
+  - `WorkspaceSource` extended with `isInstalled(_ bundleID: String) -> Bool` (real impl uses `NSWorkspace.urlForApplication(withBundleIdentifier:)`).
+  - New `AppTriggerDefaults.installedDefaults(in source: WorkspaceSource) -> [String]` filters the 6 curated IDs to those that resolve on the user's machine.
+  - New `SettingsKey.hasSeededAppDefaults` flag persists "we've already done first-launch seeding" so subsequent launches don't re-seed.
+  - `AppTrigger.init` calls `seedInstalledDefaultsIfNeeded()` — runs once per install: if `raw` is empty and the flag is unset, write the installed-only filtered defaults and set the flag. Idempotent across all subsequent inits. If raw is non-empty (user has explicit config or a test fixture set the list directly), seeding is skipped and the flag is set.
+  - `SettingsStore.appTriggerBundleIDs` getter no longer falls back to all 6 curated IDs when raw is empty — empty means "watch nothing." The seeding mechanism above is the *only* place curated defaults are populated.
+  - UI empty-state copy refreshed: "No apps configured yet. Use 'Add from running apps' below to add the apps you want Latte to keep awake — or use 'Advanced' for an app that isn't running right now."
+
+#### S77-DEF-02 — "Add from running apps" Menu items have no icons
+
+- **Severity**: P2 (UX)
+- **Repro**: Settings → Triggers → enable App trigger → "Add from running apps".
+- **Actual**: each candidate row shows app name as plain text only.
+- **Status**: **fixed-in-S7.8**. Menu items now use SwiftUI `Label { Text(name) } icon: { Image(nsImage: …) }`. When the resolved `displayInfo.iconImageData` is non-nil (real running app), the real app icon renders alongside the name. When the icon is missing but the bundle ID has a curated category (Zoom/Teams/Webex/Meet → `video.fill`, Discord/Slack → `bubble.left.and.bubble.right.fill`), `Label(title, systemImage:)` is used so the row at least communicates *what kind of app* it is. The same SF Symbol fallback is applied to the watched-list `AppRow` icon view.
+
+#### S77-DEF-03 — "Add from running apps" shows every running process
+
+- **Severity**: P2 (UX)
+- **Repro**: Settings → Triggers → "Add from running apps".
+- **Actual**: dropdown lists 30+ entries including system daemons, menu-bar utility helpers, and Latte itself.
+- **Status**: **fixed-in-S7.8**. New `WorkspaceSource.pickableRunningBundleIDs` requirement; the real `NSWorkspaceSource` filters `runningApplications` to `activationPolicy == .regular` (apps the user actively works in — approximately the Dock-visible set) and excludes the current process (`Bundle.main.bundleIdentifier`). The trigger's lifecycle / start-snapshot logic still uses `runningBundleIDs` (unfiltered), so users can still manually add a `.accessory` bundle via the Advanced section and the trigger will detect launches/terminates of those apps via the `observeLifecycle` notification path. UI uses `pickableRunningBundleIDs` for the Menu candidates only.
+
+### Additional smoke checklist for S7.8 (owner)
+
+Append to the §S7 / §S7.7 sections. Run on the S7.8 build before opening S8.
+
+- [ ] **Fresh install behavior** (delete the Latte preferences before re-launching, e.g. `defaults delete com.example.latte`): App trigger config form opens with **empty** watched list and the new empty-state copy. None of Zoom / Teams / Discord / etc. appear pre-populated unless installed.
+- [ ] **Curated defaults still seeded if installed**: install Zoom (or any curated default app), delete preferences, re-launch Latte. Watched list should now contain only the installed curated entries.
+- [ ] **"Add from running apps" Menu**: lists only `.regular` activation policy apps (the apps you'd see in Cmd-Tab + Dock), sorted alphabetically by display name. Latte itself does not appear. Menu bar utilities (e.g. CleanShot X, Bartender, Raycast) do not appear. System daemons do not appear.
+- [ ] **Menu items show icons**: each candidate has the real app icon left of the name when running. Curated defaults that aren't running but are watched fall back to the SF Symbol category icon (video / chat).
+- [ ] **Idempotent seeding**: launch app, configure watched list, quit, re-launch. Watched list survives without the seed re-running.
+- [ ] **Explicit-clear stays clear**: configure watched list → remove all entries → quit → re-launch. Watched list stays empty (the seed flag is set, so curated defaults don't repopulate).
+
+### Coverage gate snapshot (post-S7.8)
+
+Per-file coverage with adapter classes + their inner closures excluded:
+
+| File | Cov% | Status |
+|---|---|---|
+| Core/AwakeDuration | 100.00% | ✅ |
+| Core/AwakeManager | 94.12% | ✅ |
+| Core/Logging | 100.00% | ✅ |
+| Core/PowerAssertion | 87.32% | ✅ |
+| Core/SettingsStore | 100.00% | ✅ |
+| Triggers/Trigger | 82.76% | ✅ |
+| Triggers/TriggerCoordinator | 92.31% | ✅ |
+| Triggers/AppTrigger | 98.89% | ✅ |
+| Triggers/CalendarTrigger | 98.75% | ✅ |
+| Triggers/FocusTrigger | 97.94% | ✅ |
+| Triggers/WiFiTrigger | 96.55% | ✅ |
+
+**GATE: PASS** (249/249 tests, lowest 82.76%).
+
+---
+
 ## Adapter exemption rationale
 
 The following classes are excluded from the 80% coverage gate because they wrap live system services and require an interactive user / permission grant / hardware to exercise:

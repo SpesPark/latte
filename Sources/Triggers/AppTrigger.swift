@@ -26,7 +26,16 @@ public struct AppDisplayInfo: Equatable, Sendable {
 @MainActor
 public protocol WorkspaceSource: AnyObject {
     /// Snapshot of currently running apps' bundle IDs (filtered to non-nil).
+    /// Used by `AppTrigger.start()` for the initial intersection with the
+    /// watched list — must not be filtered by activation policy, since
+    /// trigger lifecycle should track every kind of running app.
     var runningBundleIDs: [String] { get }
+
+    /// Subset of `runningBundleIDs` suitable for offering in user-facing
+    /// pickers like "Add from running apps". Real implementations filter to
+    /// `.regular` activation policy (apps the user actively works in,
+    /// approximately the Dock-visible set) and exclude the current process.
+    var pickableRunningBundleIDs: [String] { get }
 
     /// Resolve a friendly display name + optional icon for a bundle ID.
     ///
@@ -34,6 +43,14 @@ public protocol WorkspaceSource: AnyObject {
     /// installed-app metadata via `urlForApplication(withBundleIdentifier:)` →
     /// `AppTriggerDefaults.displayName(for:)` curated table → `nil`.
     func displayInfo(for bundleID: String) -> AppDisplayInfo?
+
+    /// Whether this bundle ID resolves to an installed app on the system.
+    /// Used by `AppTriggerDefaults.installedDefaults(in:)` to filter the
+    /// curated default seed list to apps that actually exist on the user's
+    /// machine, so first-launch doesn't pre-populate apps the user doesn't
+    /// have. Real implementations check
+    /// `NSWorkspace.urlForApplication(withBundleIdentifier:)`.
+    func isInstalled(_ bundleID: String) -> Bool
 
     /// Subscribe to launch / terminate events. Each callback is invoked on the main actor with
     /// the affected bundle identifier (nil-safe; callers may ignore unrecognized launches).
@@ -74,6 +91,21 @@ public final class NSWorkspaceSource: WorkspaceSource {
 
     public var runningBundleIDs: [String] {
         workspace.runningApplications.compactMap { $0.bundleIdentifier }
+    }
+
+    public var pickableRunningBundleIDs: [String] {
+        let myBundleID = Bundle.main.bundleIdentifier
+        return workspace.runningApplications
+            .filter { $0.activationPolicy == .regular }
+            .compactMap { app -> String? in
+                guard let id = app.bundleIdentifier else { return nil }
+                if let myBundleID, id == myBundleID { return nil }
+                return id
+            }
+    }
+
+    public func isInstalled(_ bundleID: String) -> Bool {
+        workspace.urlForApplication(withBundleIdentifier: bundleID) != nil
     }
 
     public func displayInfo(for bundleID: String) -> AppDisplayInfo? {
@@ -220,6 +252,25 @@ public final class AppTrigger: Trigger {
             self.source = NoopWorkspaceSource()
             #endif
         }
+        seedInstalledDefaultsIfNeeded()
+    }
+
+    /// First-launch seed: if the user has never had a watched list (raw
+    /// storage empty AND seeding flag never set), populate with the
+    /// curated defaults that resolve to an installed app on this machine.
+    /// Idempotent — once `hasSeededAppDefaults` is true, this is a no-op.
+    /// Skips entirely if the user has already configured a non-empty list,
+    /// so explicitly-cleared lists stay cleared.
+    private func seedInstalledDefaultsIfNeeded() {
+        guard !settings.bool(.hasSeededAppDefaults, default: false) else { return }
+        let raw = settings.decodeStringArray(.appTriggerBundleIDs)
+        guard raw.isEmpty else {
+            settings.setBool(true, for: .hasSeededAppDefaults)
+            return
+        }
+        let installed = AppTriggerDefaults.installedDefaults(in: source)
+        settings.appTriggerBundleIDs = installed
+        settings.setBool(true, for: .hasSeededAppDefaults)
     }
 
     public func start() async {
@@ -260,6 +311,11 @@ public final class AppTrigger: Trigger {
         source.runningBundleIDs
     }
 
+    /// Filtered, user-facing subset of `runningBundleIDs` for pickers.
+    public var pickableRunningBundleIDs: [String] {
+        source.pickableRunningBundleIDs
+    }
+
     /// Resolve friendly display info for a watched bundle ID. The Settings UI
     /// uses this to show app names + icons in place of raw bundle IDs.
     public func displayInfo(for bundleID: String) -> AppDisplayInfo? {
@@ -291,6 +347,8 @@ public final class AppTrigger: Trigger {
 @MainActor
 final class NoopWorkspaceSource: WorkspaceSource {
     var runningBundleIDs: [String] { [] }
+    var pickableRunningBundleIDs: [String] { [] }
+    func isInstalled(_ bundleID: String) -> Bool { false }
     func displayInfo(for bundleID: String) -> AppDisplayInfo? {
         AppTriggerDefaults.displayName(for: bundleID).map {
             AppDisplayInfo(bundleID: bundleID, displayName: $0)
@@ -318,8 +376,28 @@ public final class MockWorkspaceSource: WorkspaceSource {
     /// priority over `AppTriggerDefaults.displayName(for:)` fallback.
     public var displayInfoLookup: [String: AppDisplayInfo] = [:]
 
+    /// Explicit pickable-list override. When `nil`, defaults to
+    /// `runningBundleIDs` (test-friendly default — every running app is
+    /// pickable unless explicitly filtered).
+    public var pickableOverride: [String]?
+
+    /// Explicit installed-set override. When `nil`, defaults to treating the
+    /// union of `runningBundleIDs` and `displayInfoLookup` keys as installed.
+    public var installedOverride: Set<String>?
+
     public init(runningBundleIDs: [String] = []) {
         self.runningBundleIDs = runningBundleIDs
+    }
+
+    public var pickableRunningBundleIDs: [String] {
+        pickableOverride ?? runningBundleIDs
+    }
+
+    public func isInstalled(_ bundleID: String) -> Bool {
+        if let installed = installedOverride { return installed.contains(bundleID) }
+        if runningBundleIDs.contains(bundleID) { return true }
+        if displayInfoLookup[bundleID] != nil { return true }
+        return false
     }
 
     public func displayInfo(for bundleID: String) -> AppDisplayInfo? {
@@ -384,6 +462,32 @@ public enum AppTriggerDefaults {
         displayNames[bundleID]
     }
 
+    /// SF Symbol fallback when neither a running-app icon nor a bundle icon
+    /// can be resolved. Categorized by app function so the row at least
+    /// communicates *what kind of app* it is when the icon is missing.
+    private static let symbolHints: [String: String] = [
+        "us.zoom.xos":                    "video.fill",
+        "com.microsoft.teams2":           "video.fill",
+        "com.cisco.webex.meetings":       "video.fill",
+        "com.google.Chrome.helper.meet":  "video.fill",
+        "com.hnc.Discord":                "bubble.left.and.bubble.right.fill",
+        "com.tinyspeck.slackmacgap":      "bubble.left.and.bubble.right.fill"
+    ]
+
+    public static func symbolHint(for bundleID: String) -> String? {
+        symbolHints[bundleID]
+    }
+
+    /// Subset of `bundleIDs` that resolve to installed apps on this system.
+    /// Used by `AppTrigger.init` to seed the watched list at first launch,
+    /// so a user with none of the curated defaults installed gets an empty
+    /// list (with friendly empty-state copy) rather than a list of apps
+    /// they don't have.
+    @MainActor
+    public static func installedDefaults(in source: WorkspaceSource) -> [String] {
+        bundleIDs.filter { source.isInstalled($0) }
+    }
+
     /// Drops invalid entries silently per 04 §4.3.2.
     public static func sanitize(_ ids: [String]) -> [String] {
         let pattern = "^[a-zA-Z0-9.-]+$"
@@ -397,13 +501,15 @@ public enum AppTriggerDefaults {
 }
 
 public extension SettingsStore {
+    /// User's watched bundle ID list. The seeding mechanism (see
+    /// `AppTrigger.init` / `AppTriggerDefaults.installedDefaults(in:)`)
+    /// populates this on first launch with the curated defaults that are
+    /// actually installed on the user's machine; subsequently it stores
+    /// exactly whatever the user (or migration code) writes. There is no
+    /// implicit fallback — an empty list means "watch nothing."
     var appTriggerBundleIDs: [String] {
         get {
-            let raw = decodeStringArray(.appTriggerBundleIDs)
-            if raw.isEmpty {
-                return AppTriggerDefaults.bundleIDs
-            }
-            return AppTriggerDefaults.sanitize(raw)
+            AppTriggerDefaults.sanitize(decodeStringArray(.appTriggerBundleIDs))
         }
         set {
             encodeStringArray(AppTriggerDefaults.sanitize(newValue), for: .appTriggerBundleIDs)

@@ -23,8 +23,9 @@ public enum SettingsKey: String, CaseIterable, Sendable {
     case calendarTriggerTrailingMinutes    = "latte.calendarTrigger.trailingMinutes"
 
     // App-presence trigger
-    case appTriggerEnabled     = "latte.appTrigger.enabled"
-    case appTriggerBundleIDs   = "latte.appTrigger.bundleIDs"
+    case appTriggerEnabled         = "latte.appTrigger.enabled"
+    case appTriggerBundleIDs       = "latte.appTrigger.bundleIDs"
+    case hasSeededAppDefaults      = "latte.appTrigger.hasSeededDefaults"
 
     // Wi-Fi trigger
     case wifiTriggerEnabled        = "latte.wifiTrigger.enabled"

@@ -155,9 +155,10 @@ private struct AppTriggerConfigForm: View {
             }
 
             if watched.isEmpty {
-                Text("No apps configured. The trigger will never fire.")
+                Text("No apps configured yet. Use \u{201C}Add from running apps\u{201D} below to add the apps you want Latte to keep awake — or use \u{201C}Advanced\u{201D} for an app that isn\u{2019}t running right now.")
                     .font(Theme.Fonts.caption)
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             runningAppsMenu
@@ -193,19 +194,26 @@ private struct AppTriggerConfigForm: View {
     }
 
     private var runningAppsMenu: some View {
-        let candidates = trigger.runningBundleIDs
+        let candidates = trigger.pickableRunningBundleIDs
             .filter { !watched.contains($0) }
-            .map { id -> (id: String, label: String) in
-                let name = trigger.displayInfo(for: id)?.displayName ?? id
-                return (id, name)
+            .map { id -> (id: String, info: AppDisplayInfo?) in
+                (id, trigger.displayInfo(for: id))
             }
-            .sorted { $0.label.localizedCaseInsensitiveCompare($1.label) == .orderedAscending }
+            .sorted { lhs, rhs in
+                let ln = lhs.info?.displayName ?? lhs.id
+                let rn = rhs.info?.displayName ?? rhs.id
+                return ln.localizedCaseInsensitiveCompare(rn) == .orderedAscending
+            }
         return Menu {
             if candidates.isEmpty {
                 Text("No new running apps to add.")
             } else {
                 ForEach(candidates, id: \.id) { candidate in
-                    Button(candidate.label) { addExisting(candidate.id) }
+                    Button {
+                        addExisting(candidate.id)
+                    } label: {
+                        menuItemLabel(for: candidate.id, info: candidate.info)
+                    }
                 }
             }
         } label: {
@@ -214,6 +222,22 @@ private struct AppTriggerConfigForm: View {
         }
         .menuStyle(.borderlessButton)
         .fixedSize()
+    }
+
+    @ViewBuilder
+    private func menuItemLabel(for bundleID: String, info: AppDisplayInfo?) -> some View {
+        let title = info?.displayName ?? bundleID
+        if let data = info?.iconImageData, let nsImage = NSImage(data: data) {
+            Label {
+                Text(title)
+            } icon: {
+                Image(nsImage: nsImage)
+            }
+        } else if let symbol = AppTriggerDefaults.symbolHint(for: bundleID) {
+            Label(title, systemImage: symbol)
+        } else {
+            Text(title)
+        }
     }
 
     private func addCustom() {
@@ -290,6 +314,12 @@ private struct AppRow: View {
             Image(nsImage: nsImage)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
+        } else if let symbol = AppTriggerDefaults.symbolHint(for: bundleID) {
+            Image(systemName: symbol)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .foregroundStyle(.secondary)
+                .padding(2)
         } else {
             Image(systemName: "app.fill")
                 .resizable()

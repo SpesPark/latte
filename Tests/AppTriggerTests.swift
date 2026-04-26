@@ -120,15 +120,16 @@ final class AppTriggerTests: XCTestCase {
 
     func testDisabledTriggerNoOpOnStart() async throws {
         let settings = InMemorySettingsStore()
-        // .appTriggerEnabled left false (not used by start; but bootTriggers checks it)
+        // .appTriggerEnabled left false (not used by start; coordinator's job).
         let source = MockWorkspaceSource(runningBundleIDs: ["us.zoom.xos"])
         let trigger = AppTrigger(settings: settings, source: source)
-        // start() itself doesn't gate on isEnabled — that's coordinator's job.
-        // But snapshot uses settings.appTriggerBundleIDs which falls back to defaults.
+        // First-launch seeding (S7.8) populates watched with installed curated
+        // defaults — Mock treats `runningBundleIDs` as the installed set, so
+        // Zoom gets seeded and start() votes ON for the running snapshot.
         await trigger.start()
         var iterator = trigger.voteStream.makeAsyncIterator()
         let vote = await iterator.next()
-        XCTAssertEqual(vote?.wantsAwake, true) // defaults include zoom
+        XCTAssertEqual(vote?.wantsAwake, true)
     }
 
     func testAppTriggerRequiresNoPermission() async {
@@ -198,5 +199,149 @@ final class AppTriggerTests: XCTestCase {
         XCTAssertEqual(trigger.displayInfo(for: "com.example.foo")?.displayName, "Foo")
         XCTAssertEqual(trigger.displayInfo(for: "us.zoom.xos")?.displayName, "Zoom") // curated fallback
         XCTAssertNil(trigger.displayInfo(for: "com.unknown.app"))
+    }
+
+    // MARK: - SymbolHint (S7.8)
+
+    func testSymbolHintForCuratedIDs() {
+        XCTAssertEqual(AppTriggerDefaults.symbolHint(for: "us.zoom.xos"), "video.fill")
+        XCTAssertEqual(AppTriggerDefaults.symbolHint(for: "com.microsoft.teams2"), "video.fill")
+        XCTAssertEqual(AppTriggerDefaults.symbolHint(for: "com.cisco.webex.meetings"), "video.fill")
+        XCTAssertEqual(AppTriggerDefaults.symbolHint(for: "com.google.Chrome.helper.meet"), "video.fill")
+        XCTAssertEqual(AppTriggerDefaults.symbolHint(for: "com.hnc.Discord"), "bubble.left.and.bubble.right.fill")
+        XCTAssertEqual(AppTriggerDefaults.symbolHint(for: "com.tinyspeck.slackmacgap"), "bubble.left.and.bubble.right.fill")
+    }
+
+    func testSymbolHintForUnknownReturnsNil() {
+        XCTAssertNil(AppTriggerDefaults.symbolHint(for: "com.unknown.app"))
+        XCTAssertNil(AppTriggerDefaults.symbolHint(for: ""))
+    }
+
+    // MARK: - isInstalled (S7.8)
+
+    func testIsInstalledMockDefaultsToRunningBundleIDs() {
+        let source = MockWorkspaceSource(runningBundleIDs: [
+            "us.zoom.xos",
+            "com.apple.Safari"
+        ])
+        XCTAssertTrue(source.isInstalled("us.zoom.xos"))
+        XCTAssertTrue(source.isInstalled("com.apple.Safari"))
+        XCTAssertFalse(source.isInstalled("com.microsoft.teams2"))
+    }
+
+    func testIsInstalledIncludesDisplayInfoLookupKeys() {
+        let source = MockWorkspaceSource(runningBundleIDs: [])
+        source.displayInfoLookup["com.installed.notrunning"] = AppDisplayInfo(
+            bundleID: "com.installed.notrunning",
+            displayName: "Installed (Not Running)"
+        )
+        XCTAssertTrue(source.isInstalled("com.installed.notrunning"))
+    }
+
+    func testIsInstalledOverrideTakesPrecedence() {
+        let source = MockWorkspaceSource(runningBundleIDs: ["us.zoom.xos"])
+        source.installedOverride = ["com.microsoft.teams2"]
+        XCTAssertFalse(source.isInstalled("us.zoom.xos")) // running but override says not installed
+        XCTAssertTrue(source.isInstalled("com.microsoft.teams2"))
+    }
+
+    // MARK: - installedDefaults helper (S7.8)
+
+    func testInstalledDefaultsFiltersToInstalledOnly() {
+        let source = MockWorkspaceSource(runningBundleIDs: [
+            "us.zoom.xos",
+            "com.tinyspeck.slackmacgap",
+            "com.unrelated.app"
+        ])
+        let installed = AppTriggerDefaults.installedDefaults(in: source)
+        XCTAssertEqual(Set(installed), Set(["us.zoom.xos", "com.tinyspeck.slackmacgap"]))
+    }
+
+    func testInstalledDefaultsEmptyWhenNoneInstalled() {
+        let source = MockWorkspaceSource(runningBundleIDs: ["com.apple.Safari"])
+        let installed = AppTriggerDefaults.installedDefaults(in: source)
+        XCTAssertTrue(installed.isEmpty)
+    }
+
+    // MARK: - First-launch seeding (S7.8)
+
+    func testFirstLaunchSeedsInstalledOnly() async {
+        let settings = InMemorySettingsStore()
+        let source = MockWorkspaceSource(runningBundleIDs: [
+            "us.zoom.xos",        // curated + installed
+            "com.unrelated.app"   // not curated
+        ])
+        // Pre-condition: never seeded, no watched.
+        XCTAssertFalse(settings.bool(.hasSeededAppDefaults, default: false))
+        XCTAssertTrue(settings.decodeStringArray(.appTriggerBundleIDs).isEmpty)
+
+        _ = AppTrigger(settings: settings, source: source)
+
+        XCTAssertTrue(settings.bool(.hasSeededAppDefaults, default: false))
+        XCTAssertEqual(settings.appTriggerBundleIDs, ["us.zoom.xos"])
+    }
+
+    func testFirstLaunchWithNoCuratedInstalledLeavesEmptyButSetsFlag() async {
+        let settings = InMemorySettingsStore()
+        let source = MockWorkspaceSource(runningBundleIDs: ["com.apple.Safari"])
+
+        _ = AppTrigger(settings: settings, source: source)
+
+        XCTAssertTrue(settings.bool(.hasSeededAppDefaults, default: false))
+        XCTAssertTrue(settings.appTriggerBundleIDs.isEmpty)
+    }
+
+    func testSecondLaunchDoesNotReSeedAfterFlagSet() async {
+        let settings = InMemorySettingsStore()
+        settings.setBool(true, for: .hasSeededAppDefaults)
+        // Stays empty because user explicitly cleared.
+        let source = MockWorkspaceSource(runningBundleIDs: ["us.zoom.xos"])
+
+        _ = AppTrigger(settings: settings, source: source)
+
+        // Flag still set; watched stayed empty.
+        XCTAssertTrue(settings.appTriggerBundleIDs.isEmpty)
+    }
+
+    func testInitWithExistingNonEmptyConfigSkipsSeed() async {
+        let settings = InMemorySettingsStore()
+        settings.appTriggerBundleIDs = ["com.tinyspeck.slackmacgap"]
+        let source = MockWorkspaceSource(runningBundleIDs: ["us.zoom.xos"])
+
+        _ = AppTrigger(settings: settings, source: source)
+
+        XCTAssertTrue(settings.bool(.hasSeededAppDefaults, default: false))
+        XCTAssertEqual(settings.appTriggerBundleIDs, ["com.tinyspeck.slackmacgap"])
+    }
+
+    // MARK: - pickableRunningBundleIDs (S7.8)
+
+    func testPickableRunningBundleIDsDefaultsToRunningInMock() {
+        let source = MockWorkspaceSource(runningBundleIDs: [
+            "us.zoom.xos",
+            "com.apple.Safari"
+        ])
+        XCTAssertEqual(Set(source.pickableRunningBundleIDs), Set(source.runningBundleIDs))
+    }
+
+    func testPickableRunningBundleIDsOverrideTakesPrecedence() {
+        let source = MockWorkspaceSource(runningBundleIDs: [
+            "us.zoom.xos",
+            "com.example.daemon",
+            "com.example.menubar.helper"
+        ])
+        source.pickableOverride = ["us.zoom.xos"] // simulating .regular filter
+        XCTAssertEqual(source.pickableRunningBundleIDs, ["us.zoom.xos"])
+        // Real running list is unfiltered:
+        XCTAssertEqual(source.runningBundleIDs.count, 3)
+    }
+
+    func testAppTriggerPickableRunningBundleIDsPassThrough() {
+        let (trigger, source, _) = makeFixture(running: [
+            "us.zoom.xos",
+            "com.apple.Safari"
+        ])
+        source.pickableOverride = ["us.zoom.xos"]
+        XCTAssertEqual(trigger.pickableRunningBundleIDs, ["us.zoom.xos"])
     }
 }
