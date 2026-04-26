@@ -123,7 +123,9 @@ final class FocusTriggerTests: XCTestCase {
         }
         try await Task.sleep(nanoseconds: 50_000_000)
         task.cancel()
-        // The stream is finished, so iterator.next() returns nil and exits.
+        // S7.11: stream stays open after stop (no continuation.finish), so the
+        // iterator just blocks until the cancel. value is nil because the task
+        // was cancelled before any yield could arrive.
         do { let _v = await task.value; XCTAssertNil(_v) }
     }
 }

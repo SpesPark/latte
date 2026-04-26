@@ -149,7 +149,9 @@ public final class WiFiTrigger: Trigger {
         pollTask?.cancel()
         pollTask = nil
         lastVote = nil
-        continuation.finish()
+        // Per S7.9 / S7.11: do NOT call `continuation.finish()`. See
+        // CalendarTrigger.stop() for the rationale — the AsyncStream stays
+        // open for the trigger's lifetime so Toggle OFF→ON cycles work.
     }
 
     public func requestPermissionIfNeeded() async -> Bool {

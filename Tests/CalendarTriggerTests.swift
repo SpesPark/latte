@@ -298,8 +298,18 @@ final class CalendarTriggerTests: XCTestCase {
         await trigger.start()
 
         trigger.stop()
-        let after = await it.next()
-        XCTAssertNil(after, "stream should finish after stop()")
+        // S7.11: stop() no longer finishes the AsyncStream (the coordinator
+        // cancels its consumer task on stop and recreates it on start; the
+        // stream lives for the trigger's lifetime so Toggle OFF→ON cycles
+        // work). To verify nothing else is yielded after stop, drain with a
+        // bounded timeout.
+        let nextProbe = Task { @MainActor () -> TriggerVote? in
+            await it.next()
+        }
+        try await Task.sleep(nanoseconds: 50_000_000)
+        nextProbe.cancel()
+        let after = await nextProbe.value
+        XCTAssertNil(after, "no further votes should be yielded after stop()")
     }
 
     func testCalendarSettingsTypedSetters() {

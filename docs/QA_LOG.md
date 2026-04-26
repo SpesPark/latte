@@ -396,6 +396,43 @@ Note on macOS sleep: cup deactivating ≠ Mac sleeping. Latte just releases the 
 
 ---
 
+## S7.10 → S7.11 — Stream-lifecycle parity for Calendar/WiFi/Focus + first AppIcon raster set (2026-04-27)
+
+Post-S7.10 review pass surfaced a latent regression risk and the owner supplied the app icon master.
+
+#### S710-DEF-01 — Stream-lifecycle fix from S7.9 was AppTrigger-only
+
+- **Severity**: P1 latent (the bug only manifests if owner enables, then toggles OFF then ON, any of Calendar/WiFi/Focus triggers — not yet hit because owner is exercising App trigger first)
+- **Root cause**: S7.9 removed `continuation.finish()` from `AppTrigger.stop()` so that Toggle OFF→ON cycles work (the AsyncStream stays open across the cycle; the coordinator handles consumer-task cancel/recreate). The same fix was *not* propagated to `CalendarTrigger.stop()` / `WiFiTrigger.stop()` / `FocusTrigger.stop()`, which all still finished their continuations. Effect identical to the pre-S7.9 AppTrigger bug: future `start()` recreates the observation but `continuation.yield(...)` calls are silently dropped because the stream is permanently closed; the consumer's `for await` exits immediately; the manager never receives the new vote; the cup never re-activates.
+- **Status**: **fixed-in-S7.11**. Removed `continuation.finish()` from all three `stop()` methods; mirrored the explanatory comment from `AppTrigger.stop()` in each. Existing tests in `CalendarTriggerTests` / `WiFiTriggerTests` / `FocusTriggerTests` that asserted "stream finishes after stop" were updated to "no further votes are yielded after stop" via a bounded-timeout `Task.cancel()` probe — matches the post-S7.9 `testStopCancelsObservation` pattern.
+
+### Additional smoke for S7.11 (owner — supersedes the deferred S7.10 candidate from earlier)
+
+- [ ] **Calendar Toggle OFF → ON cycle**: enable Calendar trigger with at least one event in the next 24 h matching lead-time → cup activates near event start. Toggle OFF (cup deactivates immediately per S7.10), Toggle ON. Polling resumes; if an active event still falls within window, cup re-activates within ≤60 s (the polling interval).
+- [ ] **WiFi Toggle OFF → ON cycle**: configure SSID list to include current network, enable trigger → cup activates within ≤30 s. Toggle OFF, ON. Cup re-activates within ≤30 s if still on the network.
+- [ ] **Focus Toggle OFF → ON cycle**: turn on a Focus mode → cup activates. Toggle OFF, ON. Cup re-activates immediately (Focus is observer-based, not polled).
+- [ ] **App icon visible**: in Finder → Applications, the Latte app shows the new latte-cup icon at 16/32/128 sizes. In Dock (if dragged in for testing) the icon renders cleanly.
+
+### Coverage gate snapshot (post-S7.11)
+
+| File | Cov% | Status |
+|---|---|---|
+| Core/AwakeDuration | 100.00% | ✅ |
+| Core/AwakeManager | 94.26% | ✅ |
+| Core/Logging | 100.00% | ✅ |
+| Core/PowerAssertion | 87.32% | ✅ |
+| Core/SettingsStore | 100.00% | ✅ |
+| Triggers/Trigger | 83.33% | ✅ |
+| Triggers/TriggerCoordinator | 92.96% | ✅ |
+| Triggers/AppTrigger | 98.62% | ✅ |
+| Triggers/CalendarTrigger | 98.79% | ✅ |
+| Triggers/FocusTrigger | 97.98% | ✅ |
+| Triggers/WiFiTrigger | 96.61% | ✅ |
+
+**GATE: PASS** (263/263 tests, lowest 83.33%). **This entry closes the S7-family iteration.** Next session is S8 — App Store prep, blocked owner-side on Apple Dev Program enrollment + bundle ID prefix decision + folder rename.
+
+---
+
 ## Adapter exemption rationale
 
 The following classes are excluded from the 80% coverage gate because they wrap live system services and require an interactive user / permission grant / hardware to exercise:

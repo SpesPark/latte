@@ -164,6 +164,75 @@ final class TriggerCoordinatorTests: XCTestCase {
         XCTAssertFalse(assertion.isActive)
     }
 
+    /// Toggle ON path: starts as OFF, user enables in Settings → coordinator.start
+    /// fires → trigger.start does initial snapshot → emits ON vote if a watched
+    /// app is currently running → manager activates immediately.
+    func testOwnerScenarioToggleOnActivatesImmediatelyWhenWatchedAppRunning() async throws {
+        let assertion = MockPowerAssertion()
+        let settings = InMemorySettingsStore()
+        // Trigger starts disabled. Watched list pre-configured.
+        settings.setBool(false, for: .appTriggerEnabled)
+        settings.appTriggerBundleIDs = ["us.zoom.xos"]
+        settings.setBool(true, for: .hasSeededAppDefaults)
+
+        let manager = AwakeManager(assertion: assertion, settings: settings)
+        let coordinator = TriggerCoordinator(awakeManager: manager, settings: settings)
+        let source = MockWorkspaceSource(runningBundleIDs: ["us.zoom.xos"])
+        let trigger = AppTrigger(settings: settings, source: source)
+        coordinator.register(trigger)
+
+        // Pre-condition: nothing started, manager asleep.
+        XCTAssertEqual(manager.state, .asleep)
+        XCTAssertFalse(manager.isAwake)
+
+        // Simulate Toggle ON: TriggerSection.onChange writes isEnabled, then
+        // spawns a Task that calls coordinator.start.
+        trigger.isEnabled = true
+        await coordinator.start(trigger)
+        try await Task.sleep(nanoseconds: 100_000_000)
+
+        if case .awakeTriggered(let votes) = manager.state {
+            XCTAssertEqual(votes["app"]?.reason, "App: us.zoom.xos")
+        } else {
+            XCTFail("Toggle ON must transition to .awakeTriggered, got \(manager.state)")
+        }
+        XCTAssertTrue(manager.isAwake, "cup should activate immediately on Toggle ON")
+        XCTAssertTrue(assertion.isActive)
+    }
+
+    /// Toggle ON when no watched app is running → no immediate vote → cup stays
+    /// inactive until a watched app launches (handled by observeLifecycle).
+    func testOwnerScenarioToggleOnNoMatchStaysInactive() async throws {
+        let assertion = MockPowerAssertion()
+        let settings = InMemorySettingsStore()
+        settings.setBool(false, for: .appTriggerEnabled)
+        settings.appTriggerBundleIDs = ["us.zoom.xos"]
+        settings.setBool(true, for: .hasSeededAppDefaults)
+
+        let manager = AwakeManager(assertion: assertion, settings: settings)
+        let coordinator = TriggerCoordinator(awakeManager: manager, settings: settings)
+        let source = MockWorkspaceSource(runningBundleIDs: ["com.apple.Safari"])
+        let trigger = AppTrigger(settings: settings, source: source)
+        coordinator.register(trigger)
+
+        trigger.isEnabled = true
+        await coordinator.start(trigger)
+        try await Task.sleep(nanoseconds: 100_000_000)
+
+        XCTAssertEqual(manager.state, .asleep, "no matching watched app → no activation")
+        XCTAssertFalse(manager.isAwake)
+        XCTAssertFalse(assertion.isActive)
+
+        // Then user launches Zoom → observeLifecycle fires → cup activates.
+        source.simulateLaunch("us.zoom.xos")
+        try await Task.sleep(nanoseconds: 100_000_000)
+
+        XCTAssertTrue(manager.isAwake, "cup must activate when watched app launches")
+        if case .awakeTriggered = manager.state { } else {
+            XCTFail("expected .awakeTriggered after launch, got \(manager.state)")
+        }
+    }
+
     func testMultipleTriggersAllVotedOnAggregateAwake() async throws {
         let (coordinator, manager, _, _) = makeCoordinator()
         let calTrigger = MockTrigger(id: "cal")

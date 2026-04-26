@@ -185,7 +185,12 @@ public final class CalendarTrigger: Trigger {
         pollTask?.cancel()
         pollTask = nil
         activeEventIDs.removeAll()
-        continuation.finish()
+        // Per S7.9 / S7.11: do NOT call `continuation.finish()`. Finishing
+        // the AsyncStream permanently closes it and any future `start()` would
+        // be unable to deliver votes (the next consumer's `for await` would
+        // exit immediately, future yields silently dropped). The coordinator
+        // cancels its consumer task on stop and recreates one on start; both
+        // subscribe to the same long-lived stream.
     }
 
     public func requestPermissionIfNeeded() async -> Bool {

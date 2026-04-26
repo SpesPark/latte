@@ -8,10 +8,10 @@
 
 | Field | Value |
 |---|---|
-| **Session #** | 7 + 7.5 + 7.6 + 7.7 + 7.8 + 7.9 + 7.10 of ~10 (seven S7-family sessions same calendar day) |
-| **Theme** | Test coverage + QA gate (S7); Per-trigger config UI (S7.5); UX rewrite after owner smoke (S7.6); App trigger friendly names (S7.7); pickable filter + installed-only seed (S7.8); trigger lifecycle / watched-list reevaluate (S7.9); per-trigger grace replaces 60 s cool-down (S7.10) |
-| **Date** | 2026-04-26 |
-| **Status** | ✅ Completed. 261/261 tests passing. S7 cleared the 80% coverage gate on `Sources/Core/**` and `Sources/Triggers/**` (live-system adapter classes excluded; rationale codified in `02-architecture.md` §13 v0.9 + `docs/QA_LOG.md`). S7.5 landed Phase 1.5.A — Settings → Triggers now offers an inline configuration form per trigger. S7.6 owner smoke surfaced two defects (P1 state-mismatch + P2 UX); both fixed by retiring the DisclosureGroup-with-Toggle-in-label structure in favor of a Section-per-trigger layout. S7.7 owner re-smoke against S7.6 build surfaced one defect (P2: App trigger row showed raw bundle IDs + no purpose copy); fixed by extending `WorkspaceSource` with `displayInfo(for:)`, curated displayName table, and rewriting `AppTriggerConfigForm` to render real app icons + friendly names. **S7.8 owner re-smoke against S7.7 build surfaced three connected complaints — pre-loaded curated defaults populate apps the owner doesn't have installed; "Add from running apps" Menu items show names without icons; the same Menu lists every running process. Fixed at the root: `WorkspaceSource` gains `pickableRunningBundleIDs` (filters `.regular` activation policy + excludes self) and `isInstalled(_:)`; `AppTrigger.init` runs a one-shot installed-only curated seed gated on the new `hasSeededAppDefaults` flag (idempotent across re-launches, respects users who explicitly cleared their list); legacy "fall back to all 6 curated when raw is empty" getter behaviour removed; UI Menu items render with real app icons or SF Symbol category fallback (`video.fill` / `bubble.left.and.bubble.right.fill`).** EKCalendar picker and per-Focus selection remain deferred as Phase 1.5.B / Apple-API-blocked respectively. |
+| **Session #** | 7 + 7.5 + 7.6 + 7.7 + 7.8 + 7.9 + 7.10 + 7.11 of ~10 (eight S7-family sub-sessions across 2026-04-26 → 2026-04-27) |
+| **Theme** | Test coverage + QA gate (S7); Per-trigger config UI (S7.5); UX rewrite after owner smoke (S7.6); App trigger friendly names (S7.7); pickable filter + installed-only seed (S7.8); trigger lifecycle / watched-list reevaluate (S7.9); per-trigger grace replaces 60 s cool-down (S7.10); stream-lifecycle parity for Calendar/WiFi/Focus + AppIcon raster set (S7.11) |
+| **Date** | 2026-04-26 → 2026-04-27 |
+| **Status** | ✅ Completed. 263/263 tests passing. **S7-family iteration closed.** S7 cleared the 80% coverage gate on `Sources/Core/**` and `Sources/Triggers/**` (live-system adapter classes excluded; rationale codified in `02-architecture.md` §13 v0.9 + `docs/QA_LOG.md`). S7.5 landed Phase 1.5.A — Settings → Triggers now offers an inline configuration form per trigger. S7.6 owner smoke surfaced two defects (P1 state-mismatch + P2 UX); both fixed by retiring the DisclosureGroup-with-Toggle-in-label structure in favor of a Section-per-trigger layout. S7.7 owner re-smoke against S7.6 build surfaced one defect (P2: App trigger row showed raw bundle IDs + no purpose copy); fixed by extending `WorkspaceSource` with `displayInfo(for:)`, curated displayName table, and rewriting `AppTriggerConfigForm` to render real app icons + friendly names. **S7.8 owner re-smoke against S7.7 build surfaced three connected complaints — pre-loaded curated defaults populate apps the owner doesn't have installed; "Add from running apps" Menu items show names without icons; the same Menu lists every running process. Fixed at the root: `WorkspaceSource` gains `pickableRunningBundleIDs` (filters `.regular` activation policy + excludes self) and `isInstalled(_:)`; `AppTrigger.init` runs a one-shot installed-only curated seed gated on the new `hasSeededAppDefaults` flag (idempotent across re-launches, respects users who explicitly cleared their list); legacy "fall back to all 6 curated when raw is empty" getter behaviour removed; UI Menu items render with real app icons or SF Symbol category fallback (`video.fill` / `bubble.left.and.bubble.right.fill`).** EKCalendar picker and per-Focus selection remain deferred as Phase 1.5.B / Apple-API-blocked respectively. |
 
 ### What was accomplished
 
@@ -179,9 +179,19 @@ S7.9 introduces one small public method addition (`AppTrigger.reevaluateWatched(
 
 S7.10 is the largest of the S7-family iterations: 1 protocol extension, 1 input signature change, 1 state machine arm forked, 6 emit-site adjustments, 7 test sites updated. The `Trigger` surface stays default-impl-friendly so any external implementer is unaffected. The `Trigger` protocol, `TriggerCoordinator`, and persistence shapes are unchanged for v1; WiFi / Calendar / Focus stay at grace = 0.
 
+### S7.11 added (Stream-lifecycle parity for the other 3 triggers + first AppIcon raster set — closes the S7-family iteration)
+
+43. **`continuation.finish()` removed from CalendarTrigger.stop() / WiFiTrigger.stop() / FocusTrigger.stop()** — mirroring the S7.9 fix that was originally applied to AppTrigger only. Latent bug: any future Toggle OFF → ON cycle on those three triggers would have silently killed the AsyncStream and broken the cup re-activation, identical to the pre-S7.9 AppTrigger bug. Owner is exercising App trigger first so this hadn't surfaced yet, but it's a clear regression risk for any next smoke pass that touches the others. Each `stop()` now leaves the AsyncStream open for the trigger's lifetime; the coordinator is solely responsible for cancelling/recreating its consumer Task across cycles. Identical explanatory comment dropped into each.
+
+44. **Three corresponding tests refreshed** — `CalendarTriggerTests` (the start-restart-stop test asserting "stream finishes after stop"), `WiFiTriggerTests` (same pattern), `FocusTriggerTests` (same pattern). Replaced the "stream finishes" expectation with a bounded-timeout `Task.cancel()` probe that asserts "no further votes are yielded after stop." Matches the post-S7.9 `testStopCancelsObservation` style on AppTrigger. 261 → 263 tests, all pass. Coverage stays PASS — CalendarTrigger 98.79% (up from 98.75% via fewer skipped lines on stop), WiFiTrigger 96.61% (up from 96.55%), FocusTrigger 97.98% (up from 97.94%); all gated files ≥ 80%.
+
+45. **F-1.C.04 — App icon bundle landed**. Owner supplied a 1254×1254 PNG master ("Latte icon.png" in repo root). Generated the 10 macOS AppIcon raster sizes via `sips -s format png -z N N <src> --out <dst>` (16, 32, 64, 128, 256, 512, 1024 — covering 1x/2x of 16/32/128/256/512). Files committed to `Resources/Assets.xcassets/AppIcon.appiconset/` with the matching `filename` keys added to `Contents.json` per Apple's asset catalog format. Source master + a 1024×1024 marketing variant filed under `docs/design/assets/icon-master-1254.png` and `docs/design/assets/icon-1024.png`. Original repo-root PNG moved out so we don't ship a stray asset. Per `docs/design/05-icon-spec.md` §6.1 / §7, the asset bundle is now ready for App Store; Icon Composer / dark / tinted variants remain as optional follow-ups owner can add later.
+
+S7.11 introduces no protocol or state machine changes — the `Trigger` API surface, `TriggerVote`, `AwakeManager`, and persistence shapes are unchanged. **This sub-session closes the S7-family iteration**: S7 → S7.5 → S7.6 → S7.7 → S7.8 → S7.9 → S7.10 → S7.11, eight iterations across 2026-04-26 → 2026-04-27, 178 → 263 tests, ROADMAP 0.9 → 0.16, 02-architecture 0.9 → 0.16. Remaining S8 work (App Store prep) is owner-side: Apple Dev Program enrollment, bundle ID prefix decision (replaces `com.example.latte`), folder rename `Caffeinated-Clone/` → `Latte/`, and one final re-smoke against the S7.11 build.
+
 ### What's NOT done (intentional)
 
-- **Owner-side manual smoke checklist** in `docs/QA_LOG.md` is checked-in but unchecked — Claude cannot drive the menu-bar UI. Owner runs through this (including the §S7.7 + §S7.8 + §S7.9 + §S7.10 addendums covering App-trigger friendly names, pickable filter, installed-only seed, watched-list reevaluate, and per-trigger grace replacing the 60 s cool-down) and ticks lines (or logs defects in the same doc) before S8 starts in earnest. Gate for S8 is: zero P1 items in QA_LOG.
+- **Owner-side manual smoke checklist** in `docs/QA_LOG.md` is checked-in but unchecked — Claude cannot drive the menu-bar UI. Owner runs through this (including the §S7.7 + §S7.8 + §S7.9 + §S7.10 + §S7.11 addendums covering App-trigger friendly names, pickable filter, installed-only seed, watched-list reevaluate, per-trigger grace, stream-lifecycle parity for the other 3 triggers, and AppIcon bundle visibility) and ticks lines (or logs defects in the same doc) before S8 starts in earnest. Gate for S8 is: zero P1 items in QA_LOG.
 - **macOS 13/14/15 matrix smoke** — deferred to S9 (TestFlight). Dev box is macOS 26 only.
 - **`AwakeManager` coverage** sits at 94.1% — the remaining 6% is mostly the two log-only paths in the IOKit power-source observer; not worth contorting tests to chase. Documented in 02 §13 v0.9.
 - **`Trigger` protocol file** at 82.8% — the 5 missed lines are default-impl fallbacks for protocols that are always overridden by concrete types. Right at the gate; do not "improve" with pointless override tests.
@@ -302,7 +312,7 @@ M  docs/QA_LOG.md                              (logged S78-DEF-01..02 fixed-in-S
                                                 S7.10 candidate note)
 M  docs/SESSION_HANDOFF.md
 
-S7.10 (this commit):
+S7.10 (commit 1437485):
 M  Sources/Triggers/Trigger.swift             (+ var graceSecondsAfterOff: TimeInterval requirement
                                                   on the Trigger protocol, with default-impl extension
                                                   returning 0 — every trigger inherits v1 immediate-OFF)
@@ -338,6 +348,39 @@ M  docs/design/03-state-machine.md            (v0.2 — §5.2 rewritten with rev
                                                 input table + change log updated)
 M  docs/QA_LOG.md                              (logged S79-DEF-01 fixed-in-S7.10 + S7.10 smoke checklist
                                                 addendum + post-S7.10 coverage snapshot)
+M  docs/SESSION_HANDOFF.md
+
+S7.11 (this commit):
+M  Sources/Triggers/CalendarTrigger.swift     (~ stop() — removed continuation.finish() so Toggle OFF→ON
+                                                  cycles work; matches the S7.9 AppTrigger fix)
+M  Sources/Triggers/WiFiTrigger.swift         (~ stop() — same fix as Calendar)
+M  Sources/Triggers/FocusTrigger.swift        (~ stop() — same fix as Calendar)
+M  Tests/CalendarTriggerTests.swift           (~ start-restart-stop test refreshed: "stream finishes
+                                                  after stop" → "no further votes after stop" via
+                                                  bounded-timeout Task.cancel probe)
+M  Tests/WiFiTriggerTests.swift               (~ same test pattern refresh)
+M  Tests/FocusTriggerTests.swift              (~ same test pattern refresh)
+A  Tests/TriggerCoordinatorTests.swift        (+ testOwnerScenarioToggleOnActivatesImmediatelyWhenWatchedAppRunning
+                                                + testOwnerScenarioToggleOnNoMatchStaysInactive — verifies
+                                                  S7.10's grace=0 path delivers immediate cup activation
+                                                  when the user toggles a trigger ON)
+A  Resources/Assets.xcassets/AppIcon.appiconset/icon_16x16.png        (16×16 raster from owner master)
+A  Resources/Assets.xcassets/AppIcon.appiconset/icon_16x16@2x.png     (32×32)
+A  Resources/Assets.xcassets/AppIcon.appiconset/icon_32x32.png        (32×32)
+A  Resources/Assets.xcassets/AppIcon.appiconset/icon_32x32@2x.png     (64×64)
+A  Resources/Assets.xcassets/AppIcon.appiconset/icon_128x128.png      (128×128)
+A  Resources/Assets.xcassets/AppIcon.appiconset/icon_128x128@2x.png   (256×256)
+A  Resources/Assets.xcassets/AppIcon.appiconset/icon_256x256.png      (256×256)
+A  Resources/Assets.xcassets/AppIcon.appiconset/icon_256x256@2x.png   (512×512)
+A  Resources/Assets.xcassets/AppIcon.appiconset/icon_512x512.png      (512×512)
+A  Resources/Assets.xcassets/AppIcon.appiconset/icon_512x512@2x.png   (1024×1024)
+M  Resources/Assets.xcassets/AppIcon.appiconset/Contents.json   (added filename keys per raster)
+A  docs/design/assets/icon-master-1254.png    (the 1254×1254 owner-supplied master, archived)
+A  docs/design/assets/icon-1024.png           (1024×1024 marketing variant per 05-icon-spec §6.3)
+M  ROADMAP.md                                 (v0.16 — closes the S7-family iteration)
+M  docs/design/02-architecture.md             (v0.16, §13 entry)
+M  docs/QA_LOG.md                              (logged S710-DEF-01 fixed-in-S7.11 + S7.11 smoke
+                                                checklist addendum + post-S7.11 coverage snapshot)
 M  docs/SESSION_HANDOFF.md                    (this file)
 ```
 

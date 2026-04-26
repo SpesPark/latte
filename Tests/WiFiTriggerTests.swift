@@ -183,9 +183,15 @@ final class WiFiTriggerTests: XCTestCase {
         await trigger.start()
 
         trigger.stop()
-        // After stop, the stream is finished — next() returns nil.
-        let after = await it.next()
-        XCTAssertNil(after)
+        // S7.11: stop() no longer finishes the AsyncStream (so Toggle OFF→ON
+        // cycles work). Verify no further yields by polling with a timeout.
+        let nextProbe = Task { @MainActor () -> TriggerVote? in
+            await it.next()
+        }
+        try await Task.sleep(nanoseconds: 50_000_000)
+        nextProbe.cancel()
+        let after = await nextProbe.value
+        XCTAssertNil(after, "no further votes should be yielded after stop()")
     }
 
     func testCurrentSSIDPassThrough() {
