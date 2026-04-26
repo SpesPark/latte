@@ -14,6 +14,7 @@ public struct TriggersTab: View {
             ForEach(coordinator.triggers, id: \.id) { trigger in
                 TriggerSection(
                     trigger: trigger,
+                    coordinator: coordinator,
                     activeVote: coordinator.activeVotes[trigger.id]
                 )
             }
@@ -28,12 +29,14 @@ public struct TriggersTab: View {
 private struct TriggerSection: View {
 
     let trigger: any Trigger
+    let coordinator: TriggerCoordinator
     let activeVote: TriggerVote?
     @State private var isOn: Bool
     @EnvironmentObject private var environment: AppEnvironment
 
-    init(trigger: any Trigger, activeVote: TriggerVote?) {
+    init(trigger: any Trigger, coordinator: TriggerCoordinator, activeVote: TriggerVote?) {
         self.trigger = trigger
+        self.coordinator = coordinator
         self.activeVote = activeVote
         self._isOn = State(initialValue: trigger.isEnabled)
     }
@@ -43,6 +46,13 @@ private struct TriggerSection: View {
             Toggle("Enable", isOn: $isOn)
                 .onChange(of: isOn) { newValue in
                     trigger.isEnabled = newValue
+                    Task { @MainActor in
+                        if newValue {
+                            await coordinator.start(trigger)
+                        } else {
+                            coordinator.stop(trigger.id)
+                        }
+                    }
                 }
 
             if isOn {
@@ -261,6 +271,10 @@ private struct AppTriggerConfigForm: View {
     private func commit(_ next: [String]) {
         watched = next
         settings.appTriggerBundleIDs = next
+        // Push the new watched set into the live trigger so the awake-state
+        // vote reflects the change immediately (S7.9 — without this, removing
+        // an app from the list left the trigger emitting a stale ON vote).
+        trigger.reevaluateWatched()
     }
 }
 

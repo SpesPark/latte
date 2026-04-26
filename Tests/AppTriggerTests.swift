@@ -113,8 +113,10 @@ final class AppTriggerTests: XCTestCase {
         await trigger.start()
         XCTAssertEqual(source.observationCount, 1)
         trigger.stop()
-        // After stop, simulate doesn't dispatch anywhere observable to caller because
-        // trigger.continuation is finished. Sanity check: simulateLaunch should be a no-op.
+        // After stop, simulateLaunch is a no-op because the observation's
+        // onLaunch handler was nil'd during cancel. (S7.9: the AsyncStream's
+        // continuation is intentionally NOT finished on stop, so a future
+        // start() can deliver votes again.)
         source.simulateLaunch("com.microsoft.teams2")
     }
 
@@ -343,5 +345,131 @@ final class AppTriggerTests: XCTestCase {
         ])
         source.pickableOverride = ["us.zoom.xos"]
         XCTAssertEqual(trigger.pickableRunningBundleIDs, ["us.zoom.xos"])
+    }
+
+    // MARK: - reevaluateWatched (S7.9)
+
+    func testReevaluateWatchedAfterAddingNewMatchEmitsOn() async throws {
+        let settings = InMemorySettingsStore()
+        settings.appTriggerBundleIDs = []
+        let source = MockWorkspaceSource(runningBundleIDs: ["us.zoom.xos"])
+        let trigger = AppTrigger(settings: settings, source: source)
+        await trigger.start()
+
+        // No initial vote (watched was empty).
+        var iterator = trigger.voteStream.makeAsyncIterator()
+
+        settings.appTriggerBundleIDs = ["us.zoom.xos"]
+        trigger.reevaluateWatched()
+
+        let vote = await iterator.next()
+        XCTAssertEqual(vote?.wantsAwake, true)
+        XCTAssertTrue(vote?.reason.contains("us.zoom.xos") ?? false)
+    }
+
+    func testReevaluateWatchedAfterRemovingLastMatchEmitsOff() async throws {
+        let settings = InMemorySettingsStore()
+        settings.appTriggerBundleIDs = ["us.zoom.xos"]
+        let source = MockWorkspaceSource(runningBundleIDs: ["us.zoom.xos"])
+        let trigger = AppTrigger(settings: settings, source: source)
+        await trigger.start()
+        var iterator = trigger.voteStream.makeAsyncIterator()
+        let onVote = await iterator.next()
+        XCTAssertEqual(onVote?.wantsAwake, true)
+
+        settings.appTriggerBundleIDs = []
+        trigger.reevaluateWatched()
+
+        let offVote = await iterator.next()
+        XCTAssertEqual(offVote?.wantsAwake, false)
+    }
+
+    func testReevaluateWatchedNoChangeIsNoOp() async throws {
+        let settings = InMemorySettingsStore()
+        settings.appTriggerBundleIDs = ["us.zoom.xos"]
+        let source = MockWorkspaceSource(runningBundleIDs: ["us.zoom.xos"])
+        let trigger = AppTrigger(settings: settings, source: source)
+        await trigger.start()
+        var iterator = trigger.voteStream.makeAsyncIterator()
+        _ = await iterator.next() // initial ON
+
+        // Settings unchanged; reevaluate must be a no-op.
+        trigger.reevaluateWatched()
+
+        let task = Task { @MainActor () -> TriggerVote? in
+            await iterator.next()
+        }
+        try await Task.sleep(nanoseconds: 50_000_000)
+        task.cancel()
+        let v = await task.value
+        XCTAssertNil(v, "reevaluate with unchanged settings must not re-emit")
+    }
+
+    func testReevaluateWatchedSetChangedButStillNonEmptyReEmitsForUpdatedReason() async throws {
+        let settings = InMemorySettingsStore()
+        settings.appTriggerBundleIDs = ["us.zoom.xos"]
+        let source = MockWorkspaceSource(runningBundleIDs: [
+            "us.zoom.xos",
+            "com.microsoft.teams2"
+        ])
+        let trigger = AppTrigger(settings: settings, source: source)
+        await trigger.start()
+        var iterator = trigger.voteStream.makeAsyncIterator()
+        let firstOn = await iterator.next()
+        XCTAssertEqual(firstOn?.reason, "App: us.zoom.xos")
+
+        // Add Teams to watched — now both Zoom + Teams match.
+        settings.appTriggerBundleIDs = ["us.zoom.xos", "com.microsoft.teams2"]
+        trigger.reevaluateWatched()
+
+        let secondOn = await iterator.next()
+        XCTAssertEqual(secondOn?.wantsAwake, true)
+        XCTAssertTrue(secondOn?.reason.contains("com.microsoft.teams2") ?? false,
+                      "expected reason to mention the newly-watched matching app")
+    }
+
+    func testReevaluateWatchedWhileStoppedIsNoOp() async throws {
+        let settings = InMemorySettingsStore()
+        settings.appTriggerBundleIDs = ["us.zoom.xos"]
+        let source = MockWorkspaceSource(runningBundleIDs: ["us.zoom.xos"])
+        let trigger = AppTrigger(settings: settings, source: source)
+        // Don't call start() — observation is nil.
+
+        settings.appTriggerBundleIDs = ["com.microsoft.teams2"]
+        trigger.reevaluateWatched()
+
+        var iterator = trigger.voteStream.makeAsyncIterator()
+        let task = Task { @MainActor () -> TriggerVote? in
+            await iterator.next()
+        }
+        try await Task.sleep(nanoseconds: 50_000_000)
+        task.cancel()
+        let v = await task.value
+        XCTAssertNil(v, "reevaluate while stopped must not emit (start() will read fresh data)")
+    }
+
+    // MARK: - Lifecycle: stop + restart (S7.9 stream stays open)
+
+    func testRestartAfterStopReEmitsInitialSnapshot() async throws {
+        let settings = InMemorySettingsStore()
+        settings.appTriggerBundleIDs = ["us.zoom.xos"]
+        let source = MockWorkspaceSource(runningBundleIDs: ["us.zoom.xos"])
+        let trigger = AppTrigger(settings: settings, source: source)
+
+        await trigger.start()
+        var iterator = trigger.voteStream.makeAsyncIterator()
+        let firstOn = await iterator.next()
+        XCTAssertEqual(firstOn?.wantsAwake, true)
+
+        trigger.stop()
+        // Stop must NOT finish the continuation — the stream stays open so a
+        // future `start()` can deliver votes again. Regression guard for the
+        // pre-S7.9 bug where the consumer task was permanently silent after
+        // a Toggle OFF → ON cycle.
+
+        await trigger.start()
+        let secondOn = await iterator.next()
+        XCTAssertEqual(secondOn?.wantsAwake, true,
+                       "restart should re-emit the initial-snapshot ON vote")
     }
 }

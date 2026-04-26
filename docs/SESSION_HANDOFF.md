@@ -8,10 +8,10 @@
 
 | Field | Value |
 |---|---|
-| **Session #** | 7 + 7.5 + 7.6 + 7.7 + 7.8 of ~10 (five S7-family sessions same calendar day) |
-| **Theme** | Test coverage + QA gate (S7); Per-trigger config UI (S7.5); UX rewrite after owner smoke (S7.6); App trigger friendly names after second smoke (S7.7); App trigger pickable filter + installed-only seed after third smoke (S7.8) |
+| **Session #** | 7 + 7.5 + 7.6 + 7.7 + 7.8 + 7.9 of ~10 (six S7-family sessions same calendar day) |
+| **Theme** | Test coverage + QA gate (S7); Per-trigger config UI (S7.5); UX rewrite after owner smoke (S7.6); App trigger friendly names (S7.7); pickable filter + installed-only seed (S7.8); trigger lifecycle / watched-list reevaluate (S7.9) |
 | **Date** | 2026-04-26 |
-| **Status** | ✅ Completed. 249/249 tests passing. S7 cleared the 80% coverage gate on `Sources/Core/**` and `Sources/Triggers/**` (live-system adapter classes excluded; rationale codified in `02-architecture.md` §13 v0.9 + `docs/QA_LOG.md`). S7.5 landed Phase 1.5.A — Settings → Triggers now offers an inline configuration form per trigger. S7.6 owner smoke surfaced two defects (P1 state-mismatch + P2 UX); both fixed by retiring the DisclosureGroup-with-Toggle-in-label structure in favor of a Section-per-trigger layout. S7.7 owner re-smoke against S7.6 build surfaced one defect (P2: App trigger row showed raw bundle IDs + no purpose copy); fixed by extending `WorkspaceSource` with `displayInfo(for:)`, curated displayName table, and rewriting `AppTriggerConfigForm` to render real app icons + friendly names. **S7.8 owner re-smoke against S7.7 build surfaced three connected complaints — pre-loaded curated defaults populate apps the owner doesn't have installed; "Add from running apps" Menu items show names without icons; the same Menu lists every running process. Fixed at the root: `WorkspaceSource` gains `pickableRunningBundleIDs` (filters `.regular` activation policy + excludes self) and `isInstalled(_:)`; `AppTrigger.init` runs a one-shot installed-only curated seed gated on the new `hasSeededAppDefaults` flag (idempotent across re-launches, respects users who explicitly cleared their list); legacy "fall back to all 6 curated when raw is empty" getter behaviour removed; UI Menu items render with real app icons or SF Symbol category fallback (`video.fill` / `bubble.left.and.bubble.right.fill`).** EKCalendar picker and per-Focus selection remain deferred as Phase 1.5.B / Apple-API-blocked respectively. |
+| **Status** | ✅ Completed. 255/255 tests passing. S7 cleared the 80% coverage gate on `Sources/Core/**` and `Sources/Triggers/**` (live-system adapter classes excluded; rationale codified in `02-architecture.md` §13 v0.9 + `docs/QA_LOG.md`). S7.5 landed Phase 1.5.A — Settings → Triggers now offers an inline configuration form per trigger. S7.6 owner smoke surfaced two defects (P1 state-mismatch + P2 UX); both fixed by retiring the DisclosureGroup-with-Toggle-in-label structure in favor of a Section-per-trigger layout. S7.7 owner re-smoke against S7.6 build surfaced one defect (P2: App trigger row showed raw bundle IDs + no purpose copy); fixed by extending `WorkspaceSource` with `displayInfo(for:)`, curated displayName table, and rewriting `AppTriggerConfigForm` to render real app icons + friendly names. **S7.8 owner re-smoke against S7.7 build surfaced three connected complaints — pre-loaded curated defaults populate apps the owner doesn't have installed; "Add from running apps" Menu items show names without icons; the same Menu lists every running process. Fixed at the root: `WorkspaceSource` gains `pickableRunningBundleIDs` (filters `.regular` activation policy + excludes self) and `isInstalled(_:)`; `AppTrigger.init` runs a one-shot installed-only curated seed gated on the new `hasSeededAppDefaults` flag (idempotent across re-launches, respects users who explicitly cleared their list); legacy "fall back to all 6 curated when raw is empty" getter behaviour removed; UI Menu items render with real app icons or SF Symbol category fallback (`video.fill` / `bubble.left.and.bubble.right.fill`).** EKCalendar picker and per-Focus selection remain deferred as Phase 1.5.B / Apple-API-blocked respectively. |
 
 ### What was accomplished
 
@@ -143,9 +143,23 @@ S7.7 introduces one small additive protocol extension (`displayInfo(for:)` on `W
 
 S7.8 introduces two additive protocol requirements + one persistence flag. The `Trigger` protocol itself, `TriggerCoordinator`, `AwakeManager`, and other architecture layers are unchanged.
 
+### S7.9 added (Trigger lifecycle: Toggle OFF + watched-list edit deactivate the cup — fix-first after fourth owner smoke)
+
+29. **`TriggerSection` Toggle now drives the live trigger lifecycle** — onChange spawns a `Task { @MainActor in … }` that calls `coordinator.start(trigger)` on ON or `coordinator.stop(trigger.id)` on OFF. Previously only `trigger.isEnabled = newValue` was set, leaving the live observation running and stale ON votes in the FSM. **Universal across all 4 triggers.**
+
+30. **`AppTrigger.watchedSet` instance var** — replaces the closure-captured `let watched = …` snapshot. Set in `start()` from `settings.appTriggerBundleIDs`, cleared in `stop()`. `handleLaunch(bundleID:)` / `handleTerminate(bundleID:)` simplified to read it (lifecycle closures no longer carry the watched set as a parameter).
+
+31. **`AppTrigger.reevaluateWatched()` public method** — re-reads `settings.appTriggerBundleIDs`, diffs against `watchedSet`, recomputes `matchingRunning = running ∩ watched`, and emits vote ON / OFF / re-emit-ON-with-fresh-reason on transition. Idempotent when nothing changed; no-op when the trigger is stopped (the next `start()` will read fresh data anyway). Called by `AppTriggerConfigForm.commit(_:)` after every add / remove so the live vote stream tracks the watched-list edits within one render pass.
+
+32. **Stream lifecycle hardening** — removed `continuation.finish()` from `AppTrigger.stop()`. Finishing the `AsyncStream` permanently closed it, so any future `start()` could not deliver votes (consumer's `for await` would terminate, future `yield`s would silently drop). Stream is now long-lived for `AppTrigger`'s lifetime; the coordinator cancels its consumer Task on stop and recreates one on start, both subscribing to the same stream. Regression-tested by the new `testRestartAfterStopReEmitsInitialSnapshot`.
+
+33. **Tests** — 6 new tests covering: reevaluate emits ON when adding a new match, OFF when removing the last match, no-op when settings unchanged, re-emits ON when set changes but stays non-empty (so vote reason updates), no-op when called while stopped, and stop+start cycle preserves the stream. Existing `testStopCancelsObservation` comment refreshed for the new lifecycle semantics. **249 → 255 tests, all pass. Coverage gate still PASS (AppTrigger 98.06% — slight drift from S7.8's 98.89% reflects the new reevaluate branches; well above the 80% gate).**
+
+S7.9 introduces one small public method addition (`AppTrigger.reevaluateWatched()`) and one UI rewiring (Toggle → coordinator). The `Trigger` protocol surface, `TriggerCoordinator`, `AwakeManager`, persistence, and other layers are unchanged. WiFi / Calendar / Focus likely have the same "watched-list mutation doesn't reach the live trigger" pattern; deferred to S7.10 if owner re-smoke surfaces it. The Toggle fix already covers "disable this trigger entirely" universally.
+
 ### What's NOT done (intentional)
 
-- **Owner-side manual smoke checklist** in `docs/QA_LOG.md` is checked-in but unchecked — Claude cannot drive the menu-bar UI. Owner runs through this (including the §S7.7 + §S7.8 addendums for App-trigger friendly-name + pickable-filter + installed-only-seed surfaces) and ticks lines (or logs defects in the same doc) before S8 starts in earnest. Gate for S8 is: zero P1 items in QA_LOG.
+- **Owner-side manual smoke checklist** in `docs/QA_LOG.md` is checked-in but unchecked — Claude cannot drive the menu-bar UI. Owner runs through this (including the §S7.7 + §S7.8 + §S7.9 addendums covering App-trigger friendly names, pickable filter, installed-only seed, and trigger lifecycle / watched-list edit) and ticks lines (or logs defects in the same doc) before S8 starts in earnest. Gate for S8 is: zero P1 items in QA_LOG.
 - **macOS 13/14/15 matrix smoke** — deferred to S9 (TestFlight). Dev box is macOS 26 only.
 - **`AwakeManager` coverage** sits at 94.1% — the remaining 6% is mostly the two log-only paths in the IOKit power-source observer; not worth contorting tests to chase. Documented in 02 §13 v0.9.
 - **`Trigger` protocol file** at 82.8% — the 5 missed lines are default-impl fallbacks for protocols that are always overridden by concrete types. Right at the gate; do not "improve" with pointless override tests.
@@ -215,7 +229,7 @@ M  docs/QA_LOG.md                              (logged S76-DEF-01 fixed-in-S7.7 
                                                 addendum + post-S7.7 coverage snapshot)
 M  docs/SESSION_HANDOFF.md
 
-S7.8 (this commit):
+S7.8 (commit c60fef7):
 M  Sources/Core/SettingsStore.swift           (+ SettingsKey.hasSeededAppDefaults)
 M  Sources/Triggers/AppTrigger.swift          (+ WorkspaceSource.pickableRunningBundleIDs,
                                                 + WorkspaceSource.isInstalled,
@@ -239,6 +253,31 @@ M  ROADMAP.md                                 (v0.13)
 M  docs/design/02-architecture.md             (v0.13, §13 entry)
 M  docs/QA_LOG.md                              (logged S77-DEF-01..03 all fixed-in-S7.8 + S7.8 smoke
                                                 checklist addendum + post-S7.8 coverage snapshot)
+M  docs/SESSION_HANDOFF.md
+
+S7.9 (this commit):
+M  Sources/Triggers/AppTrigger.swift          (+ private var watchedSet — instance var replaces
+                                                  closure-captured `let watched` in start();
+                                                + public func reevaluateWatched() with ON/OFF/re-emit
+                                                  transition logic;
+                                                ~ handleLaunch(bundleID:) / handleTerminate(bundleID:)
+                                                  signatures simplified — read watchedSet directly;
+                                                ~ stop() — removed `continuation.finish()` so the
+                                                  AsyncStream stays open across Toggle OFF→ON cycles;
+                                                  watchedSet cleared too)
+M  Sources/UI/Settings/TriggersTab.swift      (TriggerSection now takes coordinator; Toggle.onChange
+                                                spawns Task that calls coordinator.start/stop on the
+                                                live trigger — universal across all 4 triggers;
+                                                AppTriggerConfigForm.commit calls trigger.reevaluateWatched
+                                                after writing settings)
+M  Tests/AppTriggerTests.swift                (+ 6 tests — 5 reevaluateWatched cases + 1 restart-after-stop
+                                                regression; refreshed testStopCancelsObservation comment;
+                                                249 → 255 tests)
+M  ROADMAP.md                                 (v0.14)
+M  docs/design/02-architecture.md             (v0.14, §13 entry)
+M  docs/QA_LOG.md                              (logged S78-DEF-01..02 fixed-in-S7.9 + S7.9 smoke
+                                                checklist addendum + post-S7.9 coverage snapshot +
+                                                S7.10 candidate note)
 M  docs/SESSION_HANDOFF.md                    (this file)
 ```
 

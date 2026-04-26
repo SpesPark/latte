@@ -237,6 +237,12 @@ public final class AppTrigger: Trigger {
 
     private var matchingRunning: Set<String> = []
     private var observation: WorkspaceObservation?
+    /// Snapshot of `settings.appTriggerBundleIDs` taken at `start()`. Held as
+    /// an instance var (rather than captured into the lifecycle closures) so
+    /// `reevaluateWatched()` can update it from the UI without restarting the
+    /// observer — see the S7.9 fix for "removed app from watched list keeps
+    /// voting awake."
+    private var watchedSet: Set<String> = []
 
     public init(settings: SettingsStore, source: WorkspaceSource? = nil) {
         self.settings = settings
@@ -276,20 +282,20 @@ public final class AppTrigger: Trigger {
     public func start() async {
         guard observation == nil else { return }
         logger.info("AppTrigger.start")
-        let watched = Set(settings.appTriggerBundleIDs)
+        watchedSet = Set(settings.appTriggerBundleIDs)
 
         // Initial snapshot
-        matchingRunning = Set(source.runningBundleIDs).intersection(watched)
+        matchingRunning = Set(source.runningBundleIDs).intersection(watchedSet)
         if !matchingRunning.isEmpty {
             emitOn()
         }
 
         observation = source.observeLifecycle(
             onLaunch: { [weak self] bundleID in
-                self?.handleLaunch(bundleID: bundleID, watched: watched)
+                self?.handleLaunch(bundleID: bundleID)
             },
             onTerminate: { [weak self] bundleID in
-                self?.handleTerminate(bundleID: bundleID, watched: watched)
+                self?.handleTerminate(bundleID: bundleID)
             }
         )
     }
@@ -299,7 +305,12 @@ public final class AppTrigger: Trigger {
         observation?.cancel()
         observation = nil
         matchingRunning.removeAll()
-        continuation.finish()
+        watchedSet.removeAll()
+        // Note: `continuation.finish()` is intentionally NOT called here —
+        // doing so would close the AsyncStream permanently and prevent any
+        // future `start()` from delivering votes. The coordinator cancels its
+        // consumer task on stop; subsequent `start()` recreates a consumer
+        // that picks up votes again on the same long-lived stream.
     }
 
     public func requestPermissionIfNeeded() async -> Bool { true }
@@ -322,15 +333,40 @@ public final class AppTrigger: Trigger {
         source.displayInfo(for: bundleID)
     }
 
-    private func handleLaunch(bundleID: String, watched: Set<String>) {
-        guard watched.contains(bundleID) else { return }
+    /// React to changes in `settings.appTriggerBundleIDs` while the trigger
+    /// is observing. Adding a watched app that's already running emits ON;
+    /// removing the last watched app that was matching emits OFF; changing
+    /// the set while staying non-empty re-emits ON so the vote reason
+    /// reflects the new contents. Idempotent — no-op if the watched set
+    /// hasn't actually changed, and a no-op when the trigger is stopped
+    /// (the next `start()` will read fresh data from settings anyway).
+    public func reevaluateWatched() {
+        guard observation != nil else { return }
+        let newWatched = Set(settings.appTriggerBundleIDs)
+        if newWatched == watchedSet { return }
+        watchedSet = newWatched
+
+        let prevMatching = matchingRunning
+        matchingRunning = Set(source.runningBundleIDs).intersection(watchedSet)
+
+        if prevMatching.isEmpty && !matchingRunning.isEmpty {
+            emitOn()
+        } else if !prevMatching.isEmpty && matchingRunning.isEmpty {
+            continuation.yield(TriggerVote(wantsAwake: false, reason: "App: no watched apps running"))
+        } else if prevMatching != matchingRunning && !matchingRunning.isEmpty {
+            emitOn()
+        }
+    }
+
+    private func handleLaunch(bundleID: String) {
+        guard watchedSet.contains(bundleID) else { return }
         let wasEmpty = matchingRunning.isEmpty
         matchingRunning.insert(bundleID)
         if wasEmpty { emitOn() }
     }
 
-    private func handleTerminate(bundleID: String, watched: Set<String>) {
-        guard watched.contains(bundleID) else { return }
+    private func handleTerminate(bundleID: String) {
+        guard watchedSet.contains(bundleID) else { return }
         matchingRunning.remove(bundleID)
         if matchingRunning.isEmpty {
             continuation.yield(TriggerVote(wantsAwake: false, reason: "App: no watched apps running"))

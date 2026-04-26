@@ -271,6 +271,69 @@ Per-file coverage with adapter classes + their inner closures excluded:
 
 ---
 
+## S7.8 → S7.9 — Trigger off / watched-list-edit doesn't deactivate cup (2026-04-26)
+
+Owner ran the S7.8 build and confirmed positive cases work: enabling a trigger and having a watched app actually fires the cup activation. Negative cases were broken — toggling a trigger OFF or removing an app from the watched list left the cup activated indefinitely. Two structural bugs.
+
+#### S78-DEF-01 — Toggle OFF only writes the persisted flag; trigger keeps voting awake
+
+- **Severity**: P1 (the off switch doesn't actually turn things off)
+- **Repro**: Settings → Triggers → enable App trigger with at least one matching watched app running → menu-bar header cup activates. Toggle the same trigger OFF → cup stays activated.
+- **Root cause**: `TriggerSection.Toggle.onChange` in `Sources/UI/Settings/TriggersTab.swift` only assigned `trigger.isEnabled = newValue`, which writes the persisted flag via `SettingsStore`. No side-effect on the live trigger: the `WorkspaceObservation` stayed registered, the `voteStream` consumer Task in `TriggerCoordinator.consumerTasks[id]` stayed alive, and the previously-emitted ON `TriggerVote` stayed in `awakeManager.pendingVotes` (state `.awakeTriggered`). `manager.isAwake` therefore stayed `true`, the `HeaderView`'s `CoffeeCupView(isAwake:)` stayed in the awake render path, the `IOPMAssertion` stayed acquired.
+- **Status**: **fixed-in-S7.9**.
+  - `TriggerSection` now takes a `coordinator: TriggerCoordinator` parameter and the Toggle's `onChange` dispatches a `Task { @MainActor in … }` that calls `coordinator.start(trigger)` on ON or `coordinator.stop(trigger.id)` on OFF.
+  - `TriggerCoordinator.stop(_:)` already removes the active vote from `activeVotes` and forwards a synthesized vote-OFF (`TriggerVote(wantsAwake: false, reason: "trigger stopped")`) to `awakeManager.receiveTriggerVote`. The state machine then transitions out of `.awakeTriggered`, `publishDerived()` flips `isAwake` to false (modulo cool-down), and the cup deactivates.
+  - **Universal across all 4 triggers**: any registered trigger (Calendar / App / WiFi / Focus) now correctly stops on Toggle OFF.
+
+#### S78-DEF-02 — Removing an app from the watched list leaves AppTrigger emitting a stale ON vote
+
+- **Severity**: P1 (the watched list looks like the source of truth but isn't)
+- **Repro**: Enable App trigger with Zoom in the watched list while Zoom is running → cup activates. Remove Zoom from the watched list (in the App trigger config form) → cup stays activated.
+- **Root cause**: `AppTrigger.start()` snapshotted `let watched = Set(settings.appTriggerBundleIDs)` once and **captured that set into the lifecycle closures** (`onLaunch:` / `onTerminate:`). All subsequent `handleLaunch(bundleID:watched:)` / `handleTerminate(bundleID:watched:)` calls used that frozen capture. When the user mutated the watched list via the UI (`AppTriggerConfigForm.commit` → `settings.appTriggerBundleIDs = next`), the trigger's view of the watched set didn't change. `matchingRunning` continued to include the now-unwatched bundle ID → no vote-OFF emit → state stayed `.awakeTriggered` → cup stayed on.
+- **Status**: **fixed-in-S7.9**.
+  - `AppTrigger` now stores `private var watchedSet: Set<String>` as an instance property, set in `start()` from `settings.appTriggerBundleIDs` and cleared in `stop()`.
+  - `handleLaunch(bundleID:)` / `handleTerminate(bundleID:)` are simplified to read `watchedSet` (no more captured parameter).
+  - New public method `AppTrigger.reevaluateWatched()` reads the latest `settings.appTriggerBundleIDs`, diffs against `watchedSet`, recomputes `matchingRunning = running ∩ watched`, and emits the appropriate vote on transition (empty→non-empty: ON, non-empty→empty: OFF, non-empty→non-empty with set change: re-emit ON so the reason text reflects the new contents). No-op when settings didn't change OR when the trigger is stopped (the next `start()` will read fresh data anyway).
+  - `AppTriggerConfigForm.commit(_:)` calls `trigger.reevaluateWatched()` after writing settings, so every add / remove flows through to the live vote stream within one render pass.
+  - **Stream lifecycle hardening (regression guard for Toggle ON → OFF → ON)**: removed the `continuation.finish()` call from `AppTrigger.stop()`. Finishing the continuation permanently closed the `AsyncStream` — once stopped, no future `start()` could deliver votes. Now `stop()` only cancels the observation and clears `matchingRunning`/`watchedSet`; the stream stays open for the trigger's lifetime so a Toggle OFF → Toggle ON cycle works correctly. New regression test `testRestartAfterStopReEmitsInitialSnapshot`.
+
+### Additional smoke checklist for S7.9 (owner)
+
+Append to the §S7 / §S7.7 / §S7.8 sections.
+
+- [ ] **Toggle OFF actually deactivates the cup**: enable App trigger with a running watched app → cup ON. Toggle OFF → cup deactivates within one frame (or during cool-down period if `coolingDown` state still applies — confirm against `02-architecture.md` §3 + state machine §4).
+- [ ] **Toggle OFF → ON cycle works**: after Toggle OFF, Toggle ON the same trigger → cup re-activates if the watched app is still running.
+- [ ] **Removing an app from the watched list deactivates the cup**: with a single watched matching app → cup ON. Remove that app via the minus button → cup deactivates.
+- [ ] **Removing one of multiple watched apps keeps the cup ON**: Zoom + Teams both running and watched → cup ON. Remove only Zoom → cup stays ON (Teams still matching). Removing Teams too → cup deactivates.
+- [ ] **Adding a running watched app activates the cup**: with empty watched list → cup OFF. Add a running app via "Add from running apps" → cup activates.
+- [ ] **Same applies to Calendar / WiFi / Focus Toggle** (universal Toggle fix): toggling any trigger OFF deactivates its contribution to the awake state, ON re-activates.
+
+### Coverage gate snapshot (post-S7.9)
+
+Per-file coverage with adapter classes + their inner closures excluded:
+
+| File | Cov% | Status |
+|---|---|---|
+| Core/AwakeDuration | 100.00% | ✅ |
+| Core/AwakeManager | 94.12% | ✅ |
+| Core/Logging | 100.00% | ✅ |
+| Core/PowerAssertion | 87.32% | ✅ |
+| Core/SettingsStore | 100.00% | ✅ |
+| Triggers/Trigger | 82.76% | ✅ |
+| Triggers/TriggerCoordinator | 92.31% | ✅ |
+| Triggers/AppTrigger | 98.06% | ✅ |
+| Triggers/CalendarTrigger | 98.75% | ✅ |
+| Triggers/FocusTrigger | 97.94% | ✅ |
+| Triggers/WiFiTrigger | 96.55% | ✅ |
+
+**GATE: PASS** (255/255 tests, lowest 82.76%). AppTrigger drift from 98.89% → 98.06% reflects the new `reevaluateWatched` branches; still well above the 80% gate.
+
+### Known follow-ups (S7.10 candidate)
+
+The same "watched-list mutation doesn't reach the live trigger" pattern likely affects the other 3 triggers — a `WiFiTrigger.reevaluateConfiguration()` for SSID list / inverse-mode changes, a `CalendarTrigger.reevaluateConfiguration()` for lead/trail/exclude-all-day changes, etc. Owner did not surface these in the S7.8 smoke; deferred to S7.10 if reported. The universal Toggle fix (S78-DEF-01) already handles "disable this trigger entirely" for all 4.
+
+---
+
 ## Adapter exemption rationale
 
 The following classes are excluded from the 80% coverage gate because they wrap live system services and require an interactive user / permission grant / hardware to exercise:
