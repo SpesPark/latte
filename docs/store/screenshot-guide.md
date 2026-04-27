@@ -24,17 +24,57 @@ You only need to capture **2880 × 1800** for v1.0. App Store Connect down-scale
 
 ## Settings tabs auto-open via `latte://` URL scheme (S8c, 2026-04-28)
 
-Latte 1.0 ships with a built-in URL scheme so the harness (or you, manually) can deep-link straight to a Settings tab without clicking the menu bar:
+Latte 1.0 ships with two URL families. The harness (or you, manually) can deep-link straight in without any clicks:
 
 ```bash
+# Settings tabs (real production windows)
 open -a "<path-to-Latte.app>" latte://settings/general    # Shot 2
 open -a "<path-to-Latte.app>" latte://settings/triggers   # Shot 3
 open -a "<path-to-Latte.app>" latte://settings/about      # Shot 5
+
+# Demo cup (deterministic capture surface)
+open -a "<path-to-Latte.app>" "latte://demo/cup?fill=0.55&accent=caramel"  # Shot 1
 ```
 
-Scenarios `09-marketing-shot-2-general`, `10-marketing-shot-3-triggers`, and `11-marketing-shot-5-about` automate this. **Important**: the screencapture step is unreliable while always-on-top windows (Claude, Bartender, some video conferencing tools) are visible — close those before the capture pass. The captured PNG = whatever was frontmost at the moment.
+## Window-id capture is now Claude-immune (S8c, 2026-04-28)
 
-Shots 1 (menu-bar dropdown + cup mid-fill) and 4 (App trigger config close-up with running-apps menu open) still need manual click chains — the menu-bar popover is tied to mouse position and the running-apps menu requires a hover.
+Marketing scenarios use `screencapture -l <CGWindowID>` instead of full-screen capture. Owner does NOT need to close Claude / Bartender / always-on-top windows anymore — the window-id capture grabs Latte's pixels even when other windows obscure it.
+
+Scenarios:
+- `09-marketing-shot-2-general` → Shot 2 captured automatically
+- `10-marketing-shot-3-triggers` → Shot 3 captured automatically
+- `11-marketing-shot-5-about` → Shot 5 captured automatically
+- `12-marketing-shot-1-cup` → Shot 1 captured automatically (demo cup window)
+
+Run all four with:
+```bash
+~/dev/smoke-harness/run.sh --project ~/Documents/Claude/Projects/Latte
+# Shots end up in .smoke/artifacts/{09,10,11,12}-*.png
+```
+
+**Shot 4 (App trigger close-up with running-apps menu hover)** is still owner-manual — it depends on mouse hover over a NSMenu item, which would require Accessibility-driven `cliclick` and adds owner setup friction without a clean win. ~30 seconds of manual capture is honest.
+
+## TCC permission deep links (S8c, 2026-04-28)
+
+When Latte (or the harness) needs a permission you haven't granted, jump straight to the right pane:
+
+```bash
+~/dev/smoke-harness/lib/tcc_bootstrap.sh screen     # Screen Recording
+~/dev/smoke-harness/lib/tcc_bootstrap.sh calendar   # Calendar
+~/dev/smoke-harness/lib/tcc_bootstrap.sh location   # Location (for Wi-Fi SSID)
+~/dev/smoke-harness/lib/tcc_bootstrap.sh accessibility
+~/dev/smoke-harness/lib/tcc_bootstrap.sh full-disk
+```
+
+## GitHub Pages: one-command deploy (S8c, 2026-04-28)
+
+The `gh-pages` branch is pre-staged at `../latte-gh-pages-staging/`. After creating the GitHub repo:
+
+```bash
+~/dev/smoke-harness/deploy_pages.sh git@github.com:bj-park/latte.git
+```
+
+Adds the remote, pushes the branch, and prints the Pages URL to validate. The single remaining manual click is enabling Pages in repo Settings → Pages → Source = `gh-pages` (Apple does not provide an API for this).
 
 ---
 

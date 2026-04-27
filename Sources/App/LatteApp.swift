@@ -44,14 +44,20 @@ final class LatteAppDelegate: NSObject, NSApplicationDelegate, ObservableObject 
     /// specific tab without requiring Accessibility / UI scripting permissions.
     func application(_ application: NSApplication, open urls: [URL]) {
         for url in urls {
-            guard let tab = SettingsURLHandler.parse(url) else { continue }
-            let env = AppEnvironment.shared
-            SettingsWindowController.shared.show(
-                manager: env.manager,
-                coordinator: env.coordinator,
-                environment: env,
-                initialTab: tab
-            )
+            if let tab = SettingsURLHandler.parse(url) {
+                let env = AppEnvironment.shared
+                SettingsWindowController.shared.show(
+                    manager: env.manager,
+                    coordinator: env.coordinator,
+                    environment: env,
+                    initialTab: tab
+                )
+            } else if let target = DemoURLHandler.parse(url) {
+                switch target {
+                case .cup(let config):
+                    DemoCupWindowController.shared.show(config: config)
+                }
+            }
         }
     }
 }

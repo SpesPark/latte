@@ -24,11 +24,8 @@ defaults write "$SMOKE_BUNDLE_ID" latte.appTrigger.bundleIDs -data "$bundles_hex
 bash "$HARNESS_LIB/launch_app.sh" "$SMOKE_APP_PATH" "$SMOKE_BUNDLE_ID" 20 >/dev/null
 sleep 2
 bash "$HARNESS_LIB/open_settings.sh" latte triggers >/dev/null
-sleep 2
-osascript -e "tell application id \"$SMOKE_BUNDLE_ID\" to activate" 2>/dev/null || true
-sleep 2
-
-bash "$HARNESS_LIB/capture_screenshot.sh" "$SMOKE_SCREENSHOTS_DIR/10-shot-3-triggers.png"
+sleep 3
+bash "$HARNESS_LIB/capture_window.sh" "$SMOKE_SCREENSHOTS_DIR/10-shot-3-triggers.png" "Latte" "Latte Settings"
 smoke_record "$SMOKE_REPORT" 10-marketing-shot-3-triggers "passed" "Settings opened on Triggers tab with 3/4 triggers enabled and Zoom+Slack pre-seeded; full-screen capture saved"
 smoke_ok "Shot 3 candidate captured"
 

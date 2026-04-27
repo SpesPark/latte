@@ -16,11 +16,13 @@ public struct CoffeeCupView: View {
     public let isAwake: Bool
     public let fillRatio: Double
     public let liquidColor: Color
+    public let size: CGFloat
 
-    public init(isAwake: Bool, fillRatio: Double = 1.0, liquidColor: Color = CoffeeAccent.default.color) {
+    public init(isAwake: Bool, fillRatio: Double = 1.0, liquidColor: Color = CoffeeAccent.default.color, size: CGFloat = Theme.Sizes.cupView) {
         self.isAwake = isAwake
         self.fillRatio = max(0, min(1, fillRatio))
         self.liquidColor = liquidColor
+        self.size = size
     }
 
     public var body: some View {
@@ -50,7 +52,7 @@ public struct CoffeeCupView: View {
             }
             .opacity(isAwake ? 1.0 : 0.55)
         }
-        .frame(width: Theme.Sizes.cupView, height: Theme.Sizes.cupView)
+        .frame(width: size, height: size)
         .accessibilityLabel(isAwake ? "Latte awake" : "Latte asleep")
     }
 

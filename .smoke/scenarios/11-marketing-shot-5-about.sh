@@ -13,11 +13,8 @@ defaults write "$SMOKE_BUNDLE_ID" latte.firstRunCompleted -bool true
 bash "$HARNESS_LIB/launch_app.sh" "$SMOKE_APP_PATH" "$SMOKE_BUNDLE_ID" 20 >/dev/null
 sleep 2
 bash "$HARNESS_LIB/open_settings.sh" latte about >/dev/null
-sleep 2
-osascript -e "tell application id \"$SMOKE_BUNDLE_ID\" to activate" 2>/dev/null || true
-sleep 2
-
-bash "$HARNESS_LIB/capture_screenshot.sh" "$SMOKE_SCREENSHOTS_DIR/11-shot-5-about.png"
+sleep 3
+bash "$HARNESS_LIB/capture_window.sh" "$SMOKE_SCREENSHOTS_DIR/11-shot-5-about.png" "Latte" "Latte Settings"
 smoke_record "$SMOKE_REPORT" 11-marketing-shot-5-about "passed" "Settings opened on About tab via latte:// URL; full-screen capture saved"
 smoke_ok "Shot 5 candidate captured"
 

@@ -17,11 +17,10 @@ defaults write "$SMOKE_BUNDLE_ID" latte.coffeeAccent -string caramel
 bash "$HARNESS_LIB/launch_app.sh" "$SMOKE_APP_PATH" "$SMOKE_BUNDLE_ID" 20 >/dev/null
 sleep 2
 bash "$HARNESS_LIB/open_settings.sh" latte general >/dev/null
-sleep 2
-osascript -e "tell application id \"$SMOKE_BUNDLE_ID\" to activate" 2>/dev/null || true
-sleep 2
+sleep 3
 
-bash "$HARNESS_LIB/capture_screenshot.sh" "$SMOKE_SCREENSHOTS_DIR/09-shot-2-general.png"
+# Window-id capture: works even if always-on-top windows obscure Latte.
+bash "$HARNESS_LIB/capture_window.sh" "$SMOKE_SCREENSHOTS_DIR/09-shot-2-general.png" "Latte" "Latte Settings"
 smoke_record "$SMOKE_REPORT" 09-marketing-shot-2-general "passed" "Settings opened on General tab via latte:// URL; full-screen capture saved"
 smoke_ok "Shot 2 candidate captured"
 
