@@ -133,6 +133,34 @@
 - **Reason**: dev box is macOS 26 Tahoe only. TestFlight gives multi-OS coverage for free via beta testers.
 - **Action**: gather feedback from 3-5 beta testers across the 3 prior macOS majors. Triage any P1 surfaced, defer P2/P3.
 
+### V2-30 — Cross-project macOS smoke harness — **NEW, S8c primary work**
+
+- **Surfaced**: S8b owner feedback (2026-04-27). After 4 rounds of fix-first against owner-driven smoke, owner asked whether Claude can drive the smoke loop directly. Confirmed: most of the smoke (state checks, log reads, screenshots) is automatable via Bash + screencapture + AppleScript. Remaining owner-side items (TCC permission prompts) cannot be automated due to macOS sandboxing.
+- **Decision**: Owner is planning 10+ macOS apps; setting up a reusable harness now amortises after ~2 apps.
+- **Architecture** (target):
+  ```
+  ~/dev/smoke-harness/
+  ├── run.sh                    # Claude entry — takes project path
+  ├── lib/
+  │   ├── reset_prefs.sh        # defaults delete + tccutil reset
+  │   ├── launch_app.sh         # open + wait for ready
+  │   ├── capture_screenshot.sh # screencapture → /tmp/smoke/<name>.png
+  │   ├── read_log.sh           # log show predicate wrapper
+  │   ├── verify_assertion.sh   # pmset -g assertions check
+  │   └── apple_script_click.sh # NSAccessibility click best-effort
+  └── templates/
+      └── xcuitest-target/      # Drop-in UI test target
+  ```
+  Per-project config:
+  ```
+  <Project>/.smoke/
+  ├── config.yml                # bundle ID, settings keys, expected state
+  └── scenarios/                # bash scripts per flow
+  ```
+- **Effort**: ~4-6 h initial harness; ~30-60 min per project to wire scenarios.
+- **ROI**: 1st app costs more than manual; from 2nd app onward harness pays back. Owner confirmed Option B (build now, before continuing Latte smoke).
+- **Latte uses harness**: in S8c, the deferred D/E/F smoke items (icon × 3 styles × light/dark, Launch at Login external reconciliation, Calendar picker delete edge case) run via harness; marketing screenshots also captured via harness.
+
 ---
 
 ---
