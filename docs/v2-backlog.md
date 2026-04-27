@@ -59,6 +59,26 @@
 - **S8b research validation (2026-04-27)**: Q3 research confirmed zero verbatim user requests for per-Focus selection across Reddit, KYA issues, Amphetamine reviews, MacRumors. Latte's binary list-presence approach is acceptable to users.
 - **Re-evaluate trigger**: any future macOS release (15.x, 16) that surfaces a stable per-Focus API. Until then, do not invest engineering time.
 
+### V2-03b — Focus trigger reliable read (sandbox + Communication Notifications entitlement) — **NEW, deferred from v1.0 ship**
+
+- **Surfaced**: S8b owner smoke (2026-04-27). Focus trigger code path is fully wired and permission grant succeeds, but `INFocusStatusCenter.focusStatus.isFocused` always reads `false` even when the user has an active macOS Focus mode. Owner log evidence:
+  ```
+  20:18:28 FocusTrigger.start
+  20:18:28 evaluate currentlyActive=false isEnabled=true permission=granted configured=true
+  ```
+  (cup never activates; multiple Toggle OFF→ON cycles produce identical `currentlyActive=false`.)
+- **Root cause**: macOS sandboxed apps need `com.apple.developer.usernotifications.communication` entitlement to read Focus state reliably. The 19:32 log entry — `DoNotDisturb error: App is missing Communication Notifications entitlement` — is the smoking gun.
+- **Action in v1.0**: `FocusTrigger` is no longer registered with the coordinator (`AppEnvironment.registerDefaultTriggers` comments it out). Onboarding wizard and Settings → Triggers no longer show it. `Sources/Triggers/FocusTrigger.swift` is preserved (build artefact + tests stay green) so re-enabling is a one-line change.
+- **Action when revisiting**:
+  1. Apple Developer Program enrollment must be live (S8.5 gate).
+  2. Provision `com.apple.developer.usernotifications.communication` entitlement on the App ID.
+  3. Add to `Configuration/Latte.entitlements`.
+  4. Uncomment `coordinator.register(FocusTrigger(...))` in `AppEnvironment.swift`.
+  5. Re-run owner smoke against the entitled build to confirm `currentlyActive` reflects real state.
+  6. Apple may flag the entitlement on App Store review with "Why does this caffeine app need Communication Notifications?" — prepare a justification (Latte uses Focus-mode state to decide whether to keep the Mac awake; no notifications are sent or received).
+- **Effort**: ~1 h code (entitlement file + uncomment + re-test) + Apple Developer Program approval (~1-2 days).
+- **Ship target**: v1.1 if Apple approves the entitlement. Otherwise drop Focus permanently; Calendar/App/WiFi already cover the core wedge.
+
 ### V2-04 — EKCalendar list picker — ✅ **shipped in v1.0** (commit `7decb84`)
 
 - **Surfaced**: S7.5 (`CalendarTriggerConfigForm` shipped without it); also called out in S7-family handoff and SESSION_HANDOFF "Known issues" section.

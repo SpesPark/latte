@@ -13,7 +13,7 @@ Or you finally remembered to enable caffeine before that big presentation. The p
 Latte fixes both problems by automating the toggle. You configure once, then forget about it.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-HOW IT WORKS — FOUR SMART TRIGGERS
+HOW IT WORKS — THREE SMART TRIGGERS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Calendar — stays awake during your scheduled meetings. Pick which calendars trigger Latte (work only, no personal birthdays). Configurable lead and trail time so you're caffeinated a few minutes before the call starts and for a few minutes after it ends. Optional "exclude all-day events" so birthday reminders don't keep your Mac awake all day.
@@ -21,8 +21,6 @@ Calendar — stays awake during your scheduled meetings. Pick which calendars tr
 Apps — active when Zoom, Microsoft Teams, Webex, Discord, Slack, Google Meet, or any app you choose is running. The picker shows real friendly names with real app icons. No bundle ID hunting. Add anything that's running with one click.
 
 Wi-Fi — awake on your work network, sleeping on your home Wi-Fi. Or invert it — your call. Add multiple SSIDs.
-
-Focus — pairs with macOS Focus modes. Awake when any Focus mode is active, sleeping when they're all off. Useful as a "Work mode = caffeine" pattern.
 
 Triggers vote together. Latte stays awake when at least one trigger says "stay awake." When the last trigger says "go to sleep," Latte releases the assertion immediately — no hidden cool-down delay, no surprise battery drain.
 

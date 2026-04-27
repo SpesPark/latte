@@ -89,9 +89,14 @@ final class AppEnvironmentTests: XCTestCase {
 
     // MARK: - Trigger registration
 
-    func testRegistersFourDefaultTriggers() {
+    func testRegistersThreeDefaultTriggers() {
+        // S8b: FocusTrigger is intentionally not registered for v1.0
+        // pending the Communication Notifications entitlement (V2-03b
+        // in v2-backlog). Calendar/App/WiFi cover the core wedge.
         let env = AppEnvironment(settings: InMemorySettingsStore())
         let ids = env.coordinator.triggers.map(\.id)
-        XCTAssertEqual(Set(ids), Set(["calendar", "app", "wifi", "focus"]))
+        XCTAssertEqual(Set(ids), Set(["calendar", "app", "wifi"]))
+        XCTAssertFalse(ids.contains("focus"),
+                       "FocusTrigger must not be registered until V2-03b lands")
     }
 }

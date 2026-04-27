@@ -67,7 +67,15 @@ public final class AppEnvironment: ObservableObject {
         coordinator.register(CalendarTrigger(settings: settings))
         coordinator.register(AppTrigger(settings: settings))
         coordinator.register(WiFiTrigger(settings: settings))
-        coordinator.register(FocusTrigger(settings: settings))
+        // FocusTrigger is intentionally **not registered for v1.0**.
+        // S8b smoke confirmed `INFocusStatusCenter.focusStatus.isFocused`
+        // returns false even when a Focus mode is active — sandboxed
+        // macOS apps need the `com.apple.developer.usernotifications.communication`
+        // entitlement (and Apple Developer Program membership) to read
+        // Focus state reliably. Re-register once the Dev Program is
+        // active and the entitlement is provisioned. Tracked as
+        // V2-03b in `docs/v2-backlog.md`.
+        // coordinator.register(FocusTrigger(settings: settings))
     }
 
     /// Boot path: request permission for each enabled trigger that requires it,
