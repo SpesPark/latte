@@ -18,22 +18,23 @@ public enum MenuBarIconStyle: String, CaseIterable, Sendable, Identifiable {
 
     public var id: String { rawValue }
 
-    /// SF Symbol shown when Latte is at rest. Each style keeps a
-    /// distinct at-rest glyph so the user's option choice still has
-    /// visible meaning, while every style shares the same awake
-    /// glyph — a cup with steam waves — so "active" reads identically
-    /// no matter which style is selected (S8b owner feedback during
-    /// smoke: filled and outline became indistinguishable when both
-    /// awake variants were `cup.and.saucer.fill`).
+    /// SF Symbol shown when Latte is at rest. Each style has a
+    /// distinct asleep glyph **and** a distinct awake variant so the
+    /// user's option choice carries through both states (S8b owner
+    /// feedback during smoke: an earlier fix shared a single steam-cup
+    /// across all styles, making the styles indistinguishable when
+    /// awake).
     ///
-    /// At-rest glyphs:
-    /// - `filled` → `cup.and.saucer.fill` (bold filled saucer-cup)
-    /// - `outline` → `cup.and.saucer` (thin outline saucer-cup)
-    /// - `clock` → `mug` (taller mug shape)
-    ///
-    /// Awake glyph (universal): `cup.and.heat.waves.fill` — the cup
-    /// with rising steam, the unambiguous "Latte is keeping the Mac
-    /// awake right now" signal.
+    /// Style → (asleep, awake):
+    /// - `filled`  → `cup.and.saucer.fill` ↔ `cup.and.heat.waves.fill`
+    ///   (bold cup; awake adds rising steam)
+    /// - `outline` → `cup.and.saucer` ↔ `cup.and.heat.waves`
+    ///   (thin cup; awake adds rising steam, still outlined)
+    /// - `clock`   → `mug` ↔ `mug.fill`
+    ///   (taller mug shape; awake fills the cup. SF Symbols ships
+    ///   no `mug.and.heat.waves` so this style does not display
+    ///   steam — a known limitation for v1.0; consider a custom
+    ///   asset in a follow-up if owner wants steam everywhere.)
     public var symbolName: String {
         symbolName(awake: false)
     }
@@ -44,13 +45,13 @@ public enum MenuBarIconStyle: String, CaseIterable, Sendable, Identifiable {
     /// All glyphs are members of the SF Symbols 5 catalog shipping with
     /// macOS 13+, so no runtime fallback is needed.
     public func symbolName(awake: Bool) -> String {
-        if awake {
-            return "cup.and.heat.waves.fill"
-        }
-        switch self {
-        case .filled:  return "cup.and.saucer.fill"
-        case .outline: return "cup.and.saucer"
-        case .clock:   return "mug"
+        switch (self, awake) {
+        case (.filled, false):  return "cup.and.saucer.fill"
+        case (.filled, true):   return "cup.and.heat.waves.fill"
+        case (.outline, false): return "cup.and.saucer"
+        case (.outline, true):  return "cup.and.heat.waves"
+        case (.clock, false):   return "mug"
+        case (.clock, true):    return "mug.fill"
         }
     }
 

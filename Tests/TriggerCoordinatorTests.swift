@@ -250,4 +250,67 @@ final class TriggerCoordinatorTests: XCTestCase {
             XCTAssertEqual(votes.count, 2)
         } else { XCTFail("expected awakeTriggered, got \(manager.state)") }
     }
+
+    // MARK: - S8b owner-scenario: Toggle OFF→ON cycle re-activates cup
+
+    /// Regression guard for the S8b smoke bug where toggling a trigger
+    /// OFF then ON in Settings left the cup permanently asleep.
+    ///
+    /// Root cause: coordinator.stop() used to cancel the consumer task,
+    /// which terminated the underlying AsyncStream's storage even though
+    /// the continuation was never finished. After that, future yields
+    /// from the same trigger.start() were silently dropped.
+    ///
+    /// Fix: keep consumer tasks alive across the trigger's registered
+    /// lifetime; stop() halts trigger emissions and synthesizes a
+    /// vote-OFF directly to the manager, but the consumer keeps
+    /// listening for the next start().
+    func testToggleOffOnCycleReActivatesCup() async throws {
+        let (coordinator, manager, assertion, _) = makeCoordinator()
+        let trigger = MockTrigger(id: "cycle")
+        coordinator.register(trigger)
+
+        // 1. First ON cycle.
+        await coordinator.start(trigger)
+        trigger.emit(TriggerVote(wantsAwake: true, reason: "first"))
+        try await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertTrue(manager.isAwake, "first ON must activate cup")
+        XCTAssertTrue(assertion.isActive)
+
+        // 2. Toggle OFF — coordinator.stop synthesises an immediate
+        //    vote-OFF, manager goes to .asleep with grace=0.
+        coordinator.stop("cycle")
+        try await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertFalse(manager.isAwake, "stop must release the assertion")
+        XCTAssertFalse(assertion.isActive)
+
+        // 3. Toggle ON again — coordinator.start resumes the trigger.
+        //    A new vote ON must reach the manager via the still-alive
+        //    consumer task and re-activate the cup.
+        await coordinator.start(trigger)
+        trigger.emit(TriggerVote(wantsAwake: true, reason: "second"))
+        try await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertTrue(manager.isAwake,
+                      "second ON after stop/start must re-activate cup — broken before S8b consumer-keepalive fix")
+        XCTAssertTrue(assertion.isActive)
+    }
+
+    /// Same shape as the cycle test, but exercises three OFF→ON
+    /// cycles back-to-back. Catches any subtle residual cancellation
+    /// or stream-state regression that survives a single cycle.
+    func testRepeatedToggleCyclesAllReActivate() async throws {
+        let (coordinator, manager, _, _) = makeCoordinator()
+        let trigger = MockTrigger(id: "many")
+        coordinator.register(trigger)
+
+        for cycle in 1...3 {
+            await coordinator.start(trigger)
+            trigger.emit(TriggerVote(wantsAwake: true, reason: "cycle \(cycle)"))
+            try await Task.sleep(nanoseconds: 80_000_000)
+            XCTAssertTrue(manager.isAwake, "cycle \(cycle) must activate")
+            coordinator.stop("many")
+            try await Task.sleep(nanoseconds: 80_000_000)
+            XCTAssertFalse(manager.isAwake, "cycle \(cycle) stop must deactivate")
+        }
+    }
 }

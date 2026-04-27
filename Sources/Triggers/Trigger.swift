@@ -78,7 +78,11 @@ public final class MockTrigger: Trigger {
 
     public func stop() {
         stopCalls += 1
-        continuation.finish()
+        // Mirror the real triggers (Calendar/WiFi/Focus/App) post-S7.9:
+        // do NOT finish the continuation. Stop only halts production;
+        // the AsyncStream stays alive across the trigger's registered
+        // lifetime so a future start() can re-yield to the same
+        // long-lived consumer.
     }
 
     public func requestPermissionIfNeeded() async -> Bool {

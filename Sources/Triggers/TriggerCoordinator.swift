@@ -33,6 +33,16 @@ public final class TriggerCoordinator: ObservableObject {
 
     public func start(_ trigger: any Trigger) async {
         await trigger.start()
+        // Reuse the existing consumer task if one is alive — cancelling
+        // it on stop would terminate the underlying AsyncStream (the
+        // iterator's task-cancellation handler calls storage.cancel()
+        // even though we never finished the continuation), so any
+        // subsequent yield from a future trigger.start() would be
+        // silently dropped. The S8b regression where Toggle OFF→ON left
+        // the cup permanently asleep traces directly to that. We keep
+        // the consumer alive across the trigger's full registered
+        // lifetime; trigger.stop() simply pauses yields.
+        guard consumerTasks[trigger.id] == nil else { return }
         let task = Task { @MainActor [weak self] in
             for await vote in trigger.voteStream {
                 guard let self else { break }
@@ -46,8 +56,11 @@ public final class TriggerCoordinator: ObservableObject {
         if let trigger = triggers.first(where: { $0.id == triggerId }) {
             trigger.stop()
         }
-        consumerTasks[triggerId]?.cancel()
-        consumerTasks[triggerId] = nil
+        // Do NOT cancel `consumerTasks[triggerId]`. See `start(_:)` for
+        // why — task cancellation cancels the underlying AsyncStream's
+        // storage, breaking future restarts. The trigger's own stop()
+        // halts emissions; the consumer task simply waits idly until
+        // the next start() resumes yielding.
         if activeVotes.removeValue(forKey: triggerId) != nil {
             // User-explicit OFF (Toggle in Settings, etc.) — bypass any
             // per-trigger grace period and release the assertion immediately.

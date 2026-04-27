@@ -51,36 +51,50 @@ final class MenuBarIconStyleTests: XCTestCase {
         XCTAssertEqual(MenuBarIconStyle.filled.symbolName(awake: false), "cup.and.saucer.fill")
     }
 
+    func testFilledAwakeIsCupAndHeatWavesFill() {
+        XCTAssertEqual(MenuBarIconStyle.filled.symbolName(awake: true), "cup.and.heat.waves.fill")
+    }
+
     func testOutlineAsleepIsCupAndSaucer() {
         XCTAssertEqual(MenuBarIconStyle.outline.symbolName(awake: false), "cup.and.saucer")
+    }
+
+    func testOutlineAwakeIsCupAndHeatWaves() {
+        // Outline keeps its outline weight even when awake — owner
+        // explicitly asked for per-style steam variants.
+        XCTAssertEqual(MenuBarIconStyle.outline.symbolName(awake: true), "cup.and.heat.waves")
     }
 
     func testClockAsleepIsMug() {
         XCTAssertEqual(MenuBarIconStyle.clock.symbolName(awake: false), "mug")
     }
 
-    func testAllStylesShareSameAwakeGlyph() {
-        // Per S8b owner-feedback fix: every style awake glyph is the
-        // steam-cup so "active" reads identically across the three
-        // styles, while at-rest glyphs stay distinct so the user's
-        // option choice still matters.
-        for style in MenuBarIconStyle.allCases {
-            XCTAssertEqual(
-                style.symbolName(awake: true),
-                "cup.and.heat.waves.fill",
-                "\(style) awake variant must be the universal steam cup"
-            )
-        }
+    func testClockAwakeIsMugFill() {
+        // SF Symbols ships no `mug.and.heat.waves` so clock awake stays
+        // mug.fill (filled mug). Documented in MenuBarIconStyle's
+        // doc-comment as a known limitation; revisit if a custom asset
+        // is added in a follow-up.
+        XCTAssertEqual(MenuBarIconStyle.clock.symbolName(awake: true), "mug.fill")
     }
 
     func testAtRestGlyphsAreDistinctPerStyle() {
-        // The user's icon-style choice is preserved by giving each style
-        // its own at-rest glyph; awake glyphs converge.
+        // The user's icon-style choice must carry through both states.
         let atRestGlyphs = MenuBarIconStyle.allCases.map { $0.symbolName(awake: false) }
         XCTAssertEqual(
             atRestGlyphs.count,
             Set(atRestGlyphs).count,
             "Each style must have a distinct at-rest glyph (got \(atRestGlyphs))"
+        )
+    }
+
+    func testAwakeGlyphsAreDistinctPerStyle() {
+        // S8b owner-feedback fix: awake glyphs must also be distinct
+        // so the style choice carries through both states.
+        let awakeGlyphs = MenuBarIconStyle.allCases.map { $0.symbolName(awake: true) }
+        XCTAssertEqual(
+            awakeGlyphs.count,
+            Set(awakeGlyphs).count,
+            "Each style must have a distinct awake glyph (got \(awakeGlyphs))"
         )
     }
 
