@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — Latte</title>
+  <meta name="description" content="Latte's privacy policy. Plain English. No data collection, no analytics, no network calls." />
+  <style>
+    :root {
+      --bg: #faf6f1;
+      --text: #2a1a10;
+      --muted: #6f5a4a;
+      --accent: #b07a4a;
+      --border: rgba(0,0,0,0.08);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a0f08;
+        --text: #f0e6dc;
+        --muted: #b09080;
+        --accent: #c8a37a;
+        --border: rgba(255,255,255,0.1);
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+    .container { max-width: 720px; margin: 0 auto; padding: 60px 24px; }
+    a { color: var(--accent); }
+    h1 {
+      font-size: 40px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+    .meta {
+      color: var(--muted);
+      font-size: 14px;
+      margin-bottom: 40px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    h2 {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 40px 0 12px;
+    }
+    h3 {
+      font-size: 17px;
+      font-weight: 600;
+      margin: 24px 0 8px;
+      color: var(--accent);
+    }
+    p, ul { margin-bottom: 16px; color: var(--text); }
+    ul { padding-left: 24px; }
+    li { margin-bottom: 6px; }
+    .summary {
+      padding: 20px 24px;
+      background: rgba(176, 122, 74, 0.08);
+      border-left: 3px solid var(--accent);
+      border-radius: 8px;
+      margin: 24px 0 32px;
+    }
+    .summary strong { display: block; margin-bottom: 8px; }
+    code {
+      background: rgba(0,0,0,0.06);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      code { background: rgba(255,255,255,0.08); }
+    }
+    .back {
+      display: inline-block;
+      margin-bottom: 24px;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 14px;
+    }
+    .back:hover { color: var(--accent); }
+    footer {
+      margin-top: 60px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back">← Back to Latte</a>
+
+    <h1>Privacy Policy</h1>
+    <p class="meta">Effective: 2026-04-27 · Latte v1.0</p>
+
+    <div class="summary">
+      <strong>Short version:</strong>
+      Latte does not collect, transmit, or share any of your data. Everything stays on your Mac. There is no analytics SDK, no telemetry, no network call to our servers (we don't have any). This page explains the technical details of why.
+    </div>
+
+    <h2>1. What Latte does</h2>
+    <p>
+      Latte is a macOS menu bar utility that prevents your Mac from sleeping when certain conditions you configure are met — for example, when you have a calendar event, when a specific app is running, when you're on a specific Wi-Fi network, or when a Focus mode is active.
+    </p>
+
+    <h2>2. What data Latte accesses</h2>
+
+    <h3>2.1 Calendar (only if you enable the Calendar trigger)</h3>
+    <p>
+      When you enable the Calendar trigger, Latte requests <strong>read-only</strong> access to your calendar via Apple's EventKit framework. Latte reads the start and end times of upcoming events to decide when to keep your Mac awake. Latte does not read event titles for any purpose other than displaying them to you locally, never modifies events, and never transmits event data anywhere.
+    </p>
+
+    <h3>2.2 Running applications (only if you enable the App trigger)</h3>
+    <p>
+      When you enable the App trigger, Latte uses <code>NSWorkspace</code> to know which apps are currently running on your Mac, so it can stay awake when one of your watched apps is active. Bundle identifiers, app names, and icons are read from your local installed bundles only.
+    </p>
+
+    <h3>2.3 Wi-Fi network name (only if you enable the Wi-Fi trigger)</h3>
+    <p>
+      When you enable the Wi-Fi trigger, Latte uses <code>CoreWLAN</code> to read the SSID (network name) of your currently connected Wi-Fi. macOS requires the <em>Location Services</em> permission to read SSID; this is an Apple platform requirement, not a Latte choice. Latte does not access location data itself, only the SSID string.
+    </p>
+
+    <h3>2.4 Focus state (only if you enable the Focus trigger)</h3>
+    <p>
+      When you enable the Focus trigger, Latte uses <code>INFocusStatusCenter</code> to know whether any Focus mode is currently active on your Mac. macOS does not expose specific Focus mode identifiers to third-party apps in this version; Latte sees only "is any Focus mode on or off."
+    </p>
+
+    <h2>3. What Latte stores</h2>
+    <p>
+      All your settings — which triggers are enabled, which apps you've added to the App trigger, which SSIDs you've added to the Wi-Fi trigger, your preferred coffee tone, your custom duration — are stored locally in macOS <code>UserDefaults</code>. The plist file lives at:
+    </p>
+    <p>
+      <code>~/Library/Containers/com.parkbyeongjun.latte/Data/Library/Preferences/com.parkbyeongjun.latte.plist</code>
+    </p>
+    <p>
+      This file is included in macOS Time Machine backups and iCloud Drive Desktop & Documents sync (if you have those enabled), exactly the same way every other sandboxed Mac app's settings are. Latte itself does not initiate any sync.
+    </p>
+
+    <h2>4. What Latte does NOT do</h2>
+    <ul>
+      <li>Latte does not include any analytics SDK (no Firebase, no Mixpanel, no Sentry, no anything).</li>
+      <li>Latte does not include any third-party SDK at all in v1.0.</li>
+      <li>Latte does not phone home. There is no "check for updates" server. App updates come via the Mac App Store.</li>
+      <li>Latte does not read your files, your messages, your browsing history, your microphone, or your camera.</li>
+      <li>Latte does not show ads.</li>
+      <li>Latte does not sell or share data with anyone, because there is no data leaving your Mac to sell or share.</li>
+    </ul>
+
+    <h2>5. Apple's involvement</h2>
+    <p>
+      As a Mac App Store app, Latte runs inside Apple's app sandbox. Apple's standard data collection (App Store analytics, crash reports if you've opted into "Share With App Developers" in System Settings → Privacy & Security → Analytics) applies to all App Store apps, including Latte. If you receive a Latte crash report through this channel, it contains stack traces and device model information selected by Apple — Latte itself never sees them unless you've opted in. Read Apple's privacy documentation at <a href="https://www.apple.com/legal/privacy/">apple.com/legal/privacy</a> for details.
+    </p>
+
+    <h2>6. Children's privacy</h2>
+    <p>
+      Latte is not directed at children under 13. Latte does not collect personal information from anyone, including children.
+    </p>
+
+    <h2>7. Changes to this policy</h2>
+    <p>
+      If Latte's data practices ever change, this page will be updated and the new effective date will appear at the top. Material changes will also be noted in the App Store "What's New" for the affected version.
+    </p>
+
+    <h2>8. Contact</h2>
+    <p>
+      Questions, corrections, or concerns? Email <a href="mailto:hightempier18@gmail.com">hightempier18@gmail.com</a>.
+    </p>
+
+    <footer>
+      Latte · Privacy Policy v1.0 · Last updated 2026-04-27
+    </footer>
+  </div>
+</body>
+</html>

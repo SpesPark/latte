@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Latte — Never let your Mac sleep at the wrong moment</title>
+  <meta name="description" content="Latte stays awake automatically — for meetings, presentations, downloads, or wherever your day takes you. Context-aware Mac caffeine app for the Mac App Store." />
+  <meta property="og:title" content="Latte — Never let your Mac sleep at the wrong moment" />
+  <meta property="og:description" content="Latte stays awake automatically — for meetings, presentations, downloads, or wherever your day takes you." />
+  <meta property="og:type" content="website" />
+  <style>
+    :root {
+      --coffee-espresso: #3b1f0f;
+      --coffee-caramel: #b07a4a;
+      --coffee-mocha: #6f3a1d;
+      --coffee-latte: #c8a37a;
+      --coffee-noir: #1a0f08;
+      --bg: #faf6f1;
+      --text: #2a1a10;
+      --muted: #6f5a4a;
+      --accent: var(--coffee-caramel);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a0f08;
+        --text: #f0e6dc;
+        --muted: #b09080;
+        --accent: var(--coffee-latte);
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    .container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+    header {
+      padding: 80px 0 40px;
+      text-align: center;
+    }
+    .logo {
+      width: 96px;
+      height: 96px;
+      margin: 0 auto 24px;
+      background: var(--accent);
+      border-radius: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 56px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    }
+    h1 {
+      font-size: 56px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+    .tagline {
+      font-size: 22px;
+      color: var(--muted);
+      max-width: 600px;
+      margin: 0 auto 40px;
+    }
+    .cta {
+      display: inline-block;
+      padding: 14px 32px;
+      background: var(--accent);
+      color: white;
+      text-decoration: none;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 17px;
+      transition: transform 0.15s ease;
+    }
+    .cta:hover { transform: translateY(-2px); }
+    .cta.secondary {
+      background: transparent;
+      color: var(--accent);
+      border: 1.5px solid var(--accent);
+      margin-left: 12px;
+    }
+    section {
+      padding: 60px 0;
+    }
+    h2 {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      letter-spacing: -0.01em;
+    }
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 32px;
+      margin-top: 32px;
+    }
+    .feature {
+      padding: 24px;
+      background: rgba(255,255,255,0.6);
+      border-radius: 16px;
+      border: 1px solid rgba(0,0,0,0.06);
+    }
+    @media (prefers-color-scheme: dark) {
+      .feature { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); }
+    }
+    .feature h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .feature p {
+      color: var(--muted);
+      font-size: 15px;
+    }
+    .pricing {
+      text-align: center;
+      padding: 60px 0;
+      background: rgba(0,0,0,0.02);
+      border-radius: 24px;
+      margin: 40px 0;
+    }
+    @media (prefers-color-scheme: dark) {
+      .pricing { background: rgba(255,255,255,0.03); }
+    }
+    .price {
+      font-size: 56px;
+      font-weight: 800;
+      color: var(--accent);
+      margin: 16px 0;
+    }
+    .price small {
+      font-size: 18px;
+      color: var(--muted);
+      font-weight: 400;
+    }
+    footer {
+      padding: 60px 0 40px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+      border-top: 1px solid rgba(0,0,0,0.06);
+      margin-top: 60px;
+    }
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">☕</div>
+      <h1>Never let your Mac sleep<br>at the wrong moment.</h1>
+      <p class="tagline">Latte stays awake automatically — for meetings, presentations, downloads, or wherever your day takes you.</p>
+      <a href="#download" class="cta">Coming Soon to Mac App Store</a>
+      <a href="privacy.html" class="cta secondary">Privacy Policy</a>
+    </header>
+
+    <section>
+      <h2>You shouldn't have to remember a toggle.</h2>
+      <p style="color: var(--muted); font-size: 17px; max-width: 700px;">
+        Every other "stay awake" utility makes you flip a switch before each meeting and remember to flip it back after.
+        Forget once and your Mac sleeps mid-call, or your battery dies overnight.
+      </p>
+      <p style="margin-top: 16px; color: var(--muted); font-size: 17px; max-width: 700px;">
+        Latte reads your context — Calendar events, running apps, Wi-Fi network, Focus mode — and decides for you. The cup fills when your day needs it. Empties when it doesn't.
+      </p>
+    </section>
+
+    <section>
+      <h2>How it works</h2>
+      <div class="features">
+        <div class="feature">
+          <h3>📅 Calendar trigger</h3>
+          <p>Stays awake during your scheduled meetings. Lead/trail times configurable. Works with any calendar EventKit can read.</p>
+        </div>
+        <div class="feature">
+          <h3>🎥 App trigger</h3>
+          <p>Active when Zoom, Teams, Webex, Discord, Slack, or any app you choose is running. Real friendly names + icons in the picker.</p>
+        </div>
+        <div class="feature">
+          <h3>📡 Wi-Fi trigger</h3>
+          <p>Awake on your work network. Sleeps on your home Wi-Fi. Or invert it — your call.</p>
+        </div>
+        <div class="feature">
+          <h3>🌙 Focus trigger</h3>
+          <p>Pairs with macOS Focus modes. Awake when "Work" is on, sleeps when "Personal" takes over.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>What you don't have to think about</h2>
+      <div class="features">
+        <div class="feature">
+          <h3>Zero data collection</h3>
+          <p>No telemetry. No analytics. No network calls. All settings live in your local UserDefaults. Your calendar is read-only and never leaves your Mac.</p>
+        </div>
+        <div class="feature">
+          <h3>Sandboxed</h3>
+          <p>Mac App Store sandboxed. Only the entitlements Latte actually needs (Calendar, Wi-Fi network, Focus state).</p>
+        </div>
+        <div class="feature">
+          <h3>One-time purchase, forever</h3>
+          <p>$2.99 once. No subscription, ever. No "Plus" tier rent-seeking. The price you see is the price you pay — for life.</p>
+        </div>
+        <div class="feature">
+          <h3>Open about everything</h3>
+          <p>Privacy Policy is plain English. Decisions documented in the project repo (linked below).</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="pricing" id="download">
+      <h2 style="margin-bottom: 0;">$2.99</h2>
+      <div class="price">one-time<small> · no subscription</small></div>
+      <p style="color: var(--muted); margin-top: 16px;">
+        Coming soon to the Mac App Store. macOS 13 Ventura or later.
+      </p>
+    </section>
+
+    <footer>
+      <p>
+        Latte is built by an independent developer. Questions? Email
+        <a href="mailto:hightempier18@gmail.com">hightempier18@gmail.com</a>
+      </p>
+      <p style="margin-top: 12px;">
+        <a href="privacy.html">Privacy Policy</a> · <a href="mailto:hightempier18@gmail.com">Support</a>
+      </p>
+    </footer>
+  </div>
+</body>
+</html>
