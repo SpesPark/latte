@@ -47,28 +47,41 @@ final class MenuBarIconStyleTests: XCTestCase {
         }
     }
 
-    func testFilledAsleepIsCupAndSaucer() {
-        XCTAssertEqual(MenuBarIconStyle.filled.symbolName(awake: false), "cup.and.saucer")
-    }
-
-    func testFilledAwakeIsCupAndSaucerFill() {
-        XCTAssertEqual(MenuBarIconStyle.filled.symbolName(awake: true), "cup.and.saucer.fill")
+    func testFilledAsleepIsCupAndSaucerFill() {
+        XCTAssertEqual(MenuBarIconStyle.filled.symbolName(awake: false), "cup.and.saucer.fill")
     }
 
     func testOutlineAsleepIsCupAndSaucer() {
         XCTAssertEqual(MenuBarIconStyle.outline.symbolName(awake: false), "cup.and.saucer")
     }
 
-    func testOutlineAwakeIsCupAndSaucerFill() {
-        XCTAssertEqual(MenuBarIconStyle.outline.symbolName(awake: true), "cup.and.saucer.fill")
-    }
-
     func testClockAsleepIsMug() {
         XCTAssertEqual(MenuBarIconStyle.clock.symbolName(awake: false), "mug")
     }
 
-    func testClockAwakeIsCupAndHeatWavesFill() {
-        XCTAssertEqual(MenuBarIconStyle.clock.symbolName(awake: true), "cup.and.heat.waves.fill")
+    func testAllStylesShareSameAwakeGlyph() {
+        // Per S8b owner-feedback fix: every style awake glyph is the
+        // steam-cup so "active" reads identically across the three
+        // styles, while at-rest glyphs stay distinct so the user's
+        // option choice still matters.
+        for style in MenuBarIconStyle.allCases {
+            XCTAssertEqual(
+                style.symbolName(awake: true),
+                "cup.and.heat.waves.fill",
+                "\(style) awake variant must be the universal steam cup"
+            )
+        }
+    }
+
+    func testAtRestGlyphsAreDistinctPerStyle() {
+        // The user's icon-style choice is preserved by giving each style
+        // its own at-rest glyph; awake glyphs converge.
+        let atRestGlyphs = MenuBarIconStyle.allCases.map { $0.symbolName(awake: false) }
+        XCTAssertEqual(
+            atRestGlyphs.count,
+            Set(atRestGlyphs).count,
+            "Each style must have a distinct at-rest glyph (got \(atRestGlyphs))"
+        )
     }
 
     func testZeroArgSymbolNameMatchesAsleepVariant() {

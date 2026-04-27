@@ -48,6 +48,17 @@ private struct TriggerSection: View {
                     trigger.isEnabled = newValue
                     Task { @MainActor in
                         if newValue {
+                            // S8b smoke owner-feedback fix: Toggle ON
+                            // must request permission the same way
+                            // bootTriggers() does on launch. Without
+                            // this, enabling Calendar/WiFi/Focus from
+                            // Settings would silently fail — pollOnce()
+                            // returns early when permission isn't
+                            // granted, no prompt fires, cup never
+                            // activates, user blames the app.
+                            if trigger.requiresPermission {
+                                _ = await trigger.requestPermissionIfNeeded()
+                            }
                             await coordinator.start(trigger)
                         } else {
                             coordinator.stop(trigger.id)
