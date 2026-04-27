@@ -38,6 +38,22 @@ final class LatteAppDelegate: NSObject, NSApplicationDelegate, ObservableObject 
             }
         }
     }
+
+    /// AppKit calls this when the app is launched (or already running) with one
+    /// or more `latte://` URLs. Used by `smoke-harness` to open Settings on a
+    /// specific tab without requiring Accessibility / UI scripting permissions.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls {
+            guard let tab = SettingsURLHandler.parse(url) else { continue }
+            let env = AppEnvironment.shared
+            SettingsWindowController.shared.show(
+                manager: env.manager,
+                coordinator: env.coordinator,
+                environment: env,
+                initialTab: tab
+            )
+        }
+    }
 }
 
 @main

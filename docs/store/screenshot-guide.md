@@ -22,6 +22,22 @@ You only need to capture **2880 × 1800** for v1.0. App Store Connect down-scale
 
 ---
 
+## Settings tabs auto-open via `latte://` URL scheme (S8c, 2026-04-28)
+
+Latte 1.0 ships with a built-in URL scheme so the harness (or you, manually) can deep-link straight to a Settings tab without clicking the menu bar:
+
+```bash
+open -a "<path-to-Latte.app>" latte://settings/general    # Shot 2
+open -a "<path-to-Latte.app>" latte://settings/triggers   # Shot 3
+open -a "<path-to-Latte.app>" latte://settings/about      # Shot 5
+```
+
+Scenarios `09-marketing-shot-2-general`, `10-marketing-shot-3-triggers`, and `11-marketing-shot-5-about` automate this. **Important**: the screencapture step is unreliable while always-on-top windows (Claude, Bartender, some video conferencing tools) are visible — close those before the capture pass. The captured PNG = whatever was frontmost at the moment.
+
+Shots 1 (menu-bar dropdown + cup mid-fill) and 4 (App trigger config close-up with running-apps menu open) still need manual click chains — the menu-bar popover is tied to mouse position and the running-apps menu requires a hover.
+
+---
+
 ## Pre-capture: harness primes the demo state for you (S8c, 2026-04-28)
 
 **Before manually capturing**, run the smoke-harness marketing-prep scenario. It seeds Latte with deterministic demo defaults (caramel accent, filled icon, all 4 triggers wired with realistic bundles) and auto-captures Shot 6 (onboarding welcome). After it completes, Latte is running in the canonical demo state — go straight to capture.
