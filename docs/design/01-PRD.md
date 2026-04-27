@@ -3,8 +3,8 @@
 | Field | Value |
 |---|---|
 | **Product name** | Latte |
-| **Working folder** | `Caffeinated-Clone/` (will rename to `Latte/` before first commit-push) |
-| **Bundle identifier** | `com.example.latte` (placeholder — replace with owner's reverse-domain) |
+| **Working folder** | `Latte/` (renamed from `Caffeinated-Clone/` in S8 ahead of App Store submission) |
+| **Bundle identifier** | `com.parkbyeongjun.latte` (default — owner may revisit per `docs/v2-backlog.md` V2-20) |
 | **Document version** | 0.3 |
 | **Status** | Approved (design phase closed at session 2) |
 | **Owner** | Project owner |
@@ -19,9 +19,13 @@
 
 **One-line pitch**: *"Your Mac stays awake when you need it. Sleeps when you don't."*
 
-**Primary differentiator vs incumbents (Amphetamine, Caffeinated, KeepingYouAwake)**: Calendar-aware automatic activation. The user never misses a meeting because their Mac slept, and never wastes battery because they forgot to toggle off.
+**Primary differentiator vs incumbents (Amphetamine, Caffeinated, KeepingYouAwake)**: **Context-aware automatic activation** — Latte reads Calendar events, running apps, Wi-Fi network, and Focus mode to decide. Calendar awareness is the headline proof point because no incumbent ships it; the broader claim is "Latte just knows" so the user never has to remember a toggle.
 
-**Distribution**: Mac App Store, **$2.99 one-time purchase** (Apple Small Business Program 15% take rate). Source code is **private**.
+**Marketing headline (S8 research-driven, 2026-04-27)**: *"Never let your Mac sleep at the wrong moment."* Sub-headline: *"Latte stays awake automatically — for meetings, presentations, downloads, or wherever your day takes you."* Rationale recorded in `memory/project_latte_session8b_research.md`: users articulate the pain as outcome ("Mac slept during my Zoom") rather than mechanism ("calendar-aware").
+
+**Distribution**: Mac App Store, **$2.99 one-time purchase** (Apple Small Business Program 15% take rate). Aggressive entry pricing — owner explicitly chose $2.99 over the $3.99 sweet spot identified in S8b research to undercut Caffeinated ($3.99) and beat Lungo ($4.99) on price while staying above "free" comparisons. Source code is **private**.
+
+**Subscription ban (durable guardrail)**: Latte will **not** ship a subscription tier. Recurring revenue is incompatible with this category — the Bartender 5 (2024) backlash is the canonical cautionary tale. Free-tier + one-time IAP for advanced triggers may be revisited post v1.5 once review base ≥ 50.
 
 ---
 
@@ -43,7 +47,7 @@
 | **Caffeine** (legacy, free) | Discontinued, broken on Apple Silicon. |
 | **Lungo** ($4.99) | Manual toggle. No calendar/app awareness. |
 
-**Gap**: No mainstream menu-bar utility activates **automatically based on calendar events**. This is Latte's wedge.
+**Gap**: No mainstream menu-bar utility activates **automatically based on calendar events**. Calendar is the most defensible part of Latte's wedge; the full wedge is **multi-source context-awareness** (Calendar + App + WiFi + Focus combined), positioned via outcome marketing ("never miss a meeting") rather than mechanism marketing ("calendar-aware").
 
 ### 2.3 Market trend tailwinds
 
@@ -328,7 +332,7 @@ Phase 2 (Cross-device)       ← iOS/Watch — separate decision after Year 1 da
 | R-06 | Solo developer burnout | Medium | High (project death) | Phased shipping (1.0 → 1.A → 1.C); each phase independently shippable |
 | R-07 | Refund rate >5% from misunderstood UX | Low | Medium | TestFlight beta ≥2 weeks; capture confusion via feedback form |
 | R-08 | EventKit `requestFullAccessToEvents` rejected by macOS 13 (only macOS 14+) | High | Low (handled in code) | Code already has `#available(macOS 14, *)` branch with macOS 13 fallback |
-| R-09 | Bundle ID conflict (someone else owns `com.example.latte`-like) | Low | Medium | Use owner's reverse-domain for real bundle ID; resolved before launch |
+| R-09 | Bundle ID conflict (someone else owns `com.parkbyeongjun.latte`-like) | Low | Low | `com.parkbyeongjun.*` reverse-DNS is owner-controlled; revisit per V2-20 if owner moves to a custom domain |
 | R-10 | App Store name "Latte" already taken | Medium | Medium | Backup names: `Brew`, `Wakeful`, `Sippy`; verify before locking |
 
 ---

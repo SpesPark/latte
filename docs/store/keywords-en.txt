@@ -1,1 +1,1 @@
-caffeine,sleep,awake,meeting,zoom,teams,focus,menu bar,utility,productivity,calendar,wifi
+caffeine,nosleep,insomnia,screensaver,presentation,zoom,download,render,trigger,wifi,focus,menubar

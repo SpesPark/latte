@@ -1,6 +1,6 @@
-https://<github-username>.github.io/<repo>/
+https://bj-park.github.io/latte/
 
 Notes:
-- Replace <github-username> + <repo> with the actual GitHub Pages URL after deploying docs/site/.
+- Default GitHub Pages URL for `bj-park/latte`. Owner may revisit per `docs/v2-backlog.md` V2-22 (split site repo, custom domain).
 - For v1.0, support URL = marketing URL (same landing page with email contact in footer).
 - If volume justifies it post-launch, split into a dedicated /support page with FAQ + contact form.

@@ -1,5 +1,5 @@
-https://<github-username>.github.io/<repo>/
+https://bj-park.github.io/latte/
 
 Notes:
-- Replace placeholder with deployed GitHub Pages URL (or custom domain if owner buys one).
+- Default GitHub Pages URL for `bj-park/latte`. Owner may revisit per `docs/v2-backlog.md` V2-22 (custom domain such as `latte.app`).
 - Optional in App Store Connect, but recommended — gives reviewers (and users) a one-click context page.

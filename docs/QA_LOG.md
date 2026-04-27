@@ -96,7 +96,7 @@ Build location after S7 test run: `~/Library/Developer/Xcode/DerivedData/Latte-*
 #### Quit & power assertion hygiene
 
 - [ ] Quit via menu → process exits cleanly.
-- [ ] After quit, `pmset -g assertions | grep -i com.example.latte` returns nothing (no leaked assertion).
+- [ ] After quit, `pmset -g assertions | grep -i com.parkbyeongjun.latte` returns nothing (no leaked assertion).
 - [ ] Force-kill (`kill -9`) → `pmset` may briefly show a stale assertion; re-launch then quit cleanly to verify recovery (acceptable; documented in arch §13).
 
 #### macOS version matrix
@@ -242,7 +242,7 @@ The root of #1 is structural: pre-populating curated defaults for users who don'
 
 Append to the §S7 / §S7.7 sections. Run on the S7.8 build before opening S8.
 
-- [ ] **Fresh install behavior** (delete the Latte preferences before re-launching, e.g. `defaults delete com.example.latte`): App trigger config form opens with **empty** watched list and the new empty-state copy. None of Zoom / Teams / Discord / etc. appear pre-populated unless installed.
+- [ ] **Fresh install behavior** (delete the Latte preferences before re-launching, e.g. `defaults delete com.parkbyeongjun.latte`): App trigger config form opens with **empty** watched list and the new empty-state copy. None of Zoom / Teams / Discord / etc. appear pre-populated unless installed.
 - [ ] **Curated defaults still seeded if installed**: install Zoom (or any curated default app), delete preferences, re-launch Latte. Watched list should now contain only the installed curated entries.
 - [ ] **"Add from running apps" Menu**: lists only `.regular` activation policy apps (the apps you'd see in Cmd-Tab + Dock), sorted alphabetically by display name. Latte itself does not appear. Menu bar utilities (e.g. CleanShot X, Bartender, Raycast) do not appear. System daemons do not appear.
 - [ ] **Menu items show icons**: each candidate has the real app icon left of the name when running. Curated defaults that aren't running but are watched fall back to the SF Symbol category icon (video / chat).

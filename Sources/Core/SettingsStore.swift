@@ -74,7 +74,7 @@ public extension SettingsStore {
     }
 }
 
-let settingsLogger = Logger(subsystem: "com.example.latte", category: "settings")
+let settingsLogger = Logger(subsystem: "com.parkbyeongjun.latte", category: "settings")
 
 public final class UserDefaultsSettingsStore: SettingsStore {
 

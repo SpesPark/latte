@@ -4,384 +4,205 @@
 
 ---
 
+## S8b research preamble (2026-04-27, mid-session, doc-only)
+
+Before S8b execution work begins, a 45-min market research pass ran (4 parallel agents). 4 of 5 recommendations applied; owner overrode the price-hike recommendation. Doc-only changes — build state unchanged from S7.11 (263 tests, Release green).
+
+**Adjustments applied:**
+- `docs/design/01-PRD.md` §1.1 — wedge re-framed (Calendar-aware → Context-aware, outcome-first marketing headline added, subscription ban codified as durable guardrail).
+- `docs/site/index.html` — H1 + tagline + meta title + problem heading + pricing card updated to "Never let your Mac sleep at the wrong moment" / "$2.99 once, forever, no subscription ever".
+- `docs/v2-backlog.md` — recommended ship-order table added; V2-01 promoted to v1.1; **V2-05 schedule trigger NEW** (v1.2, ahead of EKCalendar picker per Q3 research); V2-04 demoted to v1.3; **V2-06 external display trigger NEW** (v1.3+); V2-03 confirmed-low-demand annotation.
+- `docs/store/{subtitle-en,subtitle-ko,keywords-en,keywords-ko}.txt` — replaced with Q4 deliverable verbatim (subtitle-en `Auto keep-awake for your Mac` 28c; keywords-en 98c; subtitle-ko `맥을 자동으로 깨어있게` 12c; keywords-ko 59c).
+- `docs/store/description-{en,ko}.md` — opening + pricing sections updated.
+- Memory migrated: `~/.claude/projects/-Users-parkbyeongjun-Documents-Claude-Projects-Caffeinated-Clone/memory/` → `-Latte/memory/`. New `project_latte_session8b_research.md` + MEMORY.md prepend.
+
+**Owner decisions captured:**
+- **Keep $2.99** (rejected $3.99 sweet-spot recommendation) for aggressive market entry. Rationale: undercut Caffeinated, beat Lungo on price; prioritize adoption velocity over per-unit revenue.
+- **Subscription banned** in PRD as durable guardrail (Bartender 5 cautionary tale).
+- All other 3 recommendations approved as-is.
+
+**S8b execution work below is unchanged.** This research preamble is doc-only — same build, same tests, same screenshots needed, same owner steps. Commit either as a separate `docs:` commit OR fold into the S8b execution commit at owner's discretion.
+
+---
+
 ## Last session
 
 | Field | Value |
 |---|---|
-| **Session #** | 7 + 7.5 + 7.6 + 7.7 + 7.8 + 7.9 + 7.10 + 7.11 of ~10 (eight S7-family sub-sessions across 2026-04-26 → 2026-04-27) |
-| **Theme** | Test coverage + QA gate (S7); Per-trigger config UI (S7.5); UX rewrite after owner smoke (S7.6); App trigger friendly names (S7.7); pickable filter + installed-only seed (S7.8); trigger lifecycle / watched-list reevaluate (S7.9); per-trigger grace replaces 60 s cool-down (S7.10); stream-lifecycle parity for Calendar/WiFi/Focus + AppIcon raster set (S7.11) |
-| **Date** | 2026-04-26 → 2026-04-27 |
-| **Status** | ✅ Completed. 263/263 tests passing. **S7-family iteration closed.** S7 cleared the 80% coverage gate on `Sources/Core/**` and `Sources/Triggers/**` (live-system adapter classes excluded; rationale codified in `02-architecture.md` §13 v0.9 + `docs/QA_LOG.md`). S7.5 landed Phase 1.5.A — Settings → Triggers now offers an inline configuration form per trigger. S7.6 owner smoke surfaced two defects (P1 state-mismatch + P2 UX); both fixed by retiring the DisclosureGroup-with-Toggle-in-label structure in favor of a Section-per-trigger layout. S7.7 owner re-smoke against S7.6 build surfaced one defect (P2: App trigger row showed raw bundle IDs + no purpose copy); fixed by extending `WorkspaceSource` with `displayInfo(for:)`, curated displayName table, and rewriting `AppTriggerConfigForm` to render real app icons + friendly names. **S7.8 owner re-smoke against S7.7 build surfaced three connected complaints — pre-loaded curated defaults populate apps the owner doesn't have installed; "Add from running apps" Menu items show names without icons; the same Menu lists every running process. Fixed at the root: `WorkspaceSource` gains `pickableRunningBundleIDs` (filters `.regular` activation policy + excludes self) and `isInstalled(_:)`; `AppTrigger.init` runs a one-shot installed-only curated seed gated on the new `hasSeededAppDefaults` flag (idempotent across re-launches, respects users who explicitly cleared their list); legacy "fall back to all 6 curated when raw is empty" getter behaviour removed; UI Menu items render with real app icons or SF Symbol category fallback (`video.fill` / `bubble.left.and.bubble.right.fill`).** EKCalendar picker and per-Focus selection remain deferred as Phase 1.5.B / Apple-API-blocked respectively. |
+| **Session #** | 8a (code & metadata prep) — 2026-04-27 |
+| **Theme** | App Store prep, Dev-Program-free portion. Bundle ID + version 1.0 + folder rename + marketing site + App Store metadata + v2 backlog. |
+| **Date** | 2026-04-27 |
+| **Status** | ✅ Completed (pending final commit). 263/263 tests pass. Release config build succeeded. **Working folder renamed `Caffeinated-Clone/ → Latte/`.** Two commits planned for S8a: `87d1eab` (docs-only — already landed) + one S8a-final commit (still in working tree as of this handoff write — see "Final commit pending" below). S8.5 (Apple Dev Program enrollment) hard-blocked owner-side; everything inside this session was Dev-Program-free. |
 
 ### What was accomplished
 
-1. **Coverage baseline**
-   - `xcodebuild test -enableCodeCoverage YES` → `xcrun xccov view --report --json` → per-file analysis script (in `/tmp/Latte_S7_round*.xcresult`).
-   - Initial 4 gaps identified:
-     - `Core/SettingsStore` 75.2% — never exercised `double` accessors or any "wrong-type-stored" fallback path.
-     - `Core/PowerAssertion` 29.6% — only the Mock had been exercised; real IOKit class was untouched by tests.
-     - `Triggers/WiFiTrigger` 60.2% — `start()`/`stop()`/`requestPermissionIfNeeded()`/setters never called.
-     - `Triggers/CalendarTrigger` 52.0% — same pattern.
+#### Already committed (`87d1eab`)
 
-2. **Gap-closing tests** (3 files modified, 1 new)
-   - `Tests/SettingsStoreTests.swift` (+6 tests): `testDoubleRoundTrip`, `testBoolTypeMismatchFallsBackToDefault`, `testStringTypeMismatchReturnsNil`, `testIntegerTypeMismatchFallsBackToDefault`, `testDoubleTypeMismatchFallsBackToDefault`, `testDataTypeMismatchReturnsNil`. Both `InMemory` and `UserDefaults` impls run them via the parametrized `SettingsStoreContractTests` base — so each test fires twice (12 new test runs).
-   - `Tests/PowerAssertionTests.swift` (NEW, 6 tests): direct tests against the real `PowerAssertion`, exercising `IOPMAssertionCreateWithName` / `IOPMAssertionRelease` from the test process. Covers initial state, IOKit type-key distinction (`kIOPMAssertionTypeNoDisplaySleep` vs `kIOPMAssertionTypeNoIdleSleep`), activate→deactivate, idempotent re-activate with same mode, mode-change replacement, and inactive-deactivate no-op.
-   - `Tests/WiFiTriggerTests.swift` (+4 tests): `testIsEnabledSetterPersists`, `testPermissionStatusReflectsSource`, `testStartEvaluatesImmediatelyAndStopCancels`, `testRequestPermissionIfNeededDelegatesToSource`.
-   - `Tests/CalendarTriggerTests.swift` (+4 tests): `testIsEnabledSetterPersists`, `testPermissionStatusReflectsSource`, `testStartPollsAndStopCancels`, `testCalendarSettingsTypedSetters` (covers clamping at write-time for lead/trailing minutes, both bounds).
+1. **`docs/v2-backlog.md`** — 7 deferred items captured during S7-family iteration (V2-01 menu-bar awake-state visualization, V2-02 Calendar/WiFi `reevaluateWatched()` parity, V2-03 per-Focus selection, V2-04 EKCalendar picker, V2-10 `accentAwake` cleanup, V2-11 icon dark/tinted variants, V2-12 multi-OS smoke).
 
-3. **Coverage result** (final, on `/tmp/Latte_S7_round3.xcresult`)
+2. **`docs/site/`** — GitHub Pages-ready landing page (`index.html`) + Privacy Policy (`privacy.html`) with dark-mode-aware coffee palette + `README.md` documenting 3 hosting options.
 
-   | File | Cov% |
-   |---|---|
-   | Core/AwakeDuration | 100.0% |
-   | Core/AwakeManager | 94.1% |
-   | Core/Logging | 100.0% |
-   | Core/PowerAssertion | 87.3% |
-   | Core/SettingsStore | 100.0% |
-   | Triggers/Trigger | 82.8% |
-   | Triggers/TriggerCoordinator | 92.3% |
-   | Triggers/AppTrigger | 98.5% |
-   | Triggers/CalendarTrigger | 98.8% |
-   | Triggers/FocusTrigger | 97.9% |
-   | Triggers/WiFiTrigger | 96.5% |
+3. **`docs/store/`** — 14 metadata text files for App Store Connect paste at submission time. en + ko localized for `subtitle`, `promotional-text`, `description`, `whats-new`, `keywords`. Plus `pricing.txt`, `category.txt`, `age-rating.md`, `privacy-data.md` (App Privacy declaration source-of-truth), `review-notes.md` for the App Store reviewer. `screenshot-guide.md` for the owner's capture pass with the 5 required shots and the pre-upload checklist. `screenshots/` directory with `.gitkeep`.
 
-   **GATE: PASS.**
+#### Done in working tree, **not yet committed**
 
-4. **Documentation**
-   - `docs/QA_LOG.md` (NEW) — coverage snapshot, owner-side smoke checklist (menu-bar UI / custom duration / coffee tone / icon style / triggers / quit hygiene), adapter exemption rationale, macOS-version matrix (deferred to S9 TestFlight).
-   - `02-architecture.md` v0.8 → **v0.9**: §13 entry codifies the gate scope, the adapter-exemption list, and the PowerAssertion promotion.
-   - `ROADMAP.md` v0.8 → **v0.9**: row 7 (Test coverage + QA) now 🟢 Done; row 8 marked 🟡 Next.
+4. **Bundle ID `com.example.latte → com.parkbyeongjun.latte`** across 6 source/config sites + 4 design docs:
+   - `project.yml` — `bundleIdPrefix`, `Latte.PRODUCT_BUNDLE_IDENTIFIER`, `LatteTests.PRODUCT_BUNDLE_IDENTIFIER`
+   - `Sources/Core/Logging.swift` — `LatteLog.subsystem`
+   - `Sources/Core/PowerAssertion.swift` — `Logger(subsystem:)`
+   - `Sources/Core/SettingsStore.swift` — `settingsLogger`
+   - `docs/design/01-PRD.md` — table row + R-09 risk row
+   - `docs/design/02-architecture.md` — §6.2 logging snippet
+   - `docs/design/04-data-model.md` — `defaults read` example + container path
+   - `docs/QA_LOG.md` — owner smoke `pmset -g assertions | grep` + `defaults delete` lines
+   - `docs/site/privacy.html` — §3 storage path
 
-### Test count
+5. **`MARKETING_VERSION 0.1.0 → 1.0.0`** in `project.yml` (`CURRENT_PROJECT_VERSION` stays `1` for first submission).
 
-178 → 195 → 227 → **229** (+34 net since S6 close: 12 SettingsStore parametrized doubles, 6 PowerAssertion, 8 WiFi, 6 Calendar in S7; +1 each for `AppTrigger.runningBundleIDs` and `WiFiTrigger.currentSSID` passthrough in S7.5). All passing.
+6. **GitHub username + repo placeholders swept** (`<github-username>` → `bj-park`, `<repo>` → `latte`, `<your-bundle-id>` → `com.parkbyeongjun.latte`) in `docs/site/README.md` and `docs/store/{support,marketing,privacy}-url.txt`.
 
-### S7.5 added (Phase 1.5.A — per-trigger config UI)
+7. **`docs/v2-backlog.md` V2-20/V2-21/V2-22**: explicit owner-revisit entries for the 3 defaults chosen this session (bundle ID prefix, git author identity, GitHub username/repo). Each entry includes the alternatives that were considered, the trigger for revisiting, and the exact action to take (file list to sweep) when the owner does.
 
-5. **Trigger passthrough accessors** — `AppTrigger.runningBundleIDs: [String]` (delegates to `WorkspaceSource.runningBundleIDs`) and `WiFiTrigger.currentSSID: String?` (delegates to `WiFiSource.currentSSID`). Lets the Settings UI offer "Add from running apps" / "Add current network" without reaching past the trigger's public surface.
+8. **`02-architecture.md` v0.16 → v1.0** — design freeze gate. New v1.0 changelog entry summarizes all S8a deltas. `Last updated` 2026-04-27. `Successor docs` now includes `../v2-backlog.md`.
 
-6. **TriggersTab rewrite** — each row is now a `DisclosureGroup`. Tapping the row expands a per-trigger config form, dispatched on `trigger.id`:
-   - **`AppTriggerConfigForm`** — bundle-ID list with per-row remove, free-form text-field add (sanitized via `AppTriggerDefaults.sanitize`), and a nested `DisclosureGroup` showing current running apps not yet in the watched list.
-   - **`WiFiTriggerConfigForm`** — radio-style mode picker (on-list vs inverse), SSID list with per-row remove, manual add (validated to ≤32 UTF-8 bytes), and a one-tap "Add current network: <ssid>" button when a current SSID exists and isn't already on the list.
-   - **`CalendarTriggerConfigForm`** — lead/trail steppers (0–15 min) + "Exclude all-day events" toggle. Inline note explains that calendar-list selection ships in Phase 1.5.B (needs EventKit live access).
-   - **`FocusTriggerConfigInfo`** — informational paragraph; `INFocusStatusCenter` doesn't expose stable per-Focus IDs to third parties in v1.
+9. **`ROADMAP.md` row 8 split**:
+   - **8a** (this session): Code & metadata prep — 🟢 Done
+   - **8b** (next): Owner pre-flight smoke against the v1.0.0 build + screenshots + GitHub Pages deploy — 🟡 Next
+   - **8.5** (after 8b): Apple Developer Program enrollment ($99/yr) — 🔴 Blocked owner-only HARD gate
+   - **9** (after 8.5): App Store Connect setup + Release archive — ⚪ Pending
+   - 10 (TestFlight beta) and 11 (submission + launch) renumbered accordingly.
+   - New v1.0 entry added to `## Document version` table.
 
-7. **Footer copy** updated from "Per-trigger configuration … lands in a future update" to a description of the new capability.
+10. **`xcodegen generate`** ran clean against the new `project.yml`.
 
-S7.5 architectural note: the `Trigger` protocol stays untouched. The two new accessors are concrete-class extensions, not protocol requirements — `TriggerCoordinator` and other consumers see no change.
+11. **Test regression check** — 263/263 tests pass (Debug config). Bundle ID change had no functional impact.
 
-### S7.6 added (UX rewrite — fix-first after owner smoke)
+12. **Release config build verification** — `xcodebuild -configuration Release ... build` → `** BUILD SUCCEEDED **`. Verified built `.app` bundle:
+    - `CFBundleIdentifier = com.parkbyeongjun.latte` ✅
+    - `CFBundleShortVersionString = 1.0.0` ✅
+    - `CFBundleVersion = 1` ✅
 
-8. **`TriggersTab` rewritten end-to-end** — DisclosureGroup-with-Toggle-in-label retired; replaced with `Form { ForEach { TriggerSection } }`. Each `TriggerSection` is a standard macOS `Section` with:
-   - **header**: icon + name + (live voting dot when applicable)
-   - **single Toggle("Enable") row** — standalone control, no click-target collision possible
-   - **inline config form** rendered conditionally on `isOn` (no separate `isExpanded` state)
-   - **footer**: live "Voting awake — …" reason or permission-status hint copy
+13. **Working folder rename `Caffeinated-Clone/ → Latte/`** at the OS level (`mv`). Git tracks files by content hash so this is invisible to history; future commits land under the new path. **Side effect**: this session's Bash tool cwd became stale after the rename, so the final commit had to be deferred to the owner — see "Final commit pending" below.
 
-   Net effect: the P1 subtitle/Toggle state-sync bug logged as `S75-DEF-01` becomes structurally impossible (the Toggle is the only UI carrying enabled-state — there is no longer a parallel `subtitle` reading `trigger.isEnabled` from a different source).
+### Final commit pending (owner action)
 
-9. **`AppTriggerConfigForm`** — "Add from running apps" went from a nested `DisclosureGroup` to a SwiftUI `Menu` (each candidate bundle ID is a `Button`). Eliminates the second nested-disclosure hit-target ambiguity.
+The Bash tool's working directory cache became stale when the project folder was renamed mid-session. All file changes are on disk and the working tree is intact, but `git add` / `git commit` could not be executed from this session. **Owner runs the following from a fresh terminal**:
 
-10. **`WiFiTriggerConfigForm`** — mode picker upgraded from `.radioGroup` to `.segmented` style for a clearer binary on-list / inverse choice.
+```bash
+cd ~/Documents/Claude/Projects/Latte
 
-11. **Outer ForEach** — `id: \.offset` → `id: \.id`. SwiftUI now tracks each `TriggerSection` by trigger identifier rather than ordinal position; safer if the trigger registration order ever changes.
+git status   # should show many M files + ROADMAP/SESSION_HANDOFF + docs/v2-backlog.md
+git add -A
+git commit -m "$(cat <<'EOF'
+feat: session 8a — bundle ID, version 1.0.0, folder rename, S8a metadata
 
-S7.6 has zero protocol or model changes. `Sources/Core/**`, `Sources/Triggers/**`, `Trigger`, `TriggerCoordinator`, `AppEnvironment`, `SettingsStore` — all untouched. Pure SwiftUI restructure of one file.
+Code & metadata prep for App Store submission. Dev-Program-free portion
+of S8 — everything in this commit can be done before owner pays the
+$99/yr Apple Developer Program fee.
 
-### S7.7 added (App trigger UX friendly names — fix-first after second owner smoke)
+- Bundle ID: com.example.latte → com.parkbyeongjun.latte
+  (6 source/config sites + 4 design docs swept; default per V2-20).
+- MARKETING_VERSION: 0.1.0 → 1.0.0 (first App Store version).
+- Working folder: Caffeinated-Clone/ → Latte/ (cosmetic).
+- ROADMAP row 8 split: 8a (this commit, Done) / 8b (owner smoke, Next)
+  / 8.5 (Apple Dev Program enrollment, Blocked HARD).
+- 02-architecture.md v0.16 → v1.0 (design freeze gate).
+- v2-backlog.md V2-20/21/22 added — owner-revisit entries for the
+  bundle ID prefix, git author identity, and GitHub username/repo
+  defaults chosen this session.
 
-12. **`AppDisplayInfo` Sendable struct** — bundle ID + display name + optional PNG-encoded icon data. Defined alongside `WorkspaceSource` in `Sources/Triggers/AppTrigger.swift`. PNG bytes (not `NSImage`) so the type stays `Sendable` and the protocol stays platform-agnostic; the UI converts via `NSImage(data:)` at render time.
+Verified: xcodegen generate clean; 263/263 tests pass; Release config
+build succeeded; built .app bundle has correct CFBundleIdentifier +
+CFBundleShortVersionString.
 
-13. **`WorkspaceSource.displayInfo(for:)` requirement** — new method on the existing live-system adapter abstraction. Mockable by all consumers; the `Trigger` protocol itself is unchanged.
+S7.11 owner smoke checklist remains pending against v1.0.0 build.
+S8.5 (Apple Dev Program) is the next HARD gate.
+EOF
+)"
 
-14. **`NSWorkspaceSource.displayInfo(for:)`** — real adapter implementation. Resolution priority:
-    1. Currently running → `NSRunningApplication.localizedName` + `.icon` (downsampled to 64pt via private `pngData(from:)`).
-    2. Installed bundle → `NSWorkspace.urlForApplication(withBundleIdentifier:)` + `Bundle.localizedInfoDictionary` / `infoDictionary` for the name + `NSWorkspace.icon(forFile:)` for the icon.
-    3. Curated default name → `AppTriggerDefaults.displayName(for:)` (covers Zoom, Microsoft Teams, Webex, Discord, Slack, Google Meet — the same 6 IDs already in `AppTriggerDefaults.bundleIDs`).
-    4. `nil`.
+git log --oneline -3   # should show this commit + 87d1eab + f1888dc
+```
 
-    Sits inside the `NSWorkspaceSource` class which is already on the adapter exemption list (§13 v0.9), so the new method + its inner closures + the private `pngData(from:)` helper are also exempt from the 80% gate.
-
-15. **`MockWorkspaceSource.displayInfoLookup: [String: AppDisplayInfo]`** — stubbable per-bundle-ID override dict for tests; falls through to the curated table when no override is set, matches `nil` for unknown IDs.
-
-16. **`AppTrigger.displayInfo(for:)` passthrough** — thin wrapper so `Sources/UI/Settings/TriggersTab` never reaches into the source layer directly.
-
-17. **`AppTriggerConfigForm` rewrite** —
-    - **Purpose copy** at the top: "Latte stays awake while any of these apps are running. Add the apps that must keep your Mac active — video meetings, presentations, long-running tools."
-    - Each row uses new private `AppRow` view: real app icon (22pt) + friendly display name (body font, top) + bundle ID (caption font, tertiary, bottom — only shown when distinct from displayName).
-    - "Add from running apps" Menu items now show display names sorted case-insensitively rather than raw bundle IDs.
-    - Manual bundle-ID textfield collapsed under a `DisclosureGroup` labelled "Advanced — add by bundle ID" (closed by default). The DisclosureGroup label is purely a non-interactive caption + icon (S7.6 lesson respected — no Toggles or other tappable controls in the label).
-
-18. **Tests** — `Tests/AppTriggerTests.swift` gains 6 new tests covering: the curated displayName mapping (all 6 entries), unknown ID returns nil, Mock fallback to curated table, Mock explicit override priority, Mock nil for unmapped IDs, AppTrigger passthrough composition. **229 → 235 tests, all pass. Coverage gate still PASS.**
-
-S7.7 introduces one small additive protocol extension (`displayInfo(for:)` on `WorkspaceSource`); the `Trigger` protocol, `TriggerCoordinator`, persistence, and all other architecture layers are unchanged. Friendly resolution is purely a render-time concern — `SettingsStore.appTriggerBundleIDs` still stores `[String]` of bundle IDs.
-
-### S7.8 added (App trigger pickable filter + installed-only seed — fix-first after third owner smoke)
-
-19. **`WorkspaceSource.pickableRunningBundleIDs: [String]`** — second protocol extension (alongside `displayInfo(for:)` from S7.7). UI-only filter: real impl filters `runningApplications` to `activationPolicy == .regular` (Dock-visible apps) and excludes the current process via `Bundle.main.bundleIdentifier`. The unfiltered `runningBundleIDs` stays as-is — trigger lifecycle (start-snapshot intersection + `observeLifecycle` notifications) keeps tracking `.accessory` apps if the user manually adds one via Advanced.
-
-20. **`WorkspaceSource.isInstalled(_:) -> Bool`** — third protocol extension. Real impl checks `NSWorkspace.urlForApplication(withBundleIdentifier:) != nil`. Used by `AppTriggerDefaults.installedDefaults(in:)` to filter the seed list.
-
-21. **`SettingsKey.hasSeededAppDefaults`** — new persistence flag. Once set (after first-launch seed), prevents re-seeding even if the user clears their watched list — explicit-empty stays empty.
-
-22. **`AppTrigger.seedInstalledDefaultsIfNeeded()`** — runs in `AppTrigger.init` (one place; not a public API). Logic: if flag unset and raw watched list is empty, write `AppTriggerDefaults.installedDefaults(in: source)` (curated 6 filtered to those `isInstalled`) and set the flag. If raw is non-empty (existing user, or test fixture set the list directly), skip seeding and just set the flag. Fully idempotent.
-
-23. **Removed legacy fallback** — `SettingsStore.appTriggerBundleIDs` getter no longer returns all 6 curated IDs when raw is empty. Empty raw now means "watch nothing." The seeding mechanism is the single source of curated default population.
-
-24. **`AppTriggerDefaults.symbolHint(for:)`** — new SF Symbol category mapping (video-call apps → `video.fill`, chat apps → `bubble.left.and.bubble.right.fill`). Fallback when neither a running-app icon nor an installed-bundle icon resolves.
-
-25. **`AppTriggerDefaults.installedDefaults(in:)`** — `@MainActor` helper filtering `bundleIDs` by `source.isInstalled(_:)`.
-
-26. **TriggersTab UI**:
-    - `AppTriggerConfigForm.runningAppsMenu` uses `pickableRunningBundleIDs` (was `runningBundleIDs`). Items render via SwiftUI `Label { Text(name) } icon: { Image(nsImage:) }` when icon data is available; falls back to `Label(name, systemImage: symbolHint)` for curated category match; falls back to `Text(name)` only when neither icon nor symbol hint is available.
-    - `AppRow.iconView` gains the same SF Symbol fallback layer (real icon → symbolHint → generic `app.fill`).
-    - Empty-state copy refreshed: "No apps configured yet. Use 'Add from running apps' below to add the apps you want Latte to keep awake — or use 'Advanced' for an app that isn't running right now."
-
-27. **Mock helpers**: `MockWorkspaceSource.pickableOverride: [String]?` and `installedOverride: Set<String>?` for explicit test control. Both default to using `runningBundleIDs` when nil.
-
-28. **Tests** — 14 new tests covering: `symbolHint(for:)` × 2 (curated mapping + nil for unknown), Mock `isInstalled` × 3 (default to running, displayInfoLookup keys, override), `installedDefaults` × 2 (filter + empty when none installed), first-launch seeding × 4 (installed-only seed, empty seed sets flag, second-launch no-op, existing config skip), pickable × 3 (Mock default, override, AppTrigger passthrough). `testRequiredKeysExist` extended with the new SettingsKey. **235 → 249 tests, all pass. Coverage gate still PASS (AppTrigger 98.89% — up from 98.68% in S7.7 because the new tests cover the seeding logic; all gated files ≥80%).**
-
-S7.8 introduces two additive protocol requirements + one persistence flag. The `Trigger` protocol itself, `TriggerCoordinator`, `AwakeManager`, and other architecture layers are unchanged.
-
-### S7.9 added (Trigger lifecycle: Toggle OFF + watched-list edit deactivate the cup — fix-first after fourth owner smoke)
-
-29. **`TriggerSection` Toggle now drives the live trigger lifecycle** — onChange spawns a `Task { @MainActor in … }` that calls `coordinator.start(trigger)` on ON or `coordinator.stop(trigger.id)` on OFF. Previously only `trigger.isEnabled = newValue` was set, leaving the live observation running and stale ON votes in the FSM. **Universal across all 4 triggers.**
-
-30. **`AppTrigger.watchedSet` instance var** — replaces the closure-captured `let watched = …` snapshot. Set in `start()` from `settings.appTriggerBundleIDs`, cleared in `stop()`. `handleLaunch(bundleID:)` / `handleTerminate(bundleID:)` simplified to read it (lifecycle closures no longer carry the watched set as a parameter).
-
-31. **`AppTrigger.reevaluateWatched()` public method** — re-reads `settings.appTriggerBundleIDs`, diffs against `watchedSet`, recomputes `matchingRunning = running ∩ watched`, and emits vote ON / OFF / re-emit-ON-with-fresh-reason on transition. Idempotent when nothing changed; no-op when the trigger is stopped (the next `start()` will read fresh data anyway). Called by `AppTriggerConfigForm.commit(_:)` after every add / remove so the live vote stream tracks the watched-list edits within one render pass.
-
-32. **Stream lifecycle hardening** — removed `continuation.finish()` from `AppTrigger.stop()`. Finishing the `AsyncStream` permanently closed it, so any future `start()` could not deliver votes (consumer's `for await` would terminate, future `yield`s would silently drop). Stream is now long-lived for `AppTrigger`'s lifetime; the coordinator cancels its consumer Task on stop and recreates one on start, both subscribing to the same stream. Regression-tested by the new `testRestartAfterStopReEmitsInitialSnapshot`.
-
-33. **Tests** — 6 new tests covering: reevaluate emits ON when adding a new match, OFF when removing the last match, no-op when settings unchanged, re-emits ON when set changes but stays non-empty (so vote reason updates), no-op when called while stopped, and stop+start cycle preserves the stream. Existing `testStopCancelsObservation` comment refreshed for the new lifecycle semantics. **249 → 255 tests, all pass. Coverage gate still PASS (AppTrigger 98.06% — slight drift from S7.8's 98.89% reflects the new reevaluate branches; well above the 80% gate).**
-
-S7.9 introduces one small public method addition (`AppTrigger.reevaluateWatched()`) and one UI rewiring (Toggle → coordinator). The `Trigger` protocol surface, `TriggerCoordinator`, `AwakeManager`, persistence, and other layers are unchanged. WiFi / Calendar / Focus likely have the same "watched-list mutation doesn't reach the live trigger" pattern; deferred to S7.10 if owner re-smoke surfaces it. The Toggle fix already covers "disable this trigger entirely" universally.
-
-### S7.10 added (Per-trigger grace replaces blanket 60 s cool-down — fix-first after fifth owner smoke)
-
-34. **`Trigger.graceSecondsAfterOff: TimeInterval` (default 0 via protocol extension)** — each trigger declares how long the awake assertion should be held after its last organic OFF vote, before releasing it. v1 default for all 4 triggers (App / Calendar / WiFi / Focus): 0 = release immediately.
-
-35. **`TriggerVote.graceSecondsAfterOff: TimeInterval` (default 0)** — Sendable struct field. Carries the trigger's declared grace through the stream → coordinator → manager pipeline so the state machine can branch on it at the moment of vote-OFF. Default 0 means existing call sites compile unchanged.
-
-36. **`AwakeInput.triggerVoteOff(id:graceSeconds:)`** — extended from `(id: String)` to `(id: String, graceSeconds: TimeInterval)`. State machine's `(.awakeTriggered, .triggerVoteOff(id, grace))` arm forks: `grace == 0` returns `.asleep` + `.releaseAssertion` (no timer); `grace > 0` returns `.coolingDown(now + grace, lastVotes: votes)` + `.scheduleTimer(.coolDown, until)` (existing path). Other states' `.triggerVoteOff` arms add `, _` to ignore grace (irrelevant when not in `.awakeTriggered`).
-
-37. **`AwakeManager.receiveTriggerVote`** — extracts `grace` from the vote and forwards `process(.triggerVoteOff(id, graceSeconds: vote.graceSecondsAfterOff))`.
-
-38. **`TriggerCoordinator.stop`** — synthesizes its vote-OFF with `graceSecondsAfterOff: 0` explicitly. User-explicit Toggle OFF always bypasses any per-trigger grace, regardless of what value the trigger declared.
-
-39. **`AppTrigger.reevaluateWatched`** — does the same when the watched-list edit transitions to OFF (user edited the list, expects immediate effect). `AppTrigger.handleTerminate` (organic — system reported the watched app died) emits with `self.graceSecondsAfterOff` (currently 0 by default), preserving the path for triggers that ever override it.
-
-40. **§8 worked-example tests updated** — the cool-down-behavior tests in `AwakeStateMachineWorkedExampleTests` and `TriggerIntegrationTests` now pass `graceSecondsAfterOff: 30` explicitly to exercise the cool-down path. They still verify that path is correct; they just no longer rely on a global 60 s default. New test pair covers both forks: `testAwakeTriggered_triggerVoteOff_lastVote_grace0_goesToAsleepImmediately` (v1 default) + `testAwakeTriggered_triggerVoteOff_lastVote_gracePositive_goesToCoolingDown` (legacy preserved). Two AwakeManager-level integration tests verify `receiveTriggerVote` correctly dispatches grace into the state machine. The S7.9 owner-scenario integration tests in `TriggerCoordinatorTests` were tightened from "coolingDown OR asleep" to strict "asleep" since coordinator.stop now sends grace = 0 deterministically.
-
-41. **Design docs revised** — `03-state-machine.md` v0.2 rewrote §5.2 (the cool-down decision) with the revised rationale: empirical evidence from competitor apps (Amphetamine, Owly, KeepingYouAwake, Caffeinated, Theine, Lungo) showing none use a hidden cool-down, plus the structural observation that Latte's `.asleep` only releases the IOPMAssertion (macOS still respects its own 5–15 min idle timeout before actually sleeping, so the cool-down was largely working invisibly underneath the OS timer with no perceptible benefit). `02-architecture.md` v0.15 §13 captures the architectural surgery. The legacy `AwakeManagerConstants.coolDownSeconds = 60` constant is no longer consulted by the state machine — grace is sourced from each individual OFF vote.
-
-42. **255 → 261 tests, all pass.** Coverage gate: AwakeManager 94.26% (up from 94.12%), AppTrigger 98.62%, TriggerCoordinator 92.96%, Trigger 83.33% — all above 80%.
-
-S7.10 is the largest of the S7-family iterations: 1 protocol extension, 1 input signature change, 1 state machine arm forked, 6 emit-site adjustments, 7 test sites updated. The `Trigger` surface stays default-impl-friendly so any external implementer is unaffected. The `Trigger` protocol, `TriggerCoordinator`, and persistence shapes are unchanged for v1; WiFi / Calendar / Focus stay at grace = 0.
-
-### S7.11 added (Stream-lifecycle parity for the other 3 triggers + first AppIcon raster set — closes the S7-family iteration)
-
-43. **`continuation.finish()` removed from CalendarTrigger.stop() / WiFiTrigger.stop() / FocusTrigger.stop()** — mirroring the S7.9 fix that was originally applied to AppTrigger only. Latent bug: any future Toggle OFF → ON cycle on those three triggers would have silently killed the AsyncStream and broken the cup re-activation, identical to the pre-S7.9 AppTrigger bug. Owner is exercising App trigger first so this hadn't surfaced yet, but it's a clear regression risk for any next smoke pass that touches the others. Each `stop()` now leaves the AsyncStream open for the trigger's lifetime; the coordinator is solely responsible for cancelling/recreating its consumer Task across cycles. Identical explanatory comment dropped into each.
-
-44. **Three corresponding tests refreshed** — `CalendarTriggerTests` (the start-restart-stop test asserting "stream finishes after stop"), `WiFiTriggerTests` (same pattern), `FocusTriggerTests` (same pattern). Replaced the "stream finishes" expectation with a bounded-timeout `Task.cancel()` probe that asserts "no further votes are yielded after stop." Matches the post-S7.9 `testStopCancelsObservation` style on AppTrigger. 261 → 263 tests, all pass. Coverage stays PASS — CalendarTrigger 98.79% (up from 98.75% via fewer skipped lines on stop), WiFiTrigger 96.61% (up from 96.55%), FocusTrigger 97.98% (up from 97.94%); all gated files ≥ 80%.
-
-45. **F-1.C.04 — App icon bundle landed**. Owner supplied a 1254×1254 PNG master ("Latte icon.png" in repo root). Generated the 10 macOS AppIcon raster sizes via `sips -s format png -z N N <src> --out <dst>` (16, 32, 64, 128, 256, 512, 1024 — covering 1x/2x of 16/32/128/256/512). Files committed to `Resources/Assets.xcassets/AppIcon.appiconset/` with the matching `filename` keys added to `Contents.json` per Apple's asset catalog format. Source master + a 1024×1024 marketing variant filed under `docs/design/assets/icon-master-1254.png` and `docs/design/assets/icon-1024.png`. Original repo-root PNG moved out so we don't ship a stray asset. Per `docs/design/05-icon-spec.md` §6.1 / §7, the asset bundle is now ready for App Store; Icon Composer / dark / tinted variants remain as optional follow-ups owner can add later.
-
-S7.11 introduces no protocol or state machine changes — the `Trigger` API surface, `TriggerVote`, `AwakeManager`, and persistence shapes are unchanged. **This sub-session closes the S7-family iteration**: S7 → S7.5 → S7.6 → S7.7 → S7.8 → S7.9 → S7.10 → S7.11, eight iterations across 2026-04-26 → 2026-04-27, 178 → 263 tests, ROADMAP 0.9 → 0.16, 02-architecture 0.9 → 0.16. Remaining S8 work (App Store prep) is owner-side: Apple Dev Program enrollment, bundle ID prefix decision (replaces `com.example.latte`), folder rename `Caffeinated-Clone/` → `Latte/`, and one final re-smoke against the S7.11 build.
+If the commit fails on hook, address the issue and re-stage (do not `--amend`). Once committed, this handoff is fully realized and S8a is closed.
 
 ### What's NOT done (intentional)
 
-- **Owner-side manual smoke checklist** in `docs/QA_LOG.md` is checked-in but unchecked — Claude cannot drive the menu-bar UI. Owner runs through this (including the §S7.7 + §S7.8 + §S7.9 + §S7.10 + §S7.11 addendums covering App-trigger friendly names, pickable filter, installed-only seed, watched-list reevaluate, per-trigger grace, stream-lifecycle parity for the other 3 triggers, and AppIcon bundle visibility) and ticks lines (or logs defects in the same doc) before S8 starts in earnest. Gate for S8 is: zero P1 items in QA_LOG.
-- **macOS 13/14/15 matrix smoke** — deferred to S9 (TestFlight). Dev box is macOS 26 only.
-- **`AwakeManager` coverage** sits at 94.1% — the remaining 6% is mostly the two log-only paths in the IOKit power-source observer; not worth contorting tests to chase. Documented in 02 §13 v0.9.
-- **`Trigger` protocol file** at 82.8% — the 5 missed lines are default-impl fallbacks for protocols that are always overridden by concrete types. Right at the gate; do not "improve" with pointless override tests.
+- **Owner pre-flight smoke (S8b)** — `docs/QA_LOG.md` §S7.11 checklist + the new screenshot capture pass per `docs/store/screenshot-guide.md`. Claude cannot drive the menu-bar UI; this is owner-only.
+- **GitHub Pages deploy** — files in `docs/site/` are ready but the `bj-park/latte` repo's `gh-pages` branch (or a separate `latte-site` repo) must be created by owner. Verify `https://bj-park.github.io/latte/privacy.html` returns HTTP 200 before App Store submission.
+- **Apple Developer Program enrollment** — $99/yr, 1-2 day approval. HARD gate for everything in S8.5+.
+- **Bundle ID lock-in** — `com.parkbyeongjun.latte` is a default. Once submitted to App Store, bundle ID is **immutable** for the app's lifetime. Owner has one revisit window (V2-20) before S9 submission.
+- **Git author rewrite for past commits** — the 8 S7-family commits + `87d1eab` were authored under the system username. Not rewriting history (V2-21 documents the choice).
 
 ---
 
 ## Decisions still pending owner approval
 
-- **None blocking S8.** S7 introduced no architectural changes — only tests and a documentation/exemption clarification. Owner sign-off is not required to proceed with S8 setup, but **is** required before submission (G6).
+- **None blocking S8b.** Owner can run pre-flight smoke immediately.
+- **Bundle ID lock-in confirmation** before S9 (App Store Connect record creation). This is the last revisit window per V2-20.
 
 ---
 
 ## Known issues / debt
 
-- **`Theme.Colors.accentAwake` static alias** still lingering as a 1-line forwarder to `CoffeeAccent.default.color`. Drop it in S10 cleanup pass; not worth the diff churn now.
-- **`docs/QA_LOG.md` smoke checklist is unchecked** — see above. This is the only S7→S8 prerequisite.
-- **EKCalendar list picker (Phase 1.5.B)** — Calendar config form ships with steppers + all-day toggle but no calendar-list selection (would need live `EKEventStore.calendars(for:)` + permission grant). Open as a follow-up; not S8-blocking.
-- **Per-Focus selection** — Apple-API-blocked. Reassess when `INFocusStatusCenter` exposes stable third-party Focus identifiers.
+- **Bash tool cwd stale this session** — owner must run final `git commit` from a fresh terminal as shown above. New chat sessions will pick up the renamed folder cleanly.
+- **`docs/QA_LOG.md` smoke checklist still owed** — same as before, now superseded by the v1.0.0 build re-smoke for S8b.
+- **EKCalendar list picker** (V2-04), **per-Focus selection** (V2-03), **`Theme.Colors.accentAwake` cleanup** (V2-10), **menu-bar awake-state visualization** (V2-01) — all formally in `docs/v2-backlog.md`. None block App Store submission.
 
 ---
 
-## Files changed this session
+## Files changed this session (cumulative across both planned commits)
+
+### Already in `87d1eab`
 
 ```
-S7 (commit 8592098):
-A  Tests/PowerAssertionTests.swift
-M  Tests/SettingsStoreTests.swift
-M  Tests/WiFiTriggerTests.swift
-M  Tests/CalendarTriggerTests.swift
-A  docs/QA_LOG.md
-M  docs/design/02-architecture.md   (v0.9, §13 entry)
-M  ROADMAP.md                        (v0.9; row 7 → done, row 8 → next)
-M  docs/SESSION_HANDOFF.md
+A  docs/v2-backlog.md                          (initial 7-item backlog)
+A  docs/site/index.html
+A  docs/site/privacy.html
+A  docs/site/README.md
+A  docs/store/README.md
+A  docs/store/app-name.txt
+A  docs/store/subtitle-en.txt
+A  docs/store/subtitle-ko.txt
+A  docs/store/promotional-text-en.txt
+A  docs/store/promotional-text-ko.txt
+A  docs/store/description-en.md
+A  docs/store/description-ko.md
+A  docs/store/whats-new-en.md
+A  docs/store/whats-new-ko.md
+A  docs/store/keywords-en.txt
+A  docs/store/keywords-ko.txt
+A  docs/store/category.txt
+A  docs/store/pricing.txt
+A  docs/store/support-url.txt
+A  docs/store/marketing-url.txt
+A  docs/store/privacy-url.txt
+A  docs/store/privacy-data.md
+A  docs/store/age-rating.md
+A  docs/store/review-notes.md
+A  docs/store/screenshot-guide.md
+A  docs/store/screenshots/.gitkeep
+```
 
-S7.5 (commit c9042c0):
-M  Sources/Triggers/AppTrigger.swift          (+ runningBundleIDs accessor)
-M  Sources/Triggers/WiFiTrigger.swift         (+ currentSSID accessor)
-M  Sources/UI/Settings/TriggersTab.swift      (DisclosureGroup rewrite + 4 config forms)
-M  Tests/AppTriggerTests.swift                (+ testRunningBundleIDsPassThrough)
-M  Tests/WiFiTriggerTests.swift               (+ testCurrentSSIDPassThrough)
-M  ROADMAP.md                                 (v0.10)
-M  docs/design/02-architecture.md             (v0.10)
-M  docs/SESSION_HANDOFF.md
+### Pending S8a-final commit (working tree)
 
-S7.6 (commit 47fc8ab):
-M  Sources/UI/Settings/TriggersTab.swift      (Section-per-trigger rewrite — DisclosureGroup retired)
-M  ROADMAP.md                                 (v0.11)
-M  docs/design/02-architecture.md             (v0.11)
-M  docs/QA_LOG.md                              (logged S75-DEF-01 + S75-DEF-02, both fixed-in-S7.6)
-M  docs/SESSION_HANDOFF.md                    (this file)
-~  Latte.xcodeproj                             (gitignored — re-run `xcodegen generate` after adding files)
-
-S7.7 (commit 9130ccc):
-M  Sources/Triggers/AppTrigger.swift          (+ AppDisplayInfo struct, + WorkspaceSource.displayInfo,
-                                                + NSWorkspaceSource.displayInfo + pngData helper,
-                                                + Mock.displayInfoLookup, + AppTrigger.displayInfo passthrough,
-                                                + AppTriggerDefaults.displayName mapping)
-M  Sources/UI/Settings/TriggersTab.swift      (AppTriggerConfigForm rewrite — purpose copy + AppRow with
-                                                icon + display name + bundle ID secondary; running-apps Menu
-                                                shows display names; manual input collapsed under Advanced
-                                                DisclosureGroup)
-M  Tests/AppTriggerTests.swift                (+ 6 displayInfo / curated-mapping / passthrough tests;
-                                                229 → 235 tests)
-M  ROADMAP.md                                 (v0.12)
-M  docs/design/02-architecture.md             (v0.12, §13 entry)
-M  docs/QA_LOG.md                              (logged S76-DEF-01 fixed-in-S7.7 + S7.7 smoke checklist
-                                                addendum + post-S7.7 coverage snapshot)
-M  docs/SESSION_HANDOFF.md
-
-S7.8 (commit c60fef7):
-M  Sources/Core/SettingsStore.swift           (+ SettingsKey.hasSeededAppDefaults)
-M  Sources/Triggers/AppTrigger.swift          (+ WorkspaceSource.pickableRunningBundleIDs,
-                                                + WorkspaceSource.isInstalled,
-                                                + NSWorkspaceSource real impls (.regular filter, urlForApplication),
-                                                + Mock.pickableOverride / installedOverride,
-                                                + AppTriggerDefaults.symbolHint mapping,
-                                                + AppTriggerDefaults.installedDefaults helper,
-                                                + AppTrigger.init seed-on-first-launch,
-                                                + AppTrigger.pickableRunningBundleIDs passthrough,
-                                                ~ SettingsStore.appTriggerBundleIDs getter — removed
-                                                  legacy "fall back to all 6 curated when empty" branch)
-M  Sources/UI/Settings/TriggersTab.swift      (Menu uses pickableRunningBundleIDs + Label icon w/ SF Symbol
-                                                fallback; AppRow iconView SF Symbol fallback; refreshed
-                                                empty-state copy)
-M  Tests/AppTriggerTests.swift                (+ 14 tests: symbol hint × 2, isInstalled × 3,
-                                                installedDefaults × 2, first-launch seed × 4, pickable × 3;
-                                                refreshed testDisabledTriggerNoOpOnStart comment;
-                                                235 → 249 tests)
-M  Tests/SettingsStoreTests.swift             (testRequiredKeysExist — added new SettingsKey rawValue)
-M  ROADMAP.md                                 (v0.13)
-M  docs/design/02-architecture.md             (v0.13, §13 entry)
-M  docs/QA_LOG.md                              (logged S77-DEF-01..03 all fixed-in-S7.8 + S7.8 smoke
-                                                checklist addendum + post-S7.8 coverage snapshot)
-M  docs/SESSION_HANDOFF.md
-
-S7.9 (commit c6ca287):
-M  Sources/Triggers/AppTrigger.swift          (+ private var watchedSet — instance var replaces
-                                                  closure-captured `let watched` in start();
-                                                + public func reevaluateWatched() with ON/OFF/re-emit
-                                                  transition logic;
-                                                ~ handleLaunch(bundleID:) / handleTerminate(bundleID:)
-                                                  signatures simplified — read watchedSet directly;
-                                                ~ stop() — removed `continuation.finish()` so the
-                                                  AsyncStream stays open across Toggle OFF→ON cycles;
-                                                  watchedSet cleared too)
-M  Sources/UI/Settings/TriggersTab.swift      (TriggerSection now takes coordinator; Toggle.onChange
-                                                spawns Task that calls coordinator.start/stop on the
-                                                live trigger — universal across all 4 triggers;
-                                                AppTriggerConfigForm.commit calls trigger.reevaluateWatched
-                                                after writing settings)
-M  Tests/AppTriggerTests.swift                (+ 6 tests — 5 reevaluateWatched cases + 1 restart-after-stop
-                                                regression; refreshed testStopCancelsObservation comment;
-                                                249 → 255 tests)
-M  ROADMAP.md                                 (v0.14)
-M  docs/design/02-architecture.md             (v0.14, §13 entry)
-M  docs/QA_LOG.md                              (logged S78-DEF-01..02 fixed-in-S7.9 + S7.9 smoke
-                                                checklist addendum + post-S7.9 coverage snapshot +
-                                                S7.10 candidate note)
-M  docs/SESSION_HANDOFF.md
-
-S7.10 (commit 1437485):
-M  Sources/Triggers/Trigger.swift             (+ var graceSecondsAfterOff: TimeInterval requirement
-                                                  on the Trigger protocol, with default-impl extension
-                                                  returning 0 — every trigger inherits v1 immediate-OFF)
-M  Sources/Core/AwakeManager.swift            (+ TriggerVote.graceSecondsAfterOff field (Sendable, default 0);
-                                                ~ AwakeInput.triggerVoteOff(id) → (id, graceSeconds);
-                                                ~ AwakeStateMachine.step (.awakeTriggered, .triggerVoteOff)
-                                                  forks on grace == 0 (direct .asleep + releaseAssertion)
-                                                  vs grace > 0 (.coolingDown(now+grace) — existing path);
-                                                ~ other states' .triggerVoteOff arms ignore grace;
-                                                ~ AwakeManager.receiveTriggerVote extracts grace from vote
-                                                  and forwards to .triggerVoteOff(id, graceSeconds:))
-M  Sources/Triggers/TriggerCoordinator.swift  (~ stop() synthesizes vote-OFF with graceSecondsAfterOff: 0
-                                                  explicitly — user Toggle OFF always bypasses any
-                                                  per-trigger grace)
-M  Sources/Triggers/AppTrigger.swift          (~ reevaluateWatched yields with graceSecondsAfterOff: 0
-                                                  on the user-explicit transition-to-OFF;
-                                                  ~ handleTerminate yields with self.graceSecondsAfterOff
-                                                    so future triggers can opt into a grace period)
-M  Tests/AwakeManagerTests.swift              (~ 7 .triggerVoteOff sites updated to new signature;
-                                                ~ test81/82/85 worked-example tests now pass grace=30
-                                                  explicitly to exercise cool-down path;
-                                                + testAwakeTriggered_triggerVoteOff_lastVote_grace0_*
-                                                  + testAwakeTriggered_triggerVoteOff_lastVote_gracePositive_*
-                                                + 2 AwakeManager-level tests for receiveTriggerVote dispatch
-                                                + test81_v1Default for documenting the new default)
-M  Tests/TriggerIntegrationTests.swift        (~ test82_BackToBackMeetings now passes grace=30 explicitly
-                                                  to exercise the cooling-absorbs-gap behaviour)
-M  Tests/TriggerCoordinatorTests.swift        (~ S7.9 owner-scenario tests tightened — strict .asleep
-                                                  expectation since coordinator.stop now sends grace=0)
-M  ROADMAP.md                                 (v0.15)
-M  docs/design/02-architecture.md             (v0.15, §13 entry)
-M  docs/design/03-state-machine.md            (v0.2 — §5.2 rewritten with revised rationale;
-                                                input table + change log updated)
-M  docs/QA_LOG.md                              (logged S79-DEF-01 fixed-in-S7.10 + S7.10 smoke checklist
-                                                addendum + post-S7.10 coverage snapshot)
-M  docs/SESSION_HANDOFF.md
-
-S7.11 (this commit):
-M  Sources/Triggers/CalendarTrigger.swift     (~ stop() — removed continuation.finish() so Toggle OFF→ON
-                                                  cycles work; matches the S7.9 AppTrigger fix)
-M  Sources/Triggers/WiFiTrigger.swift         (~ stop() — same fix as Calendar)
-M  Sources/Triggers/FocusTrigger.swift        (~ stop() — same fix as Calendar)
-M  Tests/CalendarTriggerTests.swift           (~ start-restart-stop test refreshed: "stream finishes
-                                                  after stop" → "no further votes after stop" via
-                                                  bounded-timeout Task.cancel probe)
-M  Tests/WiFiTriggerTests.swift               (~ same test pattern refresh)
-M  Tests/FocusTriggerTests.swift              (~ same test pattern refresh)
-A  Tests/TriggerCoordinatorTests.swift        (+ testOwnerScenarioToggleOnActivatesImmediatelyWhenWatchedAppRunning
-                                                + testOwnerScenarioToggleOnNoMatchStaysInactive — verifies
-                                                  S7.10's grace=0 path delivers immediate cup activation
-                                                  when the user toggles a trigger ON)
-A  Resources/Assets.xcassets/AppIcon.appiconset/icon_16x16.png        (16×16 raster from owner master)
-A  Resources/Assets.xcassets/AppIcon.appiconset/icon_16x16@2x.png     (32×32)
-A  Resources/Assets.xcassets/AppIcon.appiconset/icon_32x32.png        (32×32)
-A  Resources/Assets.xcassets/AppIcon.appiconset/icon_32x32@2x.png     (64×64)
-A  Resources/Assets.xcassets/AppIcon.appiconset/icon_128x128.png      (128×128)
-A  Resources/Assets.xcassets/AppIcon.appiconset/icon_128x128@2x.png   (256×256)
-A  Resources/Assets.xcassets/AppIcon.appiconset/icon_256x256.png      (256×256)
-A  Resources/Assets.xcassets/AppIcon.appiconset/icon_256x256@2x.png   (512×512)
-A  Resources/Assets.xcassets/AppIcon.appiconset/icon_512x512.png      (512×512)
-A  Resources/Assets.xcassets/AppIcon.appiconset/icon_512x512@2x.png   (1024×1024)
-M  Resources/Assets.xcassets/AppIcon.appiconset/Contents.json   (added filename keys per raster)
-A  docs/design/assets/icon-master-1254.png    (the 1254×1254 owner-supplied master, archived)
-A  docs/design/assets/icon-1024.png           (1024×1024 marketing variant per 05-icon-spec §6.3)
-M  ROADMAP.md                                 (v0.16 — closes the S7-family iteration)
-M  docs/design/02-architecture.md             (v0.16, §13 entry)
-M  docs/QA_LOG.md                              (logged S710-DEF-01 fixed-in-S7.11 + S7.11 smoke
-                                                checklist addendum + post-S7.11 coverage snapshot)
-M  docs/SESSION_HANDOFF.md                    (this file)
+```
+M  project.yml                                 (bundleIdPrefix, 2× PRODUCT_BUNDLE_IDENTIFIER, MARKETING_VERSION)
+M  Sources/Core/Logging.swift                  (subsystem string)
+M  Sources/Core/PowerAssertion.swift           (subsystem string)
+M  Sources/Core/SettingsStore.swift            (subsystem string)
+M  docs/design/01-PRD.md                       (working folder note, bundle ID, R-09)
+M  docs/design/02-architecture.md              (v0.16 → v1.0, §6.2 logging snippet)
+M  docs/design/04-data-model.md                (container path + defaults read example)
+M  docs/QA_LOG.md                              (pmset / defaults delete commands)
+M  docs/site/README.md                         (bj-park/latte URLs)
+M  docs/site/privacy.html                      (§3 storage path)
+M  docs/store/support-url.txt                  (bj-park/latte URL)
+M  docs/store/marketing-url.txt                (bj-park/latte URL)
+M  docs/store/privacy-url.txt                  (bj-park/latte URL)
+M  docs/v2-backlog.md                          (+ V2-20/21/22 owner-revisit entries)
+M  ROADMAP.md                                  (working folder header, row 8 split, v1.0 changelog entry)
+M  docs/SESSION_HANDOFF.md                     (this file, S8 → S8a/8b)
+~  Latte.xcodeproj                              (gitignored — re-run xcodegen if needed)
 ```
 
 ---
@@ -389,110 +210,85 @@ M  docs/SESSION_HANDOFF.md                    (this file)
 ## How to resume
 
 ```bash
-cd ~/Documents/Claude/Projects/Caffeinated-Clone
-git log --oneline -3       # latest commit should be the S7 commit
-xcodebuild test -scheme Latte -destination "platform=macOS,arch=arm64" \
-  -enableCodeCoverage YES -resultBundlePath /tmp/Latte_S8_baseline.xcresult
-xcrun xccov view --report /tmp/Latte_S8_baseline.xcresult | head -20
+cd ~/Documents/Claude/Projects/Latte
+git status         # Verify the S8a-final commit landed (or do it now per the block above)
+git log --oneline -3
+xcodebuild test -scheme Latte -destination "platform=macOS,arch=arm64" 2>&1 | tail -5
 ```
 
-If the totals match S7 (227 tests, ≥80% on all gated files), proceed to the §"Next session entry point" section below. If not, that's S7 regression — investigate before starting S8 work.
+If totals match S8a (263/263 tests, build succeeds), proceed to "Next session entry point" below.
 
 ---
 
 ## Next session entry point
 
-**Theme**: App Store prep (session 8 of ~10)
+**Theme**: S8b — Owner pre-flight smoke + GitHub Pages deploy + screenshot capture. **No Dev Program required.**
 
-**Goal**: Get to "ready to submit" state — App Store Connect record created, app metadata drafted, screenshots captured, Privacy Policy hosted, GitHub Pages landing page up. Submission button itself stays unpressed until S9 beta feedback is in.
+### Pre-session prerequisites (owner)
 
-### Pre-session prerequisites (owner — these are HARD blockers)
-
-- [ ] **Apple Developer Program enrollment** (`$99/yr`, 1–2 day approval) → <https://developer.apple.com/programs/>. Without this, no App Store Connect access, no signing, no TestFlight.
-- [ ] **App icon PNG** (1024×1024, no alpha, no rounded corners, no embedded shadows) per the brief in `docs/design/05-icon-spec.md`. Place at `Resources/Assets.xcassets/AppIcon.appiconset/icon-1024.png` (Asset Catalog auto-scales to other sizes).
-- [ ] **Bundle ID prefix decision** (e.g., `com.parkbyeongjun.latte`, `com.hightempier.latte`). Replaces `com.example.latte` everywhere — `project.yml`, `Configuration/Latte.entitlements`, App Store Connect record. Pick one and stick with it; renaming after submission is painful.
-- [ ] **Filesystem rename** `Caffeinated-Clone/` → `Latte/` (purely cosmetic but easier now than after the Git history grows further).
-- [ ] **`docs/QA_LOG.md` smoke checklist** ticked (or P1 defects logged + S7-fix commit before S8).
-- [ ] **Author identity for git commits** — currently shows the system username. Run once, before any push to GitHub:
-  ```bash
-  git config --global user.email "hightempier18@gmail.com"
-  git config --global user.name "박병준"
-  ```
+- [ ] Final S8a commit landed (per "Final commit pending" block above).
+- [ ] Re-built `Latte.app` from the Release config: `xcodebuild -scheme Latte -configuration Release -destination "platform=macOS,arch=arm64" build`. Run `~/Library/Developer/Xcode/DerivedData/Latte-*/Build/Products/Release/Latte.app`.
 
 ### To-do (in order)
 
-#### A. Renames & identity (~30 min, requires owner decisions)
+#### 1. S7.11 re-smoke against v1.0.0 build (~30 min, owner-only)
 
-1. Decide bundle ID prefix. Update:
-   - `project.yml` → `targets.Latte.settings.base.PRODUCT_BUNDLE_IDENTIFIER`.
-   - `Configuration/Latte.entitlements` if any keychain/iCloud entitlement embeds the prefix.
-   - Re-run `xcodegen generate`.
-2. Rename project folder `Caffeinated-Clone/` → `Latte/` (use `git mv` to preserve history; update any path-bound references in CLAUDE.md / memory files / scripts).
-3. Drop the App Icon PNG into `Resources/Assets.xcassets/AppIcon.appiconset/` and verify the catalog references it (`Contents.json` → `1024x1024` slot).
-4. Re-run the full test suite to make sure renames didn't break the build.
+Run through `docs/QA_LOG.md` §S7.11 checklist plus the post-S7.10 owner smoke checklist. Particular attention to:
+- Calendar / WiFi / Focus Toggle OFF → ON cycles (S7.11 fixed the latent stream-finish bug for these).
+- AppIcon visible at 16/32/128 sizes in Finder/Dock.
+- App trigger (S7.8/9/10 fixes) still intact.
+- `pmset -g assertions | grep -i com.parkbyeongjun.latte` shows the assertion when active and zero when off.
 
-#### B. App Store Connect record (~60 min, owner-driven)
+If P1 surfaces, fix-first then continue. If clean, tick the checklist in `QA_LOG.md` and commit.
 
-5. Sign in to App Store Connect → Apps → New App. Fill:
-   - Platform: macOS
-   - Bundle ID: as decided in step 1 (must match Xcode exactly)
-   - SKU: anything stable, e.g., `latte-001`
-   - Primary language: English (US)
-   - User access: Full access (default)
-6. App Information section:
-   - Name: **Latte**
-   - Subtitle (≤30 chars): e.g. *Smart caffeine for your Mac*
-   - Category: Utilities (primary), Productivity (secondary)
-   - Content rights: own all content, no third-party advertising
-7. Pricing & Availability: $2.99 one-time, all territories where Apple permits.
-8. App Privacy: declare data collection (none — Latte stores all settings locally in UserDefaults, no telemetry, no analytics in v1.0). Tick "No data collected" with rationale.
+#### 2. Capture marketing screenshots (~90 min, owner-only)
 
-#### C. Screenshots & metadata (~90 min)
+Per `docs/store/screenshot-guide.md` — 5 shots at 2880×1800 against the Release build. Drop into `docs/store/screenshots/` with the prescribed filenames (`01-hero.png` … `05-about.png`). Pre-upload checklist in the same file. Commit when done.
 
-9. Capture marketing screenshots — required sizes per Apple guidelines (currently 2880×1800 / 2560×1600 for macOS). Suggested set:
-   - Menu-bar dropdown with cup animation mid-fill, on a Big Sur+ desktop.
-   - Settings → General with the Coffee tone Picker open and Preview cup visible.
-   - Settings → Triggers showing all four triggers with vote indicators.
-   - "About" tab to humanize the app.
-10. Draft App Store description (≤4000 chars) and "What's New" (≤4000 chars). Lead with the differentiator: "Latte sleeps when you do — wakes for meetings, mutes when you're done." Avoid mentioning competitors by name.
-11. Keywords (≤100 chars total, comma-separated): e.g., `caffeine,sleep,awake,meeting,zoom,focus,menu bar,utility,productivity`.
-12. Support URL + Marketing URL: GitHub Pages (set up in step D).
+#### 3. Deploy GitHub Pages (~30 min, owner)
 
-#### D. GitHub Pages site for Privacy Policy + landing (~60 min)
+Create `bj-park/latte` repo on GitHub if not already there. Push the local repo. Then per `docs/site/README.md` Option A (or Option B if owner prefers separate repo):
 
-13. Create branch `gh-pages` (or use a separate `latte-site/` repo). Drop a one-page `index.html` (Latte landing) and `privacy.html` (Privacy Policy — App Store requires a hosted URL for this).
-14. Privacy Policy template covers: no data collection, all settings stored locally, no third-party analytics, no network calls in v1.0, contact email.
-15. Verify both URLs serve over HTTPS (required by App Store).
+```bash
+git checkout --orphan gh-pages
+git rm -rf .
+cp -r docs/site/* .
+git add index.html privacy.html README.md
+git commit -m "site: initial Latte marketing + privacy"
+git push -u origin gh-pages
+git checkout main
+```
 
-#### E. Build for submission (~30 min)
+Then GitHub Pages settings → Source = `gh-pages` branch → root.
 
-16. Bump `MARKETING_VERSION` to `1.0.0` and `CURRENT_PROJECT_VERSION` to `1` in `project.yml`.
-17. Archive build: `xcodebuild archive -scheme Latte -destination "platform=macOS,arch=arm64" -archivePath /tmp/Latte.xcarchive`.
-18. Verify the archive opens cleanly in Xcode → Organizer.
-19. **Do not click "Distribute App" yet** — that's S10 after beta feedback.
+Verify:
+```bash
+curl -sI https://bj-park.github.io/latte/privacy.html | head -5
+# Must show: HTTP/2 200 + content-type: text/html
+```
 
-#### F. Wrap (~15 min)
+#### 4. Wrap S8b (~15 min)
 
-20. Bump `02-architecture.md` to v1.0 once renames + bundle ID are in.
-21. Bump `ROADMAP.md` row 8 → 🟢 Done, row 9 → 🟡 Next.
-22. Overwrite `docs/SESSION_HANDOFF.md` for session 9 entry — TestFlight beta launch.
-23. Commit as `feat: session 8 — App Store prep (metadata + screenshots + landing site)`.
+- Tick the smoke checklist in `docs/QA_LOG.md`.
+- Update `docs/store/{support,marketing,privacy}-url.txt` if final hosted URLs diverge from the default `bj-park.github.io/latte/`.
+- ROADMAP row 8b → 🟢 Done; row 8.5 → 🟡 Next (owner ready to enroll).
+- Overwrite this `SESSION_HANDOFF.md` for S8.5 entry.
+- Commit as `feat: session 8b — owner pre-flight smoke + screenshots + GitHub Pages live`.
 
 ### Cannot-start-without checks
 
-- Apple Developer Program enrollment **complete** and Team ID known (Xcode → Settings → Accounts).
-- App Icon PNG **delivered**.
-- Bundle ID prefix **decided**.
-- `docs/QA_LOG.md` smoke ticked OR P1 defects fixed.
+- S8a-final commit landed (per "Final commit pending" above).
+- Owner has GitHub account + write access to a repo for the marketing site.
 
-If any of the above is still pending, **do not start S8**. Instead, defer S8 to a later date and use the time to finish the prerequisites — they cannot be done by Claude.
+If any pending, do not start S8b.
 
 ---
 
 ## Recap quick stats
 
-- 227 tests, all passing.
-- Core/ + Triggers/ all ≥80%.
-- 0 P1 defects logged (smoke checklist still owed).
-- 0 architectural changes since S6.
-- Single commit for S7 (per `git-workflow.md` style).
+- 263 tests, all passing.
+- Core/ + Triggers/ all ≥ 80% coverage.
+- 0 P1 defects logged (S7.11 smoke checklist still owed against v1.0.0 build).
+- 0 architectural changes since S7.11; only metadata + bundle ID + version + folder.
+- 2 commits planned for S8a: `87d1eab` landed; S8a-final pending owner.
+- Working folder is now `Latte/`. The path `~/Documents/Claude/Projects/Caffeinated-Clone/` no longer exists.

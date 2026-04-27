@@ -1,6 +1,6 @@
-Your Mac stays awake when you need it. Sleeps when you don't.
+Never let your Mac sleep at the wrong moment.
 
-Latte is a menu bar utility that prevents your Mac from sleeping — but unlike every other "stay awake" app, you don't have to remember to toggle it. Latte watches your context and decides for you.
+Latte stays awake automatically — for meetings, presentations, downloads, or wherever your day takes you. It's a menu bar utility that prevents your Mac from sleeping — but unlike every other "stay awake" app, you don't have to remember to toggle it. Latte watches your context and decides for you.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 WHY LATTE
@@ -52,7 +52,7 @@ Read the full Privacy Policy on our site (linked below). Plain English. No trick
 ONE-TIME PURCHASE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-$2.99 once. No subscription. No upgrade-as-a-service. Pay once, own forever.
+$2.99 once. No subscription, ever. No upgrade-as-a-service. No "Plus" tier rent-seeking. Pay once, own forever.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 REQUIREMENTS

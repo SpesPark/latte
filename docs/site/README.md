@@ -26,8 +26,8 @@ git checkout main
 
 GitHub Pages settings → Source = `gh-pages` branch → root.
 URLs:
-- Landing: `https://<github-username>.github.io/<repo>/`
-- Privacy: `https://<github-username>.github.io/<repo>/privacy.html`
+- Landing: `https://bj-park.github.io/latte/`
+- Privacy: `https://bj-park.github.io/latte/privacy.html`
 
 ### Option B — separate `latte-site` repo (cleaner for App Store reviewer)
 
@@ -41,8 +41,8 @@ git push -u origin main
 
 GitHub Pages settings → Source = `main` branch → root.
 URLs:
-- Landing: `https://<github-username>.github.io/latte-site/`
-- Privacy: `https://<github-username>.github.io/latte-site/privacy.html`
+- Landing: `https://bj-park.github.io/latte-site/`
+- Privacy: `https://bj-park.github.io/latte-site/privacy.html`
 
 ### Option C — custom domain (post-launch, optional)
 
