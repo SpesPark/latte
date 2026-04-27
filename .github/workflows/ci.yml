@@ -1,0 +1,63 @@
+name: CI
+
+# Triggered on push to main and on PRs targeting main. Runs build + tests on
+# a macOS GitHub-hosted runner. UI-driving smoke scenarios (those that need a
+# logged-in console session, screencapture permission, or window-id capture)
+# are intentionally NOT in CI — they live in `.smoke/scenarios/` and are run
+# locally by the owner via `~/dev/smoke-harness/run.sh`.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    name: Build + Test
+    runs-on: macos-15
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain versions
+        run: |
+          sw_vers
+          xcodebuild -version
+          swift --version
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build (Debug)
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -scheme Latte \
+            -destination 'platform=macOS,arch=arm64' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            | tail -200
+
+      - name: Test
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -scheme Latte \
+            -destination 'platform=macOS,arch=arm64' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            -resultBundlePath TestResults.xcresult \
+            | tail -300
+
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults.xcresult
+          retention-days: 7

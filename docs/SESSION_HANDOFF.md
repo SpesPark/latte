@@ -206,10 +206,14 @@ After the initial S8c commit (`7e55ae4`), two extension passes landed:
 
 ## Recap quick stats (S8c end)
 
-- **Tests**: 288 / 288 (unchanged from S8b)
-- **New files**: 9 in Latte (`.smoke/` config + 8 scenarios), 16 in `~/dev/smoke-harness/` (12 lib + run.sh + README + 3 templates)
-- **Commits this session**: `7e55ae4` (S8c initial) + `e35d212` (v0.2 harness extension) + gh-pages root `e3738a9` (separate branch)
-- **Smoke iterations**: 4 fix-first cycles on harness itself, all resolved
-- **Artifacts**: 13 PNGs (8 scenarios pass, 6 are visual capture)
-- **Time-to-rerun**: full 8-scenario harness in <2 min vs ~30 min for S8b manual smoke (~15× speedup)
-- **Owner-side action remaining**: shots 1-5 capture + `git push -u origin gh-pages` (S8d, ~30 min total now that staging is done)
+- **Tests**: 288 → **309** (+21 — URL parser + demo URL handler)
+- **New files in Latte repo**: 18 (`.smoke/` config + 14 scenarios + `Sources/UI/Settings/SettingsTab.swift` + `Sources/UI/Demo/{DemoURLHandler,DemoCupWindowController}.swift` + 2 test files + `.github/workflows/ci.yml`)
+- **New files in `~/dev/smoke-harness/`**: 20 (15 lib + run.sh + deploy_pages.sh + README + 3 templates)
+- **Commits this session (`main`)**: `7e55ae4` → `e35d212` → `d58f851` → `3b39ba8` → `ce69864` → next-S8c-final
+- **Separate branch**: `gh-pages` root `e3738a9` (worktree at `../latte-gh-pages-staging/`)
+- **Scenarios**: 14 (8 functional + 4 marketing + 1 soak + 1 permission-flow), all PASS in ~3:30 end-to-end
+- **Artifacts**: 17 PNGs (4 marketing-grade + 6 icon-state matrix + 7 functional)
+- **Latte production additions in v1.0**: `latte://settings/<tab>` + `latte://demo/cup` URL schemes, `LSMultipleInstancesProhibited`, `setActivationPolicy(.regular)` toggle, `CoffeeCupView.size` param
+- **Time-to-rerun**: full 14-scenario harness in ~3:30 vs ~30 min for S8b manual smoke (~9× speedup including soak)
+- **CI**: `.github/workflows/ci.yml` builds + tests on every push/PR (macos-15 runner, ~6 min)
+- **Owner-side action remaining for S8d (~5 min total)**: pick 5 PNGs from `.smoke/artifacts/` into `docs/store/screenshots/`, optionally Shot 4 manual hover (~30s), `~/dev/smoke-harness/deploy_pages.sh <repo-url>`, GitHub Pages enable click, curl validation

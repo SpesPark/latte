@@ -52,7 +52,10 @@ Run all four with:
 # Shots end up in .smoke/artifacts/{09,10,11,12}-*.png
 ```
 
-**Shot 4 (App trigger close-up with running-apps menu hover)** is still owner-manual — it depends on mouse hover over a NSMenu item, which would require Accessibility-driven `cliclick` and adds owner setup friction without a clean win. ~30 seconds of manual capture is honest.
+**Shot 4 (App trigger close-up)** has two acceptable paths now:
+
+1. **Reuse `10-shot-3-triggers.png` cropped** — scenario 10 already enables Calendar + App + Wi-Fi triggers, with App section's `enabled = true` toggling its config form open. Cropping the App section out of that PNG is App Store-acceptable.
+2. **Owner manual** (~30 s): use the harness output from `06-marketing-prep` as the prepared state, then click the "Add from running apps" Menu and capture. SwiftUI `Menu`'s hover/highlight state is not externally controllable without Accessibility-mediated `cliclick`, and lifting that state into URL parameters would mean ~150 LOC of production code change for a single screenshot — not worth it.
 
 ## TCC permission deep links (S8c, 2026-04-28)
 

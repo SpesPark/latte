@@ -15,6 +15,11 @@
 **Shipped in v1.0** (NEW, not previously backlog'd):
 - ✅ Launch at Login (SMAppService) → commit `6109859`
 - ✅ First-run onboarding wizard (3-step picker) → commit `2da1f3d`
+- ✅ `latte://settings/<tab>` URL scheme + tab deep linking → commit `3b39ba8`
+- ✅ `latte://demo/cup?fill=&accent=&awake=` URL scheme + DemoCupWindow → commit `ce69864`
+- ✅ `LSMultipleInstancesProhibited` (single-instance forwarding) → commit `3b39ba8`
+- ✅ `setActivationPolicy(.regular)` toggle for Settings/Demo windows → commits `3b39ba8`+`ce69864`
+- ✅ `CoffeeCupView.size` parameter (default-preserves backward compat) → commit `ce69864`
 
 **Recommended ship order** (post v1.0):
 
