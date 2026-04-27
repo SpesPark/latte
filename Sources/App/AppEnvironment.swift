@@ -3,6 +3,12 @@ import Foundation
 @MainActor
 public final class AppEnvironment: ObservableObject {
 
+    /// Process-wide singleton so `LatteAppDelegate` (instantiated by AppKit,
+    /// outside the SwiftUI @StateObject lifecycle) can reach the same
+    /// instance the SwiftUI scene observes. Tests construct their own
+    /// instances via the public init below.
+    public static let shared = AppEnvironment()
+
     public let settings: SettingsStore
     public let manager: AwakeManager
     public let coordinator: TriggerCoordinator

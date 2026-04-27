@@ -154,14 +154,21 @@ public final class FocusTrigger: Trigger {
 
     /// Test seam — evaluate the trigger's vote given a known focus-active state.
     public func evaluate(currentlyActive: Bool) {
+        let permission = source.permissionStatus
+        // S8b smoke owner-feedback: leaving a structured info log here so
+        // future Focus-doesn't-fire reports can be diagnosed without a
+        // reproducible test setup. Cheap to emit and only fires on each
+        // KVO change or start/restart.
+        logger.info("FocusTrigger.evaluate currentlyActive=\(currentlyActive, privacy: .public) isEnabled=\(self.isEnabled, privacy: .public) permission=\(String(describing: permission), privacy: .public) configured=\(!self.settings.focusTriggerFocusIDs.isEmpty, privacy: .public)")
         guard isEnabled else { return }
-        guard source.permissionStatus == .granted else { return }
+        guard permission == .granted else { return }
         // v1: list non-empty + Focus active ⇒ ON. We can't filter by specific ID.
         let configured = !settings.focusTriggerFocusIDs.isEmpty
         let wantsAwake = configured && currentlyActive
         if lastVote == nil && !wantsAwake { return }
         if lastVote == wantsAwake { return }
         lastVote = wantsAwake
+        logger.info("FocusTrigger.yield wantsAwake=\(wantsAwake, privacy: .public)")
         continuation.yield(TriggerVote(
             wantsAwake: wantsAwake,
             reason: wantsAwake ? "Focus: active" : "Focus: inactive"
