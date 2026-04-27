@@ -1,0 +1,6 @@
+https://<github-username>.github.io/<repo>/
+
+Notes:
+- Replace <github-username> + <repo> with the actual GitHub Pages URL after deploying docs/site/.
+- For v1.0, support URL = marketing URL (same landing page with email contact in footer).
+- If volume justifies it post-launch, split into a dedicated /support page with FAQ + contact form.

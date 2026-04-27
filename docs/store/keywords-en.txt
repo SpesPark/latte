@@ -1,0 +1,1 @@
+caffeine,sleep,awake,meeting,zoom,teams,focus,menu bar,utility,productivity,calendar,wifi

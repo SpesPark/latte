@@ -1,0 +1,10 @@
+Tier: USD $2.99 one-time purchase
+App Store Connect tier code: TIER 3 (or whatever Apple's current $2.99 tier is at submission time)
+Territories: All territories where Apple distributes apps
+Subscriptions: None
+In-app purchases: None
+
+Notes for owner at submission:
+- Apple Small Business Program (15% take rate instead of 30%) — opt in at App Store Connect → Agreements, Tax, and Banking → Apple Developer Program License Agreement → Small Business Program. Requires < $1M USD revenue across all your apps in prior calendar year. As a new developer in 2026, you qualify.
+- Pricing tier $2.99 maps to tier number that Apple updates periodically. Pick whichever tier shows "$2.99 USD" in the dropdown at submission time.
+- Korean store price will be auto-set to ₩4,400 or ₩4,900 (Apple's tier conversion). Do not manually override unless you want a different price for Korea specifically.
