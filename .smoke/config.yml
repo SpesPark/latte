@@ -1,0 +1,11 @@
+# smoke-harness config for Latte (S8c).
+# Run with:
+#   ~/dev/smoke-harness/run.sh --project ~/Documents/Claude/Projects/Latte
+#
+# All scenarios assume:
+#   - Latte.app is built (Release) at app_path below
+#   - bundle_id matches what AppEnvironment uses for UserDefaults
+
+bundle_id: com.parkbyeongjun.latte
+app_path: ~/Library/Developer/Xcode/DerivedData/Latte-hcfmwngrrkeynehkwodtxrrnyxyq/Build/Products/Release/Latte.app
+screenshots_dir: ~/Documents/Claude/Projects/Latte/.smoke/artifacts

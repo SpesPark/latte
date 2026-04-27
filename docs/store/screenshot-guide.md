@@ -22,6 +22,29 @@ You only need to capture **2880 × 1800** for v1.0. App Store Connect down-scale
 
 ---
 
+## Pre-capture: harness primes the demo state for you (S8c, 2026-04-28)
+
+**Before manually capturing**, run the smoke-harness marketing-prep scenario. It seeds Latte with deterministic demo defaults (caramel accent, filled icon, all 4 triggers wired with realistic bundles) and auto-captures Shot 6 (onboarding welcome). After it completes, Latte is running in the canonical demo state — go straight to capture.
+
+```bash
+~/dev/smoke-harness/run.sh \
+  --project ~/Documents/Claude/Projects/Latte \
+  --scenario 06-marketing-prep
+```
+
+Output:
+- `Latte/.smoke/artifacts/06-onboarding-welcome.png` — auto-captured first-run wizard
+- Latte running with: filled icon · caramel accent · Calendar/App/Wi-Fi triggers enabled · Zoom + Slack in App trigger list
+
+When done capturing, clean up:
+```bash
+pkill -x Latte && defaults delete com.parkbyeongjun.latte
+```
+
+LSUIElement (menu-bar-only) apps cannot be driven into Settings programmatically — the popover/Settings click chain requires sandbox-restricted UI scripting. Shots 1-5 are owner-manual; the harness reduces setup time but does not replace the click.
+
+---
+
 ## Capture environment setup (do once)
 
 1. **Display**: connect/use a Retina display set to "More space" scaling (or use a 16" MacBook Pro built-in). Verify with `system_profiler SPDisplaysDataType | grep -i resolution` — target ≥ 2880 × 1800.

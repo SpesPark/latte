@@ -37,3 +37,7 @@ ExportOptions.plist
 *.p12
 *.mobileprovision
 AuthKey_*.p8
+
+# smoke-harness artifacts (S8c)
+.smoke/artifacts/
+.smoke/reports/
