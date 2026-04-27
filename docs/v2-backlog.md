@@ -5,22 +5,34 @@
 >
 > **S8b research reshuffle (2026-04-27)**: Q3 trigger-priority research (Reddit, KYA GitHub issues, Amphetamine reviews, MacRumors) reordered post-v1.0 ship. Headline finding: visual menu-bar state (V2-01) is a **15-year category-standard UX gap** validated by KYA Issue #57; time-of-day/schedule trigger (V2-05, new) shows higher demand than EKCalendar list picker (V2-04). Per-Focus selection (V2-03) is confirmed-low-demand and stays deferred. Full research record: `memory/project_latte_session8b_research.md`.
 
+**v1.0 expansion (S8b, 2026-04-27)**: owner approved "ship aggressively" — V2-01, V2-04, V2-10 promoted into v1.0 alongside two new features (Launch at Login, first-run onboarding wizard). v1.1+ ship order updated below.
+
+**Shipped in v1.0** (originally in this backlog, no longer deferred):
+- ✅ **V2-01** menu-bar awake visualization → commit `05f8c2d`
+- ✅ **V2-04** EKCalendar list picker → commit `7decb84`
+- ✅ **V2-10** `Theme.Colors.accentAwake` cleanup → commit `05f8c2d`
+
+**Shipped in v1.0** (NEW, not previously backlog'd):
+- ✅ Launch at Login (SMAppService) → commit `6109859`
+- ✅ First-run onboarding wizard (3-step picker) → commit `2da1f3d`
+
 **Recommended ship order** (post v1.0):
 
 | Window | Item | Rationale |
 |---|---|---|
-| v1.1 | **V2-01** Menu-bar awake visualization | Highest-validated UX expectation; closes category-standard gap |
-| v1.2 | **V2-05** Time-of-day / schedule trigger (NEW) | Higher demand than EKCalendar picker per Q3 research |
-| v1.3 | **V2-04** EKCalendar list picker | Refinement of existing trigger, not an enabler |
-| v1.3+ | **V2-06** External display trigger (NEW) | Lightweight, validated demand (KYA #235) |
+| v1.1 | **V2-05** Time-of-day / schedule trigger (NEW) | Highest unmet demand after V2-01 ships in v1.0 |
+| v1.1 | Keyboard shortcut for manual toggle | Power-user signal; deferred from v1.0 |
+| v1.2 | **V2-06** External display trigger (NEW) | Lightweight, validated demand (KYA #235) |
+| v1.2 | **V2-11** Icon dark/tinted variants | Owner-side Icon Composer pass; cosmetic polish |
 | v1.x | **V2-02** Calendar/WiFi watched-list immediate-edit | Polling cycle ≤60s makes it tolerable |
+| v1.x | **V2-12** macOS 13/14/15 matrix smoke | Surfaced via TestFlight beta in S10 |
 | defer | **V2-03** Per-Focus selection | Apple API limit + confirmed-low-demand |
 
 ---
 
 ## P1 candidates (real UX gaps, defer only because not v1.0-blocking)
 
-### V2-01 — Menu-bar icon does not visualize awake state — **v1.1 ship target**
+### V2-01 — Menu-bar icon does not visualize awake state — ✅ **shipped in v1.0** (commit `05f8c2d`)
 
 - **Surfaced**: S7.11 diagnostic note (after owner reported "활성화가 바로 안돼" for App trigger; integration tests proved activation happens within ~100 ms, so the perceived bug was an absent visual signal).
 - **S8b research validation (2026-04-27)**: KYA Issue #57 ("really not as clear as caffeine") + KYA #192 (display remaining time) directly demand this. Caffeine's 15-year-old full-cup/empty-cup is the de facto standard. Promoted to v1.1 must-have.
@@ -47,7 +59,7 @@
 - **S8b research validation (2026-04-27)**: Q3 research confirmed zero verbatim user requests for per-Focus selection across Reddit, KYA issues, Amphetamine reviews, MacRumors. Latte's binary list-presence approach is acceptable to users.
 - **Re-evaluate trigger**: any future macOS release (15.x, 16) that surfaces a stable per-Focus API. Until then, do not invest engineering time.
 
-### V2-04 — EKCalendar list picker — **demoted to v1.3 (was Phase 1.5.B)**
+### V2-04 — EKCalendar list picker — ✅ **shipped in v1.0** (commit `7decb84`)
 
 - **Surfaced**: S7.5 (`CalendarTriggerConfigForm` shipped without it); also called out in S7-family handoff and SESSION_HANDOFF "Known issues" section.
 - **Scope**: live `EKEventStore.calendars(for:)` enumeration + permission flow, multi-select picker UI, persistence as `[String]` of EKCalendar identifiers, `CalendarTrigger` filter applied to the polled events.
@@ -83,12 +95,11 @@
 
 ## P2 candidates (cleanup / hygiene)
 
-### V2-10 — Drop `Theme.Colors.accentAwake` static alias
+### V2-10 — Drop `Theme.Colors.accentAwake` static alias — ✅ **shipped in v1.0** (commit `05f8c2d`)
 
 - **Surfaced**: S6 design polish session (and re-noted in S7-family handoff).
-- **Current state**: `Theme.Colors.accentAwake` is a 1-line forwarder to `CoffeeAccent.default.color`. Lingers from pre-S6 single-color era.
-- **Action**: delete the alias, replace 0-N call sites (likely 0 — fold into S10 cleanup pass).
-- **Effort**: <30 min.
+- **Original state**: `Theme.Colors.accentAwake` was a 1-line forwarder. Confirmed 0 call sites in source/tests at S8b.
+- **Outcome**: alias deleted; no migration needed.
 
 ### V2-11 — Icon Composer / dark / tinted variants
 

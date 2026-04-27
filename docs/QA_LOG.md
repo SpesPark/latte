@@ -433,6 +433,62 @@ Post-S7.10 review pass surfaced a latent regression risk and the owner supplied 
 
 ---
 
+## S8b — v1.0 scope expansion (2026-04-27)
+
+Owner approved aggressive ship after S8b market research. Five additions on top of the original v1.0 scope landed in 4 atomic commits.
+
+### Owner-side smoke checklist (supersedes S7.11 alone)
+
+Run all S7.11 items above first, then add these for the v1.0 expansion. Particular attention to interactions between the new and existing surfaces.
+
+#### Onboarding wizard (commit `2da1f3d`)
+
+- [ ] **First launch presents the onboarding window**. Simulate a fresh install: quit Latte, then `defaults delete com.parkbyeongjun.latte` (or move the prefs plist out of the Latte container), relaunch. The 3-step wizard should appear: welcome → trigger picker (4 cards) → done.
+- [ ] **Skip path**: hit "Skip" at any step. Window dismisses, menu bar icon present, no triggers enabled. Settings → Triggers should show all four toggles OFF.
+- [ ] **Apply path with permission**: pick Calendar at step 2, hit "Apply." Permission prompt fires. Granting it: trigger ends up enabled with permission status `.granted`. Denying it: trigger row appears with the "Permission denied" footer copy in Settings → Triggers.
+- [ ] **Apply with multiple triggers**: pick Calendar + App at step 2, hit "Apply." Both prompts fire (App trigger is `.notRequired` so it just enables). Done step lists both triggers in the summary.
+- [ ] **Idempotency**: the wizard does NOT appear on the next launch. `defaults read com.parkbyeongjun.latte latte.firstRunCompleted` returns 1.
+
+#### Menu-bar awake visualization (commit `05f8c2d`)
+
+- [ ] **Filled style**: at rest, the menu-bar shows `cup.and.saucer` (outline). Activate manually via the popover → icon swaps to `cup.and.saucer.fill` (filled). Toggle OFF → reverts to outline within ≤1 frame.
+- [ ] **Outline style**: same paired behavior (outline → fill).
+- [ ] **Clock style**: at rest shows `mug` (a distinct glyph), active shows `cup.and.heat.waves.fill` (cup with steam). The asleep glyph is intentionally different from filled/outline to differentiate the option.
+- [ ] **Style switching while active**: toggle a trigger ON, then change icon style in Settings → General → Appearance. Both the asleep and awake variants should update across the chosen style without a flicker.
+- [ ] **Light + dark menu bar**: verify all 6 combos (3 styles × 2 awake states) render legibly in System Settings → Appearance → Light then Dark.
+
+#### Launch at Login (commit `6109859`)
+
+- [ ] **Toggle ON**: Settings → General → Behavior → "Launch at login" → ON. System Settings → General → Login Items should now list "Latte" under "Open at Login." `defaults read com.parkbyeongjun.latte latte.launchAtLogin` returns 1.
+- [ ] **Toggle OFF**: same path → OFF. Login Items entry disappears. Settings flag returns 0.
+- [ ] **External-source reconciliation**: with Latte off, manually remove "Latte" from System Settings → Login Items. Relaunch Latte. The toggle in General should reflect OFF (live status reconciled to settings cache).
+- [ ] **Sign-out / sign-in test (optional, slow)**: enable, sign out, sign in. Latte should auto-launch.
+
+#### EKCalendar list picker (commit `7decb84`)
+
+- [ ] **Empty selection (default)**: Settings → Triggers → Calendar → "Watched calendars" disclosure shows "All calendars" badge. Behavior matches v1: every granted calendar fires the trigger.
+- [ ] **Single calendar selected**: tick one calendar (e.g. "Work"). Disclosure header now shows "1 selected." Create a test event on the unticked calendar → cup does NOT activate when the event starts. Create a test event on the ticked calendar → cup activates per the existing Calendar trigger contract.
+- [ ] **"Select all" button**: ticks every available calendar. Disclosure shows "(N) selected" where N = available calendars count.
+- [ ] **"Use all calendars" button**: clears selection. Returns to default behavior.
+- [ ] **Permission denied fallback**: if Calendar permission has not been granted, the picker section shows the explanatory copy ("Re-open this tab once Calendar permission is granted...") instead of an empty list.
+- [ ] **Calendar deletion edge case** (slow): tick "Work" calendar, then delete it from Calendar.app. Re-open Settings — the picker should re-list current calendars without the deleted one. The persisted ID stays in `latte.calendarTrigger.calendarIDs` (harmless; the source filter ignores unknown IDs).
+
+#### V2-10 cleanup (commit `05f8c2d`)
+
+- [ ] No visible behavior change. `Theme.Colors.accentAwake` was an unused alias; removing it must compile and run identically.
+
+### Coverage gate snapshot (post-S8b expansion)
+
+Re-run after fix-first if any P1 surfaces:
+
+```bash
+xcodebuild test -scheme Latte -destination "platform=macOS,arch=arm64" -enableCodeCoverage YES
+```
+
+Target: 284/284 tests pass (S7.11 baseline 263 + 21 new across the 4 commits). Coverage gate PASS expected (no source-file deletions; new files exercised by their tests).
+
+---
+
 ## Adapter exemption rationale
 
 The following classes are excluded from the 80% coverage gate because they wrap live system services and require an interactive user / permission grant / hardware to exercise:

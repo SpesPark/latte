@@ -5,10 +5,10 @@
 | **Product name** | Latte |
 | **Working folder** | `Latte/` (renamed from `Caffeinated-Clone/` in S8 ahead of App Store submission) |
 | **Bundle identifier** | `com.parkbyeongjun.latte` (default — owner may revisit per `docs/v2-backlog.md` V2-20) |
-| **Document version** | 0.3 |
-| **Status** | Approved (design phase closed at session 2) |
+| **Document version** | 0.4 |
+| **Status** | Approved (design phase closed at session 2; v1.0 scope re-expanded at S8b) |
 | **Owner** | Project owner |
-| **Last updated** | 2026-04-25 |
+| **Last updated** | 2026-04-27 |
 | **Related docs** | [02-architecture.md](02-architecture.md), [03-state-machine.md](03-state-machine.md), [04-data-model.md](04-data-model.md) |
 
 ---
@@ -26,6 +26,13 @@
 **Distribution**: Mac App Store, **$2.99 one-time purchase** (Apple Small Business Program 15% take rate). Aggressive entry pricing — owner explicitly chose $2.99 over the $3.99 sweet spot identified in S8b research to undercut Caffeinated ($3.99) and beat Lungo ($4.99) on price while staying above "free" comparisons. Source code is **private**.
 
 **Subscription ban (durable guardrail)**: Latte will **not** ship a subscription tier. Recurring revenue is incompatible with this category — the Bartender 5 (2024) backlash is the canonical cautionary tale. Free-tier + one-time IAP for advanced triggers may be revisited post v1.5 once review base ≥ 50.
+
+**v1.0 scope expansion (S8b, 2026-04-27)** — owner asked to ship aggressively after S8b market research. Five additions on top of the original v1.0 plan:
+1. **Menu-bar awake-state visualization** (V2-01, was v1.1) — paired SF Symbol per icon style; the cup visibly fills when active. Closes a 15-year category-standard UX gap (KYA Issue #57).
+2. **EKCalendar list picker** (V2-04, was v1.3) — multi-select picker so users restrict the trigger to specific calendars instead of "all granted." Strengthens the headline Calendar wedge.
+3. **`accentAwake` cleanup** (V2-10, was v1.x) — dead-code alias removed.
+4. **Launch at Login** (NEW) — `SMAppService.mainApp` wrapper exposed via Settings → General → Behavior. Standard menu-bar utility expectation.
+5. **First-run onboarding wizard** (NEW) — 3-step picker (welcome → trigger cards → confirm). Persists `firstRunCompleted` in `SettingsKey`. Day-1 retention insurance.
 
 ---
 

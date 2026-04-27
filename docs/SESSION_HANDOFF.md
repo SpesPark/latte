@@ -25,6 +25,27 @@ Before S8b execution work begins, a 45-min market research pass ran (4 parallel 
 
 ---
 
+## S8b — v1.0 scope expansion (mid-session, code + tests + docs)
+
+After approving the research preamble owner asked to ship more aggressively. Five v1.0 additions landed on the same `main` branch in 4 atomic commits (each independently smoke-able):
+
+| Commit | Item | Effort | Tests |
+|---|---|---|---|
+| `05f8c2d` | V2-01 menu-bar awake visualization + V2-10 `accentAwake` cleanup | ~2h | 263 → 267 (+4) |
+| `6109859` | Launch at Login (SMAppService) | ~2h | 267 → 274 (+7) |
+| `7decb84` | V2-04 EKCalendar list picker | ~3h | 274 → 279 (+5) |
+| `2da1f3d` | First-run onboarding wizard | ~4h | 279 → 284 (+5) |
+
+**Behavior changes owner must smoke** (in addition to S7.11 regression check):
+1. **First launch shows onboarding window** (3 steps: welcome → trigger picker → done). Old installs (settings already populated) skip — verify by deleting `~/Library/Containers/com.parkbyeongjun.latte/Data/Library/Preferences/com.parkbyeongjun.latte.plist` to simulate first run.
+2. **Menu-bar icon now visibly distinguishes awake vs asleep**. Filled/outline styles: outline cup at rest → filled cup when active. Clock style: mug at rest → cup-with-steam when active.
+3. **Settings → General → Behavior** has new "Launch at login" toggle. Toggling it should immediately register/unregister the SMAppService login item (verify via System Settings → General → Login Items).
+4. **Settings → Triggers → Calendar** now has a "Watched calendars" disclosure with a multi-select picker. Empty selection means "all calendars" (backward-compat with pre-S8b default).
+
+If any of #1-#4 surfaces a P1, fix-first per the established S7-family pattern.
+
+---
+
 ## Last session
 
 | Field | Value |

@@ -16,7 +16,7 @@ Latte fixes both problems by automating the toggle. You configure once, then for
 HOW IT WORKS — FOUR SMART TRIGGERS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Calendar — stays awake during your scheduled meetings. Configurable lead and trail time so you're caffeinated a few minutes before the call starts and for a few minutes after it ends. Optional "exclude all-day events" so birthday reminders don't keep your Mac awake all day.
+Calendar — stays awake during your scheduled meetings. Pick which calendars trigger Latte (work only, no personal birthdays). Configurable lead and trail time so you're caffeinated a few minutes before the call starts and for a few minutes after it ends. Optional "exclude all-day events" so birthday reminders don't keep your Mac awake all day.
 
 Apps — active when Zoom, Microsoft Teams, Webex, Discord, Slack, Google Meet, or any app you choose is running. The picker shows real friendly names with real app icons. No bundle ID hunting. Add anything that's running with one click.
 
@@ -29,12 +29,25 @@ Triggers vote together. Latte stays awake when at least one trigger says "stay a
 You can still toggle caffeine manually from the menu bar — 15 minutes, 30 minutes, 1 hour, 2 hours, custom (1 to 1440 minutes), or "until I turn it off." All four toggle modes coexist with the trigger system.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WHAT MAKES LATTE DIFFERENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Most "stay awake" apps make you remember a toggle. Latte doesn't — it watches your context and decides for you.
+
+• Calendar-aware: no other mainstream menu-bar utility activates automatically based on calendar events.
+• Live state in the menu bar: the cup fills when active, empties when at rest. Glance once and you know.
+• Set and forget: enable Launch at Login during the welcome wizard, pick which contexts matter, and never touch it again.
+• No subscription. Ever. $2.99 once and Latte is yours for life — no "Plus" tier, no upgrade-as-a-service.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 DESIGNED FOR macOS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Native SwiftUI menu bar app with a coffee-cup view that animates with steam particles when you're caffeinated.
+Native SwiftUI menu bar app with a coffee-cup view that animates with steam particles when you're caffeinated. The menu-bar icon visibly fills when Latte is keeping your Mac awake — no need to open the popover to check.
 
-Pick from five coffee tones — espresso, caramel, mocha, latte, or noir — to match your menu bar aesthetic. Choose a menu-bar icon style: filled, outlined, or clock.
+A friendly first-run wizard walks you through choosing which contexts should keep your Mac awake. You can change anything later from Settings.
+
+Pick from five coffee tones — espresso, caramel, mocha, latte, or noir — to match your menu bar aesthetic. Choose a menu-bar icon style.
 
 On macOS 26 Tahoe, the cup picks up the Liquid Glass treatment automatically.
 
