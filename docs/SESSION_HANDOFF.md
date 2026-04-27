@@ -186,11 +186,30 @@ If all 4 pass, S9 starts (after Apple Dev Program approval).
 
 ---
 
+## S8c addendum — harness v0.2 + Pages staging (2026-04-28, same session)
+
+After the initial S8c commit (`7e55ae4`), two extension passes landed:
+
+**v0.2 commit `e35d212`** — `feat: harness v0.2 — wifi-inverse + power-assertion scenarios`
+- New scenario `07-wifi-inverse.sh`: Mode A (normal+empty SSID list) + Mode C (inverse+empty list) — both stable, no crash.
+- New scenario `08-power-assertion.sh`: PRD §10 G4 short-window check via `pmset -g assertions`. Idle = no held assertion; quit = no leak. 24h soak deferred to v1.x.
+- Harness lib v0.2 (`~/dev/smoke-harness/lib/`): `assert_log.sh` (regex match or `--negate` absent) + `wait_for.sh` (poll a command until success or timeout).
+- `templates/xcuitest-target/` skeleton — drop-in XCUITest for apps where bash + AppleScript can't reach the UI. Ready for the second app the owner wires.
+- All 8 Latte scenarios PASS in <2 min.
+
+**Pages branch staging (no commit on `main`)**
+- `git worktree add ../latte-gh-pages-staging --detach` → `git checkout --orphan gh-pages` → committed `index.html` + `privacy.html` as root commit `e3738a9` on the `gh-pages` branch.
+- Owner action shrank from "create branch + commit + configure + push" to "add remote + push".
+- See updated `docs/site/README.md` Option A for the exact 3-line owner sequence.
+
+---
+
 ## Recap quick stats (S8c end)
 
 - **Tests**: 288 / 288 (unchanged from S8b)
-- **New files**: 7 in Latte (`.smoke/`), 13 in `~/dev/smoke-harness/`
+- **New files**: 9 in Latte (`.smoke/` config + 8 scenarios), 16 in `~/dev/smoke-harness/` (12 lib + run.sh + README + 3 templates)
+- **Commits this session**: `7e55ae4` (S8c initial) + `e35d212` (v0.2 harness extension) + gh-pages root `e3738a9` (separate branch)
 - **Smoke iterations**: 4 fix-first cycles on harness itself, all resolved
-- **Artifacts**: 13 PNGs covering onboarding × 2, menubar before/after × 2, icon-state matrix × 6, settings-general × 1, calendar-empty × 1, onboarding-welcome × 1
-- **Time-to-rerun**: full harness in <2 min vs ~30 min for S8b manual smoke (~15× speedup)
-- **Owner-side action remaining**: shots 1-5 capture + Pages deploy (S8d)
+- **Artifacts**: 13 PNGs (8 scenarios pass, 6 are visual capture)
+- **Time-to-rerun**: full 8-scenario harness in <2 min vs ~30 min for S8b manual smoke (~15× speedup)
+- **Owner-side action remaining**: shots 1-5 capture + `git push -u origin gh-pages` (S8d, ~30 min total now that staging is done)

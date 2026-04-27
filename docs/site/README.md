@@ -11,17 +11,40 @@ Static site for App Store landing + Privacy Policy. Hosted on GitHub Pages.
 
 ## Hosting setup (do once, before App Store submission)
 
-### Option A — same repo, `gh-pages` branch (simplest)
+### Option A — same repo, `gh-pages` branch (simplest) — **PRE-STAGED IN S8c**
+
+The `gh-pages` branch is already created in a sibling worktree at
+`../latte-gh-pages-staging/` with one root commit (`e3738a9`). Owner only needs
+to add the remote and push:
 
 ```bash
-# from repo root
+# Verify the staged worktree is intact
+git worktree list
+# Expected: latte-gh-pages-staging  e3738a9 [gh-pages]
+
+cd ../latte-gh-pages-staging
+git remote add origin <github-url>     # e.g. git@github.com:bj-park/latte.git
+git push -u origin gh-pages
+```
+
+Then in GitHub repo Settings → Pages → Source = `gh-pages` branch / root.
+
+To update the site later (after edits in `docs/site/`):
+```bash
+cd ../latte-gh-pages-staging
+cp /path/to/Latte/docs/site/{index,privacy}.html .
+git add . && git commit -m "site: update"
+git push
+```
+
+If you ever need to rebuild from scratch (lost the worktree, etc.):
+```bash
+git worktree add --detach ../latte-gh-pages-staging
+cd ../latte-gh-pages-staging
 git checkout --orphan gh-pages
 git rm -rf .
-cp -r docs/site/* .
-git add index.html privacy.html
-git commit -m "site: initial Latte marketing + privacy"
-git push -u origin gh-pages
-git checkout main
+cp /path/to/Latte/docs/site/{index,privacy}.html .
+git add . && git commit -m "site: rebuild"
 ```
 
 GitHub Pages settings → Source = `gh-pages` branch → root.
