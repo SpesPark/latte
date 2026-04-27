@@ -18,21 +18,40 @@ public enum MenuBarIconStyle: String, CaseIterable, Sendable, Identifiable {
 
     public var id: String { rawValue }
 
-    /// SF Symbol name passed to `MenuBarExtra(_:systemImage:)`.
+    /// SF Symbol name shown when Latte is **at rest** (Mac is sleeping
+    /// or no triggers are voting awake). Mirrors the user-selected style.
     ///
-    /// - `filled` → `cup.and.saucer.fill` — default; the app's identity.
-    /// - `outline` → `cup.and.saucer` — minimalist; pairs well with thin
-    ///   menu bars.
-    /// - `clock` → `cup.and.heat.waves.fill` — the cup with steam waves,
-    ///   conveying "active / time passing." We chose this over a literal
-    ///   clock-and-cup composite because no single SF Symbol composes both,
-    ///   and using two symbols would require a custom view that breaks
-    ///   `MenuBarExtra`'s built-in tinting.
+    /// V2-01 (S8b research): paired with `awakeSymbolName(_:)` so the
+    /// menu bar icon visibly distinguishes the two states. Closes a
+    /// 15-year category-standard UX gap (Caffeine's full-cup/empty-cup).
+    ///
+    /// - `filled` → `cup.and.saucer` (outline cup at rest; awake variant
+    ///   is the filled cup).
+    /// - `outline` → `cup.and.saucer` (same outline at rest; awake
+    ///   variant is the filled cup).
+    /// - `clock` → `mug` (a quieter mug glyph at rest; awake variant
+    ///   shows steam — the "active / time passing" connotation).
+    ///
+    /// The `filled` and `outline` cases share the at-rest glyph because
+    /// the awake variant is what visually distinguishes them now;
+    /// follow-up cleanup (v1.x) may consolidate the two cases.
     public var symbolName: String {
+        symbolName(awake: false)
+    }
+
+    /// SF Symbol used by `MenuBarExtra(_:systemImage:)`. Returns the
+    /// at-rest or awake glyph based on the live `manager.isAwake` value.
+    ///
+    /// Both glyphs in each pair are members of the SF Symbols 5 catalog
+    /// shipping with macOS 13+, so no runtime fallback is needed.
+    public func symbolName(awake: Bool) -> String {
         switch self {
-        case .filled:  return "cup.and.saucer.fill"
-        case .outline: return "cup.and.saucer"
-        case .clock:   return "cup.and.heat.waves.fill"
+        case .filled:
+            return awake ? "cup.and.saucer.fill" : "cup.and.saucer"
+        case .outline:
+            return awake ? "cup.and.saucer.fill" : "cup.and.saucer"
+        case .clock:
+            return awake ? "cup.and.heat.waves.fill" : "mug"
         }
     }
 

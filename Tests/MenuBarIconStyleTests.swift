@@ -25,27 +25,58 @@ final class MenuBarIconStyleTests: XCTestCase {
 
     func testSymbolNamesAreSFSymbolFormatted() {
         for style in MenuBarIconStyle.allCases {
-            let name = style.symbolName
-            XCTAssertFalse(name.isEmpty, "\(style) has an empty symbol name")
-            XCTAssertFalse(name.contains(" "), "\(style) symbol name must not contain spaces")
+            for awake in [false, true] {
+                let name = style.symbolName(awake: awake)
+                XCTAssertFalse(name.isEmpty, "\(style) awake=\(awake) has an empty symbol name")
+                XCTAssertFalse(name.contains(" "), "\(style) awake=\(awake) symbol name must not contain spaces")
+            }
         }
     }
 
-    func testSymbolNamesAreUnique() {
-        let names = MenuBarIconStyle.allCases.map(\.symbolName)
-        XCTAssertEqual(names.count, Set(names).count, "Each variant must use a distinct SF Symbol")
+    // V2-01 (S8b): asleep glyph and awake glyph differ for *every* style,
+    // so the menu-bar icon visibly reflects state. This is the core
+    // contract of the awake-state visualization feature.
+    func testAsleepGlyphDiffersFromAwakeGlyphForEveryStyle() {
+        for style in MenuBarIconStyle.allCases {
+            let asleep = style.symbolName(awake: false)
+            let awake = style.symbolName(awake: true)
+            XCTAssertNotEqual(
+                asleep, awake,
+                "\(style) must use distinct SF Symbols for asleep vs awake (else V2-01 has no visible effect for this style)"
+            )
+        }
     }
 
-    func testFilledSymbolIsCupAndSaucerFill() {
-        XCTAssertEqual(MenuBarIconStyle.filled.symbolName, "cup.and.saucer.fill")
+    func testFilledAsleepIsCupAndSaucer() {
+        XCTAssertEqual(MenuBarIconStyle.filled.symbolName(awake: false), "cup.and.saucer")
     }
 
-    func testOutlineSymbolIsCupAndSaucer() {
-        XCTAssertEqual(MenuBarIconStyle.outline.symbolName, "cup.and.saucer")
+    func testFilledAwakeIsCupAndSaucerFill() {
+        XCTAssertEqual(MenuBarIconStyle.filled.symbolName(awake: true), "cup.and.saucer.fill")
     }
 
-    func testClockSymbolIsCupAndHeatWavesFill() {
-        XCTAssertEqual(MenuBarIconStyle.clock.symbolName, "cup.and.heat.waves.fill")
+    func testOutlineAsleepIsCupAndSaucer() {
+        XCTAssertEqual(MenuBarIconStyle.outline.symbolName(awake: false), "cup.and.saucer")
+    }
+
+    func testOutlineAwakeIsCupAndSaucerFill() {
+        XCTAssertEqual(MenuBarIconStyle.outline.symbolName(awake: true), "cup.and.saucer.fill")
+    }
+
+    func testClockAsleepIsMug() {
+        XCTAssertEqual(MenuBarIconStyle.clock.symbolName(awake: false), "mug")
+    }
+
+    func testClockAwakeIsCupAndHeatWavesFill() {
+        XCTAssertEqual(MenuBarIconStyle.clock.symbolName(awake: true), "cup.and.heat.waves.fill")
+    }
+
+    func testZeroArgSymbolNameMatchesAsleepVariant() {
+        // The bare `symbolName` accessor must return the asleep variant
+        // (back-compat with v1 callers and the asleep-default convention).
+        for style in MenuBarIconStyle.allCases {
+            XCTAssertEqual(style.symbolName, style.symbolName(awake: false))
+        }
     }
 
     // MARK: - Display names
