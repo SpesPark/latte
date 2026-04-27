@@ -312,6 +312,60 @@ final class CalendarTriggerTests: XCTestCase {
         XCTAssertNil(after, "no further votes should be yielded after stop()")
     }
 
+    // MARK: - V2-04 EKCalendar picker
+
+    func testAvailableCalendarsEmptyWhenPermissionNotGranted() {
+        let (trigger, source, _, _) = makeFixture(permissionStatus: .denied)
+        source.calendars = [
+            CalendarSummary(id: "a", title: "Work", red: 1, green: 0, blue: 0, alpha: 1, sourceTitle: "iCloud")
+        ]
+        XCTAssertEqual(trigger.availableCalendars(), [])
+    }
+
+    func testAvailableCalendarsReturnsSourceCalendarsWhenGranted() {
+        let work = CalendarSummary(id: "a", title: "Work", red: 1, green: 0, blue: 0, alpha: 1, sourceTitle: "iCloud")
+        let personal = CalendarSummary(id: "b", title: "Personal", red: 0, green: 1, blue: 0, alpha: 1, sourceTitle: "iCloud")
+        let (trigger, source, _, _) = makeFixture()
+        source.calendars = [work, personal]
+        XCTAssertEqual(trigger.availableCalendars(), [work, personal])
+    }
+
+    func testCalendarSummaryIsIdentifiableByID() {
+        let summary = CalendarSummary(id: "x", title: "Hello", red: 0.5, green: 0.5, blue: 0.5, alpha: 1, sourceTitle: "Local")
+        XCTAssertEqual(summary.id, "x")
+    }
+
+    func testCalendarSummariesEquatableForChangeDetection() {
+        let a = CalendarSummary(id: "x", title: "Hello", red: 0.5, green: 0.5, blue: 0.5, alpha: 1, sourceTitle: "Local")
+        let b = CalendarSummary(id: "x", title: "Hello", red: 0.5, green: 0.5, blue: 0.5, alpha: 1, sourceTitle: "Local")
+        XCTAssertEqual(a, b)
+        let c = CalendarSummary(id: "x", title: "Hello", red: 0.5, green: 0.5, blue: 0.5, alpha: 1, sourceTitle: "iCloud")
+        XCTAssertNotEqual(a, c)
+    }
+
+    func testEmptyCalendarIDListMeansAllCalendarsPolled() async {
+        // Sanity check that the existing data path treats `[]` as
+        // "all granted calendars" — V2-04 picker UI relies on this.
+        let now = Date(timeIntervalSince1970: 1_750_000_000)
+        let event = CalendarEventSnapshot(
+            id: "e",
+            title: "Standup",
+            startDate: now.addingTimeInterval(-60),
+            endDate: now.addingTimeInterval(600),
+            isAllDay: false,
+            calendarID: "any-calendar"
+        )
+        let (trigger, source, settings, _) = makeFixture(events: [event], nowOverride: now)
+        settings.calendarTriggerCalendarIDs = [] // empty = all
+        await trigger.pollOnce()
+        // The mock records the calendarIDs used in the last query —
+        // empty array means "all granted calendars" was the request.
+        XCTAssertEqual(source.lastQueryCalendarIDs, [])
+        var iterator = trigger.voteStream.makeAsyncIterator()
+        let vote = await iterator.next()
+        XCTAssertEqual(vote?.wantsAwake, true)
+    }
+
     func testCalendarSettingsTypedSetters() {
         let settings = InMemorySettingsStore()
         settings.calendarTriggerCalendarIDs = ["work", "personal"]

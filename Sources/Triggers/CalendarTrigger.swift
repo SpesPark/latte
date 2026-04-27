@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(AppKit)
+import AppKit
+#endif
 #if canImport(EventKit)
 import EventKit
 #endif
@@ -13,6 +16,44 @@ public protocol CalendarSource: AnyObject {
     /// Returns events whose `[startDate, endDate]` intersects `[windowStart, windowEnd]`,
     /// optionally restricted to the given calendar identifiers (empty = all granted).
     func events(in window: ClosedRange<Date>, calendarIDs: [String]) -> [CalendarEventSnapshot]
+    /// Enumerates the user's accessible calendars for the picker UI (V2-04).
+    /// Returns `[]` when permission is not granted; the UI is expected to
+    /// guard against showing the picker before the access prompt resolves.
+    func availableCalendars() -> [CalendarSummary]
+}
+
+/// Lightweight projection of an EKCalendar for the picker UI. Avoids
+/// holding EventKit references past the snapshot.
+public struct CalendarSummary: Equatable, Sendable, Identifiable {
+    public let id: String           // EKCalendar.calendarIdentifier
+    public let title: String
+    /// CGColor not Sendable; persist as sRGB components so the UI can
+    /// reconstruct an `NSColor`/`Color` without a live EKCalendar.
+    public let red: Double
+    public let green: Double
+    public let blue: Double
+    public let alpha: Double
+    /// `local`, `iCloud`, `subscription`, `birthday`, `exchange`, etc.
+    /// We surface this so the UI can group calendars by source.
+    public let sourceTitle: String
+
+    public init(
+        id: String,
+        title: String,
+        red: Double,
+        green: Double,
+        blue: Double,
+        alpha: Double,
+        sourceTitle: String
+    ) {
+        self.id = id
+        self.title = title
+        self.red = red
+        self.green = green
+        self.blue = blue
+        self.alpha = alpha
+        self.sourceTitle = sourceTitle
+    }
 }
 
 /// Snapshot of an EKEvent. We never hold EventKit objects past their fetch.
@@ -110,6 +151,32 @@ public final class EKCalendarSource: CalendarSource {
             )
         }
     }
+
+    public func availableCalendars() -> [CalendarSummary] {
+        guard permissionStatus == .granted else { return [] }
+        let calendars = store.calendars(for: .event)
+        return calendars.map { calendar in
+            // EKCalendar.cgColor is the user-set hue. Decompose into sRGB.
+            let nsColor = NSColor(cgColor: calendar.cgColor) ?? NSColor.systemBlue
+            let resolved = nsColor.usingColorSpace(.sRGB) ?? nsColor
+            return CalendarSummary(
+                id: calendar.calendarIdentifier,
+                title: calendar.title,
+                red: Double(resolved.redComponent),
+                green: Double(resolved.greenComponent),
+                blue: Double(resolved.blueComponent),
+                alpha: Double(resolved.alphaComponent),
+                sourceTitle: calendar.source?.title ?? ""
+            )
+        }
+        .sorted { lhs, rhs in
+            // Group by source, then alphabetic within source for stable display.
+            if lhs.sourceTitle != rhs.sourceTitle {
+                return lhs.sourceTitle.localizedCaseInsensitiveCompare(rhs.sourceTitle) == .orderedAscending
+            }
+            return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
+        }
+    }
 }
 #endif
 
@@ -201,6 +268,13 @@ public final class CalendarTrigger: Trigger {
         }
     }
 
+    /// V2-04 — picker UI delegate. Exposes the underlying source's
+    /// available calendars so the Settings form can render a multi-select
+    /// list. Returns `[]` when permission is not granted.
+    public func availableCalendars() -> [CalendarSummary] {
+        source.availableCalendars()
+    }
+
     /// Test seam — invoked by `start`'s polling loop, also callable directly from tests.
     public func pollOnce() async {
         guard isEnabled else { return }
@@ -253,16 +327,19 @@ public final class CalendarTrigger: Trigger {
 public final class MockCalendarSource: CalendarSource {
     public var permissionStatus: TriggerPermissionStatus
     public var events: [CalendarEventSnapshot]
+    public var calendars: [CalendarSummary]
     public private(set) var requestAccessCalls = 0
     public private(set) var lastQueryCalendarIDs: [String]?
     public private(set) var lastQueryWindow: ClosedRange<Date>?
 
     public init(
         permissionStatus: TriggerPermissionStatus = .granted,
-        events: [CalendarEventSnapshot] = []
+        events: [CalendarEventSnapshot] = [],
+        calendars: [CalendarSummary] = []
     ) {
         self.permissionStatus = permissionStatus
         self.events = events
+        self.calendars = calendars
     }
 
     public func requestAccess() async -> Bool {
@@ -284,6 +361,11 @@ public final class MockCalendarSource: CalendarSource {
             }
         }
     }
+
+    public func availableCalendars() -> [CalendarSummary] {
+        guard permissionStatus == .granted else { return [] }
+        return calendars
+    }
 }
 
 #if !canImport(EventKit)
@@ -292,6 +374,7 @@ final class NoopCalendarSource: CalendarSource {
     var permissionStatus: TriggerPermissionStatus { .denied }
     func requestAccess() async -> Bool { false }
     func events(in window: ClosedRange<Date>, calendarIDs: [String]) -> [CalendarEventSnapshot] { [] }
+    func availableCalendars() -> [CalendarSummary] { [] }
 }
 #endif
 

@@ -121,7 +121,12 @@ private struct TriggerSection: View {
                 WiFiTriggerConfigForm(trigger: wifi, settings: environment.settings)
             }
         case "calendar":
-            CalendarTriggerConfigForm(settings: environment.settings)
+            if let calendar = trigger as? CalendarTrigger {
+                CalendarTriggerConfigForm(
+                    trigger: calendar,
+                    settings: environment.settings
+                )
+            }
         case "focus":
             FocusTriggerConfigInfo()
         default:
@@ -449,21 +454,32 @@ private struct WiFiTriggerConfigForm: View {
     }
 }
 
-// MARK: - Calendar config form (no EKCalendar picker yet — Phase 1.5.B)
+// MARK: - Calendar config form (V2-04 — multi-calendar picker)
 
 private struct CalendarTriggerConfigForm: View {
 
+    let trigger: CalendarTrigger
     let settings: SettingsStore
 
     @State private var leadMinutes: Int
     @State private var trailingMinutes: Int
     @State private var excludeAllDay: Bool
+    @State private var selectedCalendarIDs: Set<String>
+    @State private var availableCalendars: [CalendarSummary] = []
 
-    init(settings: SettingsStore) {
+    init(trigger: CalendarTrigger, settings: SettingsStore) {
+        self.trigger = trigger
         self.settings = settings
         self._leadMinutes = State(initialValue: settings.calendarTriggerLeadTimeMinutes)
         self._trailingMinutes = State(initialValue: settings.calendarTriggerTrailingMinutes)
         self._excludeAllDay = State(initialValue: settings.calendarTriggerExcludeAllDay)
+        // Empty persisted set means "all granted calendars" — we render
+        // that as no checkboxes ticked, with explicit copy. When the
+        // user picks any calendar, the set becomes non-empty and the
+        // trigger filters to that subset.
+        self._selectedCalendarIDs = State(
+            initialValue: Set(settings.calendarTriggerCalendarIDs)
+        )
     }
 
     var body: some View {
@@ -495,10 +511,136 @@ private struct CalendarTriggerConfigForm: View {
                     settings.calendarTriggerExcludeAllDay = newValue
                 }
 
-            Text("Calendar selection ships in a follow-up update. Today, Latte watches every calendar you've granted access to.")
+            calendarPickerSection
+        }
+        .task {
+            availableCalendars = trigger.availableCalendars()
+        }
+    }
+
+    @ViewBuilder
+    private var calendarPickerSection: some View {
+        if availableCalendars.isEmpty {
+            Text("Latte watches every calendar you've granted access to. Re-open this tab once Calendar permission is granted to pick specific calendars.")
                 .font(Theme.Fonts.caption)
                 .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        } else {
+            DisclosureGroup {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    pickerHeaderControls
+                    ForEach(availableCalendars) { calendar in
+                        CalendarPickerRow(
+                            calendar: calendar,
+                            isSelected: selectedCalendarIDs.contains(calendar.id),
+                            onToggle: { toggle(calendar.id) }
+                        )
+                    }
+                    Text(filterDescription)
+                        .font(Theme.Fonts.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.top, Theme.Spacing.xs)
+                }
+                .padding(.top, Theme.Spacing.xs)
+            } label: {
+                HStack {
+                    Label("Watched calendars", systemImage: "calendar")
+                        .font(Theme.Fonts.caption)
+                    Spacer()
+                    Text(selectedCalendarIDs.isEmpty
+                         ? "All calendars"
+                         : "\(selectedCalendarIDs.count) selected")
+                        .font(Theme.Fonts.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
+    }
+
+    private var pickerHeaderControls: some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            Button("Select all") {
+                selectedCalendarIDs = Set(availableCalendars.map(\.id))
+                commit()
+            }
+            .buttonStyle(.borderless)
+            .font(Theme.Fonts.caption)
+
+            Button("Use all calendars") {
+                selectedCalendarIDs.removeAll()
+                commit()
+            }
+            .buttonStyle(.borderless)
+            .font(Theme.Fonts.caption)
+            .help("Empty selection means Latte watches every calendar you've granted access to.")
+
+            Spacer()
+        }
+    }
+
+    private var filterDescription: String {
+        if selectedCalendarIDs.isEmpty {
+            return "Empty selection = watch every granted calendar."
+        }
+        return "Latte only fires for events in the calendars checked above."
+    }
+
+    private func toggle(_ id: String) {
+        if selectedCalendarIDs.contains(id) {
+            selectedCalendarIDs.remove(id)
+        } else {
+            selectedCalendarIDs.insert(id)
+        }
+        commit()
+    }
+
+    private func commit() {
+        // Sort for stable persisted order (avoids spurious diffs in
+        // UserDefaults snapshots and helps the next read yield a
+        // predictable ordering).
+        settings.calendarTriggerCalendarIDs = selectedCalendarIDs.sorted()
+    }
+}
+
+private struct CalendarPickerRow: View {
+
+    let calendar: CalendarSummary
+    let isSelected: Bool
+    let onToggle: () -> Void
+
+    private var swatchColor: Color {
+        Color(red: calendar.red, green: calendar.green, blue: calendar.blue)
+            .opacity(calendar.alpha)
+    }
+
+    var body: some View {
+        Button(action: onToggle) {
+            HStack(spacing: Theme.Spacing.sm) {
+                Image(systemName: isSelected ? "checkmark.square.fill" : "square")
+                    .foregroundStyle(isSelected ? .primary : .secondary)
+                    .frame(width: 16)
+                Circle()
+                    .fill(swatchColor)
+                    .frame(width: 10, height: 10)
+                    .overlay(Circle().strokeBorder(Color.primary.opacity(0.15), lineWidth: 0.5))
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(calendar.title)
+                        .font(Theme.Fonts.body)
+                        .lineLimit(1)
+                    if !calendar.sourceTitle.isEmpty {
+                        Text(calendar.sourceTitle)
+                            .font(Theme.Fonts.caption)
+                            .foregroundStyle(.tertiary)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer()
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(calendar.title), \(calendar.sourceTitle)")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
