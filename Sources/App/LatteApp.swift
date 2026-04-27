@@ -23,8 +23,22 @@ struct LatteApp: App {
                 .environmentObject(environment)
                 .task {
                     await environment.bootTriggers()
+                    presentOnboardingIfNeeded()
                 }
         }
         .menuBarExtraStyle(.window)
+    }
+
+    /// Show the first-run onboarding window the first time the menu bar
+    /// becomes interactive. Idempotent — subsequent launches read the
+    /// persisted flag and no-op.
+    @MainActor
+    private func presentOnboardingIfNeeded() {
+        guard !environment.onboarding.hasCompletedOnboarding else { return }
+        OnboardingWindowController.shared.show(
+            state: environment.onboarding,
+            coordinator: environment.coordinator,
+            environment: environment
+        )
     }
 }

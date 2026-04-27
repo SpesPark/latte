@@ -7,6 +7,7 @@ public final class AppEnvironment: ObservableObject {
     public let manager: AwakeManager
     public let coordinator: TriggerCoordinator
     public let launchAtLogin: LaunchAtLoginCoordinator
+    public let onboarding: OnboardingState
 
     /// User-selected menu bar icon variant. Mirrors `SettingsKey.menuBarIconStyle`
     /// — writing here persists to the underlying `SettingsStore`.
@@ -52,6 +53,7 @@ public final class AppEnvironment: ObservableObject {
             service: resolvedLaunchService,
             settings: settings
         )
+        self.onboarding = OnboardingState(settings: settings)
         registerDefaultTriggers()
     }
 
