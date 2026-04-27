@@ -6,6 +6,7 @@ public final class AppEnvironment: ObservableObject {
     public let settings: SettingsStore
     public let manager: AwakeManager
     public let coordinator: TriggerCoordinator
+    public let launchAtLogin: LaunchAtLoginCoordinator
 
     /// User-selected menu bar icon variant. Mirrors `SettingsKey.menuBarIconStyle`
     /// — writing here persists to the underlying `SettingsStore`.
@@ -26,7 +27,10 @@ public final class AppEnvironment: ObservableObject {
         }
     }
 
-    public init(settings: SettingsStore = UserDefaultsSettingsStore()) {
+    public init(
+        settings: SettingsStore = UserDefaultsSettingsStore(),
+        launchAtLoginService: LaunchAtLoginService? = nil
+    ) {
         self.settings = settings
         // Use AwakeManager.shared so AppIntents (out-of-process) and the in-process app
         // operate on the same FSM. Re-creating would split state.
@@ -34,6 +38,20 @@ public final class AppEnvironment: ObservableObject {
         self.coordinator = TriggerCoordinator(awakeManager: AwakeManager.shared, settings: settings)
         self.menuBarIconStyle = MenuBarIconStyle.decode(settings.string(.menuBarIconStyle))
         self.coffeeAccent = CoffeeAccent.decode(settings.string(.coffeeAccent))
+        let resolvedLaunchService: LaunchAtLoginService
+        if let launchAtLoginService {
+            resolvedLaunchService = launchAtLoginService
+        } else {
+            #if canImport(ServiceManagement)
+            resolvedLaunchService = SMAppServiceLaunchAtLogin()
+            #else
+            resolvedLaunchService = InMemoryLaunchAtLoginService()
+            #endif
+        }
+        self.launchAtLogin = LaunchAtLoginCoordinator(
+            service: resolvedLaunchService,
+            settings: settings
+        )
         registerDefaultTriggers()
     }
 

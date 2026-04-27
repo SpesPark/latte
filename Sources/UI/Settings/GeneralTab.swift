@@ -9,11 +9,27 @@ public struct GeneralTab: View {
         self.manager = manager
     }
 
+    @ViewBuilder
+    private var launchAtLoginToggle: some View {
+        // Bridge the environment-owned coordinator into a local binding so
+        // SwiftUI dispatches updates without traversing through the
+        // environment's let-bound stored property.
+        Toggle(
+            "Launch at login",
+            isOn: Binding(
+                get: { environment.launchAtLogin.isEnabled },
+                set: { environment.launchAtLogin.isEnabled = $0 }
+            )
+        )
+        .help("Latte starts automatically when you sign in to your Mac. Recommended for set-and-forget use.")
+    }
+
     public var body: some View {
         Form {
             Section {
                 Toggle("Allow display to sleep", isOn: $manager.allowDisplaySleep)
                     .help("When enabled, the system stays awake but the display may sleep.")
+                launchAtLoginToggle
             } header: {
                 Text("Behavior").font(Theme.Fonts.subheadline)
             }
