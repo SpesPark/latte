@@ -8,21 +8,25 @@
 
 | Field | Value |
 |---|---|
-| **Session #** | 10 — S9-family follow-through (simplify pass, Settings resizable, AppTrigger friendly reason, smoke comment hygiene, **Activate at launch**). 2026-04-30. |
-| **Theme** | Owner gave green-light to take recommended priorities in parallel while owner-side S8d/S8.5 stays blocked. Spawned a code-reviewer simplify pass on the S9 family and resolved its findings; landed `.resizable` on Settings (handoff-tracked observation); fixed S9d "raw bundle id in Reason" debt with friendly-name resolution + 3 regression tests; cleaned the now-stale 18-schedule smoke comment; closed the deferred `SettingsKey.activateOnLaunch` debt with an end-to-end "Activate at launch" feature (toggle + boot path + 3-gate behavior + 7 unit tests + new smoke scenario 19). Six landed commits, no architectural change. |
-| **Status** | ✅ All landed clean. 388 → **398 tests** (+3 regression for AppTrigger friendly-reason + 7 for activateOnLaunch). Smoke 18 → **19 scenarios**, full batch passes. Working tree clean. Build verified macOS 26.4 SDK + Xcode 26.4.1 (~5.0 s test run). |
-| **Tail commit** | resolves to S10 head when read (~`3ebc4af` after ROADMAP/v2-backlog sync) — see `git log -8` |
+| **Session #** | 10 → **S10.1** → **S10.1.1** — S10 (S9-family follow-through + Activate-at-launch) extended same-day with two no-churn passes: a second simplify-pass + plan-only specs for v1.2 + Tier A doc cleanup. 2026-04-30. |
+| **Theme** | After the S10 wrap, owner gave green-light to keep going while context budget allowed. Two extension waves landed, both owner-unblocked and churn-risk-zero. **S10.1**: a second code-reviewer simplify-pass scoped to S10's 4 code commits returned APPROVE-WITH-NITS; both MEDs resolved (observability log for `applyActivateOnLaunchIfEnabled` no-op gate + `setUp`/`tearDown` test isolation in `AppEnvironmentTests`). Plan-only design specs added for v1.2 so the next code session can RED-GREEN immediately: V2-06 external-display trigger + B1.2 custom-chord recorder. **S10.1.1** (Tier A no-churn cleanup): C-7 four-path comparison doc (decision-ready), ROADMAP row 9f, MEMORY index update, two LOW comment fixes. Cold-start cadence verified — `xcodebuild test` ↔ smoke harness must run serially (parallel = phantom rc=137 on `03-icon-states`). |
+| **Status** | ✅ 10 commits across S10 + S10.1 + S10.1.1 (7 + 2 + 1). 388 → **398 tests** (Δ from S10; S10.1+S10.1.1 are no-test-delta). Smoke 18 → **19 scenarios**. Working tree clean. Test run ~4.0 s, smoke run ~5 min. |
+| **Tail commit** | `6d72a81` — `docs: A1+A3+A4+A5 follow-through (S10.1.1)` |
 
-### Commit chain (this session)
+### Commit chain (this session — top is HEAD)
 
 ```
-3ebc4af  docs: ROADMAP row 9e + v2-backlog S10 shipped section (S10)
-5c06ea9  docs: SESSION_HANDOFF S10 update for Activate-at-launch (S10)
-a2c74a3  feat: Activate at launch (S10)
-cfe9155  smoke: 18-schedule INFO line reflects resizable Settings (S10)
-c6c6408  fix: AppTrigger vote reason uses friendly app names (S10)
-66e8628  feat: Settings window resizable (S10)
-d4497f1  chore: S9 family simplify-pass cleanup (S10)
+6d72a81  docs: A1+A3+A4+A5 follow-through (S10.1.1)                       (S10.1.1)
+04223e9  docs: serial-exec warning + V2-06/B1.2 plan-only specs (S10.1)   (S10.1 #2)
+e9d4033  chore: simplify-pass MED follow-through (S10.1)                  (S10.1 #1)
+dd60f7c  docs: SESSION_HANDOFF tail bumped to ROADMAP/backlog sync (S10)  (S10 wrap #3)
+3ebc4af  docs: ROADMAP row 9e + v2-backlog S10 shipped section (S10)      (S10 wrap #2)
+5c06ea9  docs: SESSION_HANDOFF S10 update for Activate-at-launch (S10)    (S10 wrap #1)
+a2c74a3  feat: Activate at launch (S10)                                   (S10 #5)
+cfe9155  smoke: 18-schedule INFO line reflects resizable Settings (S10)   (S10 #4)
+c6c6408  fix: AppTrigger vote reason uses friendly app names (S10)        (S10 #3)
+66e8628  feat: Settings window resizable (S10)                            (S10 #2)
+d4497f1  chore: S9 family simplify-pass cleanup (S10)                     (S10 #1)
 f1fbc1d  docs: SESSION_HANDOFF wrap for S9 family                          (S9 family wrap)
 63b8b3e  feat: B1 keyboard shortcut + smoke S9 coverage + 08/13 patch     (S9d)
 ```
@@ -37,17 +41,32 @@ f1fbc1d  docs: SESSION_HANDOFF wrap for S9 family                          (S9 f
 | 4 | `cfe9155` | **Smoke 18 comment hygiene** — `.smoke/scenarios/18-schedule.sh` INFO line + inline comment rewritten to reflect "resizable but harness lacks AX permission for AppleScript-driven resize" instead of the old "non-resizable" claim. No code change. | 0 (smoke-only) |
 | 5 | `a2c74a3` | **Activate at launch** — closes the deferred `SettingsKey.activateOnLaunch` debt. New `AppEnvironment.activateOnLaunch` published flag + `applyActivateOnLaunchIfEnabled()` method invoked from `LatteAppDelegate.applicationDidFinishLaunching` after `bootTriggers`. Three gates: flag ON + onboarding completed + manager currently asleep. Activates `.indefinite` with `reason: .launch`. Fixes the previously-dead `reason:` parameter on `AwakeManager.activate(for:reason:)` — the FSM hardcodes `.user` for `.userActivate` inputs, so the manager now overrides `activeReason` post-step when caller passes a non-`.user` reason. New Settings → General → Behavior toggle. New smoke scenario `19-activate-on-launch.sh` covers ON / OFF / onboarding-incomplete gates. | +7 (4 binding mirror + 3 functional gating) |
 
+### What landed in S10.1 (no-churn extension)
+
+| # | Commit | Scope | Tests Δ |
+|---|---|---|---|
+| 6 | `e9d4033` | **Simplify-pass MED follow-through** — second simplify-pass on S10's own commits returned APPROVE-WITH-NITS; both MEDs resolved. (1) `applyActivateOnLaunchIfEnabled` now logs a `LatteLog.awake.info` line when the activate is silently blocked by an input-boundary gate (`requireACForAwake` on battery), surfacing the otherwise-mute "toggle on, no assertion" failure mode. (2) `AppEnvironmentTests` overrides `setUp`/`tearDown` to defensively `AwakeManager.shared.deactivate()` each test, eliminating the test-leak path; the 3 redundant inline `deactivate()` calls in the activate-at-launch tests are dropped. | 0 (no behavior change; tests still 398/398) |
+| 7 | `04223e9` | **Serial-exec warning + V2-06/B1.2 plan-only specs** — SESSION_HANDOFF "How to resume" gains an explicit warning that `xcodebuild test` and `~/dev/smoke-harness/run.sh` MUST run serially (parallel run kills the smoke scenario via SIGKILL propagation). Two new design docs: `06-display-trigger.md` (V2-06, ~4h impl) and `07-shortcut-recorder.md` (B1.2, ~5h impl) — both with full RED-GREEN-ready test plans, smoke outlines, and 4 owner Qs each. | 0 (docs-only) |
+
+### What landed in S10.1.1 (Tier A no-churn cleanup)
+
+| # | Commit | Scope | Tests Δ |
+|---|---|---|---|
+| 8 | `6d72a81` | **A1+A3+A4+A5 follow-through** — A1: `08-c7-quick-presets-paths.md` NEW, full A/B/C/D comparison for the C-7 "Until X PM" preset feature (LOC / FSM-impact / persistence / UX-correctness / risk side-by-side, per-priority recommendation matrix). A3: ROADMAP row 9f added between row 9e (S10) and row 10 (App Store Connect). A4: MEMORY.md + `project_latte_session10.md` extended with S10.1 + S10.1.1 narrative (outside the repo). A5: 2 LOW findings from the second simplify-pass — `LatteApp.swift` comment clarified ("belt-and-suspenders" instead of implying redundancy) + `19-activate-on-launch.sh` poll-loop comment notes the 8s window is cold-CI headroom. | 0 (docs / comment-only) |
+
 ### Reviewer findings resolved
 
-S9-family code-reviewer simplify pass (run 2026-04-30) returned: **0 CRITICAL, 0 HIGH, 2 MEDIUM, 2 LOW** — all addressed in commit `d4497f1`. Verdict was APPROVE; the fixes are quality-of-life cleanup only.
+- **S9-family simplify pass** (run 2026-04-30, scope S9 family): **0 CRITICAL, 0 HIGH, 2 MEDIUM, 2 LOW** — all addressed in commit `d4497f1` (S10 #1).
+- **S10 simplify pass** (run 2026-04-30, scope S10's own 4 code commits): **0 CRITICAL, 0 HIGH, 2 MEDIUM, 2 LOW** — both MEDs resolved in `e9d4033` (S10.1), both LOWs resolved in `6d72a81` (S10.1.1).
 
 ### Architectural invariants preserved
 
-- **No state-machine changes** across all four S10 commits.
+- **No state-machine changes** across all 8 commits (S10 + S10.1 + S10.1.1).
 - **Persistence schema unchanged** (no new SettingsKey cases this session).
-- **DI surface unchanged** (no new protocols; `WorkspaceSource.displayInfo` was already a S7.7-vintage seam — this session just calls it from one more place).
+- **DI surface unchanged** (no new protocols; `WorkspaceSource.displayInfo` was already a S7.7-vintage seam — S10 just calls it from one more place. S10.1 / S10.1.1 are docs / observability / test-isolation only).
 - **AsyncStream lifecycle** untouched.
 - **No-auto-replay policy** untouched.
+- **`AwakeManager.shared` use deliberate** — `AppIntents` runs out-of-process and must share the FSM. The MED #2 test-isolation fix uses defensive `setUp`/`tearDown` rather than init-injecting a fresh manager, preserving this invariant.
 
 ### Files changed (S10)
 
@@ -81,8 +100,8 @@ Tests/TriggerCoordinatorTests.swift                (c6c6408: 1 literal update)
 
 ```bash
 cd ~/Documents/Claude/Projects/Latte
-git log --oneline -7
-# Expected top: cfe9155 smoke: 18-schedule INFO line reflects resizable Settings (S10)
+git log --oneline -12
+# Expected top: 6d72a81 docs: A1+A3+A4+A5 follow-through (S10.1.1)
 
 # Pre-flight (always before Xcode Cmd-R OR xcodebuild test):
 pkill -9 -f "Latte.app" 2>/dev/null
@@ -93,7 +112,7 @@ pkill -9 -f "Latte.app" 2>/dev/null
 
 # Verify Latte tests:
 xcodebuild test -scheme Latte -destination 'platform=macOS,arch=arm64' 2>&1 | grep "Executed 398 tests"
-# Expected: Executed 398 tests, with 0 failures (~5.0 s)
+# Expected: Executed 398 tests, with 0 failures (~4.0 s)
 
 # Verify smoke harness (~5 min, requires Release build of Latte at the
 # DerivedData path encoded in `.smoke/config.yml`):
@@ -140,12 +159,12 @@ If any of these surfaces are awkward, file as P1 follow-up before piling on more
 1. **Owner smoke results** — the 6-step list above. P1 from there comes first.
 2. **Owner-side blocked actions** (still): S8d ~5 min capture + Pages deploy; S8.5 Apple Developer Program enrollment ($99/yr, 1–2 day review).
 3. **Remaining v1.1 candidates** (need owner pick + scope confirmation):
-   - **C-7 Quick presets** — note that `AwakeDuration.presets` already has 7 entries and the popover already renders them. The actual delta vs the original sketch is "Until X PM" semantic presets, which require a small AwakeManager state extension or an `AwakeDuration.until(Date)` enum case. See "C-7 scope alternatives" in S10 conversation transcript.
+   - **C-7 Quick presets** — `AwakeDuration.presets` already has 7 entries; the actual delta is "Until X PM" semantic presets. Full **A/B/C/D path comparison** lives in [docs/design/08-c7-quick-presets-paths.md](docs/design/08-c7-quick-presets-paths.md) — owner picks on a single screen via the recommendation matrix.
    - **C-3 Activity history** — Charts framework + new Settings tab. May trigger SwiftData v2 migration depending on storage choice. Higher risk while owner-side S8d/S8.5 still pending.
 4. **Smoke harness AX permission** — granting the runner Accessibility privilege would unlock AppleScript-driven window resize and let scenario 18 capture the full Triggers tab in one shot. Pure infra; affects no app code.
-5. **v1.2 candidates** (post-v1.1):
-   - **B1.2** Custom keyboard-shortcut recorder
-   - **V2-06** External display trigger (validated demand per S8b research)
+5. **v1.2 candidates** (post-v1.1, both **RED-GREEN ready** thanks to S10.1 plan-only specs):
+   - **V2-06** External display trigger — full spec in [docs/design/06-display-trigger.md](docs/design/06-display-trigger.md). ~4h impl, 8 unit + 2 integration tests, smoke 20 outline, 4 owner Qs.
+   - **B1.2** Custom keyboard-shortcut recorder — full spec in [docs/design/07-shortcut-recorder.md](docs/design/07-shortcut-recorder.md). ~5h impl, 12 unit tests, smoke 21 outline, 4 owner Qs.
 
 > **Activate-at-launch follow-up note**: the published `activeReason` is now overridden post-FSM when callers pass a non-`.user` reason. This is a narrow workaround; if a future change adds more `.launch`-style reasons (e.g. `.system`, `.shortcut`), prefer plumbing the reason through `AwakeInput.userActivate` directly (8 Sources sites + 7 Tests sites). Documented in `Sources/Core/AwakeManager.swift:activate(for:reason:)` inline comment.
 
@@ -153,7 +172,7 @@ If any of these surfaces are awkward, file as P1 follow-up before piling on more
 
 ## Decisions still pending owner approval
 
-- **C-7 scope** — A (`.minutes(N)` conversion, simplest, UX checkmark leaks to Custom row) vs B (`AwakeDuration.until(Date)`, semantic-clean but ~3× LOC) vs C (`@Published var activeQuickPreset`, future-proofs C-3) vs skip-to-C-3.
+- **C-7 scope** — pick path A / B / C / D from [docs/design/08-c7-quick-presets-paths.md](docs/design/08-c7-quick-presets-paths.md). The doc has a single-screen recommendation matrix; pick the row that matches your sprint priorities and write the answer here as a one-line note.
 - Whether to keep going on v1.1 features in parallel with owner-side S8d, or pause new feature work until S8d/S8.5 unblocks.
 
 ---
@@ -169,19 +188,18 @@ If any of these surfaces are awkward, file as P1 follow-up before piling on more
 
 ---
 
-## Recap stats (S10 end)
+## Recap stats (S10.1.1 end)
 
-| | S8c end | S9d end | **S10 end** | Δ (S10) |
-|---|---|---|---|---|
-| Tests | 309 | 388 | **398** | +10 (3 regression + 7 new feature) |
-| Smoke scenarios | 14 | 18 | **19** | +1 (19-activate-on-launch) |
-| Default triggers | 3 | 4 | **4** | 0 |
-| AwakeManager `@Published` settings | 1 | 3 | **3** | 0 |
-| AppEnvironment `@Published` settings | 2 (icon style + accent) | 2 | **3** (+ activateOnLaunch) | +1 |
-| Settings keys total | 22 | 27 | **27** (activateOnLaunch was already declared) | 0 |
-| Power-source DI surface | none | `PowerSourceType` | unchanged | 0 |
-| Hotkey DI surface | none | `HotKeyRegistrar` | unchanged | 0 |
-| Global hotkeys | 0 | 1 (⌘⇧L) | **1** | 0 |
-| Settings window | fixed 460×360 | fixed 460×360 | **resizable** | +1 UX win |
-| AppTrigger Reason format | raw bundle id | raw bundle id | **friendly via displayInfo** | semantic fix |
-| `AwakeReason.launch` | declared, unused | declared, unused | **wired end-to-end** | feature complete |
+| | S8c end | S9d end | S10 end | **S10.1.1 end** | Δ (S10.1+S10.1.1) |
+|---|---|---|---|---|---|
+| Tests | 309 | 388 | 398 | **398** | 0 (no-test-delta extensions) |
+| Smoke scenarios | 14 | 18 | 19 | **19** | 0 |
+| Default triggers | 3 | 4 | 4 | **4** | 0 |
+| AwakeManager `@Published` settings | 1 | 3 | 3 | **3** | 0 |
+| AppEnvironment `@Published` settings | 2 | 2 | 3 | **3** | 0 |
+| Settings keys total | 22 | 27 | 27 | **27** | 0 |
+| Settings window | fixed | fixed | resizable | **resizable** | 0 |
+| AppTrigger Reason format | raw id | raw id | friendly | **friendly** | 0 |
+| `AwakeReason.launch` | declared | declared | wired | **wired + observability log** | log polish |
+| Plan-only specs in `docs/design/` | 5 | 5 | 5 | **8** (+06 V2-06, +07 B1.2, +08 C-7 paths) | +3 |
+| ROADMAP rows | through 9d | through 9d | through 9e | **through 9f** | +1 |
