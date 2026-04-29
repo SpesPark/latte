@@ -8,14 +8,15 @@
 
 | Field | Value |
 |---|---|
-| **Session #** | 10 — S9-family follow-through (simplify pass, Settings resizable, AppTrigger friendly reason, smoke comment hygiene). 2026-04-30. |
-| **Theme** | Owner gave green-light to take recommended priorities in parallel while owner-side S8d/S8.5 stays blocked. Spawned a code-reviewer simplify pass on the S9 family and resolved its findings; landed `.resizable` on Settings (handoff-tracked observation); fixed S9d "raw bundle id in Reason" debt with friendly-name resolution + 3 regression tests; cleaned the now-stale 18-schedule smoke comment. Four landed commits, no architectural change. |
-| **Status** | ✅ All landed clean. 388 → **391 tests** (+3 new regression tests for the AppTrigger friendly-reason fix; the 4 existing assertions that locked in the old "raw bundle id" reason were updated). Smoke 18/18 PASS (full batch). Working tree clean. Build verified macOS 26.4 SDK + Xcode 26.4.1 (~5.0 s test run). |
-| **Tail commit** | `cfe9155` (will resolve to S10 head when read — see `git log -5`) |
+| **Session #** | 10 — S9-family follow-through (simplify pass, Settings resizable, AppTrigger friendly reason, smoke comment hygiene, **Activate at launch**). 2026-04-30. |
+| **Theme** | Owner gave green-light to take recommended priorities in parallel while owner-side S8d/S8.5 stays blocked. Spawned a code-reviewer simplify pass on the S9 family and resolved its findings; landed `.resizable` on Settings (handoff-tracked observation); fixed S9d "raw bundle id in Reason" debt with friendly-name resolution + 3 regression tests; cleaned the now-stale 18-schedule smoke comment; closed the deferred `SettingsKey.activateOnLaunch` debt with an end-to-end "Activate at launch" feature (toggle + boot path + 3-gate behavior + 7 unit tests + new smoke scenario 19). Six landed commits, no architectural change. |
+| **Status** | ✅ All landed clean. 388 → **398 tests** (+3 regression for AppTrigger friendly-reason + 7 for activateOnLaunch). Smoke 18 → **19 scenarios**, full batch passes. Working tree clean. Build verified macOS 26.4 SDK + Xcode 26.4.1 (~5.0 s test run). |
+| **Tail commit** | `a2c74a3` (will resolve to S10 head when read — see `git log -5`) |
 
 ### Commit chain (this session)
 
 ```
+a2c74a3  feat: Activate at launch (S10)
 cfe9155  smoke: 18-schedule INFO line reflects resizable Settings (S10)
 c6c6408  fix: AppTrigger vote reason uses friendly app names (S10)
 66e8628  feat: Settings window resizable (S10)
@@ -32,6 +33,7 @@ f1fbc1d  docs: SESSION_HANDOFF wrap for S9 family                          (S9 f
 | 2 | `66e8628` | **Settings window resizable** — `SettingsWindowController` adds `.resizable` to styleMask + explicit `setContentSize(NSSize(460, 360))`; `SettingsRoot` `.frame(width:height:)` → `.frame(minWidth:minHeight:)`. Opens at the same default; user can drag to grow; Form auto-scrolls so Schedule (4th trigger) becomes visible without scroll. | 0 (AppKit-only; existing tests cover SwiftUI surfaces) |
 | 3 | `c6c6408` | **AppTrigger friendly reason** — S9d known issue closed. `AppTrigger.emitOn` now resolves bundle ids through `WorkspaceSource.displayInfo` (`us.zoom.xos` → "Zoom", explicit `displayInfoLookup` overrides win, unmapped ids fall back to raw id). Sorted-by-id, joined as friendly names. | +3 regression (fallback / curated / explicit-override) + 4 existing test literals updated |
 | 4 | `cfe9155` | **Smoke 18 comment hygiene** — `.smoke/scenarios/18-schedule.sh` INFO line + inline comment rewritten to reflect "resizable but harness lacks AX permission for AppleScript-driven resize" instead of the old "non-resizable" claim. No code change. | 0 (smoke-only) |
+| 5 | `a2c74a3` | **Activate at launch** — closes the deferred `SettingsKey.activateOnLaunch` debt. New `AppEnvironment.activateOnLaunch` published flag + `applyActivateOnLaunchIfEnabled()` method invoked from `LatteAppDelegate.applicationDidFinishLaunching` after `bootTriggers`. Three gates: flag ON + onboarding completed + manager currently asleep. Activates `.indefinite` with `reason: .launch`. Fixes the previously-dead `reason:` parameter on `AwakeManager.activate(for:reason:)` — the FSM hardcodes `.user` for `.userActivate` inputs, so the manager now overrides `activeReason` post-step when caller passes a non-`.user` reason. New Settings → General → Behavior toggle. New smoke scenario `19-activate-on-launch.sh` covers ON / OFF / onboarding-incomplete gates. | +7 (4 binding mirror + 3 functional gating) |
 
 ### Reviewer findings resolved
 
@@ -48,6 +50,9 @@ S9-family code-reviewer simplify pass (run 2026-04-30) returned: **0 CRITICAL, 0
 ### Files changed (S10)
 
 ```
+Sources/App/AppEnvironment.swift                   (a2c74a3: + activateOnLaunch published + applyActivateOnLaunchIfEnabled)
+Sources/App/LatteApp.swift                         (a2c74a3: post-bootTriggers call)
+Sources/Core/AwakeManager.swift                    (a2c74a3: activate() honours reason: param post-FSM)
 Sources/Core/KeyboardShortcutCoordinator.swift     (d4497f1: LatteLog.shortcut + class doc)
 Sources/Core/Logging.swift                         (d4497f1: + LatteLog.shortcut)
 Sources/Core/PowerSource.swift                     (d4497f1: LatteLog.powerSource)
@@ -55,14 +60,17 @@ Sources/Triggers/AppTrigger.swift                  (c6c6408: emitOn → friendly
 Sources/Triggers/CalendarTrigger.swift             (d4497f1: reevaluateWatched comment trim)
 Sources/Triggers/ScheduleTrigger.swift             (d4497f1: reevaluateWatched comment trim)
 Sources/Triggers/WiFiTrigger.swift                 (d4497f1: reevaluateWatched comment trim)
+Sources/UI/Settings/GeneralTab.swift               (a2c74a3: + activateOnLaunchToggle in Behavior)
 Sources/UI/Settings/SettingsRoot.swift             (66e8628: minWidth/minHeight)
 Sources/UI/Settings/SettingsWindowController.swift (66e8628: + .resizable + setContentSize)
 Sources/UI/Settings/TriggersTab.swift              (d4497f1: ScheduleEntryRow label .onChange)
 
+Tests/AppEnvironmentTests.swift                    (a2c74a3: + 7 tests for activateOnLaunch)
 Tests/AppTriggerTests.swift                        (c6c6408: 4 literal updates + 3 new regression tests)
 Tests/TriggerCoordinatorTests.swift                (c6c6408: 1 literal update)
 
 .smoke/scenarios/18-schedule.sh                    (cfe9155: comment hygiene)
+.smoke/scenarios/19-activate-on-launch.sh          (a2c74a3: NEW)
 ```
 
 ---
@@ -82,14 +90,14 @@ pkill -9 -f "Latte.app" 2>/dev/null
 # into a clean run.
 
 # Verify Latte tests:
-xcodebuild test -scheme Latte -destination 'platform=macOS,arch=arm64' 2>&1 | grep "Executed 391 tests"
-# Expected: Executed 391 tests, with 0 failures (~5.0 s)
+xcodebuild test -scheme Latte -destination 'platform=macOS,arch=arm64' 2>&1 | grep "Executed 398 tests"
+# Expected: Executed 398 tests, with 0 failures (~5.0 s)
 
 # Verify smoke harness (~5 min, requires Release build of Latte at the
 # DerivedData path encoded in `.smoke/config.yml`):
 xcodebuild build -scheme Latte -configuration Release -destination 'platform=macOS,arch=arm64'
 ~/dev/smoke-harness/run.sh --project .
-# Expected: all scenarios passed (18/18)
+# Expected: all scenarios passed (19/19)
 ```
 
 ---
@@ -113,9 +121,9 @@ If any of these surfaces are awkward, file as P1 follow-up before piling on more
 
 - ~~**A-1 reason field shows raw bundle id**~~ — **resolved S10 c6c6408**.
 - ~~**Settings window not resizable**~~ — **resolved S10 66e8628**.
+- ~~**`SettingsKey.activateOnLaunch` declared but never read**~~ — **resolved S10 a2c74a3** (full feature: toggle + boot path + 3-gate behavior).
 - **A-1 Power row conditional rendering** — verified the `nil`-suppression is intentional. Owner should confirm during step 4.
-- **`SettingsKey.activateOnLaunch` is declared but never read** — design docs describe it as "boot Awake on launch" — deferred but still a planned feature, not dead code. Do **not** delete; revisit when the matching code path is implemented.
-- **Smoke harness coverage** — 18 scenarios. Run via `~/dev/smoke-harness/run.sh --project ~/Documents/Claude/Projects/Latte` (~5 min, 18/18 expected).
+- **Smoke harness coverage** — **19 scenarios**. Run via `~/dev/smoke-harness/run.sh --project ~/Documents/Claude/Projects/Latte` (~5 min, 19/19 expected).
 
 ---
 
@@ -127,10 +135,11 @@ If any of these surfaces are awkward, file as P1 follow-up before piling on more
    - **C-7 Quick presets** — note that `AwakeDuration.presets` already has 7 entries and the popover already renders them. The actual delta vs the original sketch is "Until X PM" semantic presets, which require a small AwakeManager state extension or an `AwakeDuration.until(Date)` enum case. See "C-7 scope alternatives" in S10 conversation transcript.
    - **C-3 Activity history** — Charts framework + new Settings tab. May trigger SwiftData v2 migration depending on storage choice. Higher risk while owner-side S8d/S8.5 still pending.
 4. **Smoke harness AX permission** — granting the runner Accessibility privilege would unlock AppleScript-driven window resize and let scenario 18 capture the full Triggers tab in one shot. Pure infra; affects no app code.
-5. **`SettingsKey.activateOnLaunch` real implementation** — design-doc-tracked deferred feature; small (~1 hour).
-6. **v1.2 candidates** (post-v1.1):
+5. **v1.2 candidates** (post-v1.1):
    - **B1.2** Custom keyboard-shortcut recorder
    - **V2-06** External display trigger (validated demand per S8b research)
+
+> **Activate-at-launch follow-up note**: the published `activeReason` is now overridden post-FSM when callers pass a non-`.user` reason. This is a narrow workaround; if a future change adds more `.launch`-style reasons (e.g. `.system`, `.shortcut`), prefer plumbing the reason through `AwakeInput.userActivate` directly (8 Sources sites + 7 Tests sites). Documented in `Sources/Core/AwakeManager.swift:activate(for:reason:)` inline comment.
 
 ---
 
@@ -156,13 +165,15 @@ If any of these surfaces are awkward, file as P1 follow-up before piling on more
 
 | | S8c end | S9d end | **S10 end** | Δ (S10) |
 |---|---|---|---|---|
-| Tests | 309 | 388 | **391** | +3 (regression) |
-| Smoke scenarios | 14 | 18 | **18** | 0 |
+| Tests | 309 | 388 | **398** | +10 (3 regression + 7 new feature) |
+| Smoke scenarios | 14 | 18 | **19** | +1 (19-activate-on-launch) |
 | Default triggers | 3 | 4 | **4** | 0 |
 | AwakeManager `@Published` settings | 1 | 3 | **3** | 0 |
-| Settings keys total | 22 | 27 | **27** | 0 |
+| AppEnvironment `@Published` settings | 2 (icon style + accent) | 2 | **3** (+ activateOnLaunch) | +1 |
+| Settings keys total | 22 | 27 | **27** (activateOnLaunch was already declared) | 0 |
 | Power-source DI surface | none | `PowerSourceType` | unchanged | 0 |
 | Hotkey DI surface | none | `HotKeyRegistrar` | unchanged | 0 |
 | Global hotkeys | 0 | 1 (⌘⇧L) | **1** | 0 |
 | Settings window | fixed 460×360 | fixed 460×360 | **resizable** | +1 UX win |
 | AppTrigger Reason format | raw bundle id | raw bundle id | **friendly via displayInfo** | semantic fix |
+| `AwakeReason.launch` | declared, unused | declared, unused | **wired end-to-end** | feature complete |
