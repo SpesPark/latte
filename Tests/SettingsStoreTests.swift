@@ -179,6 +179,7 @@ final class SettingsKeyEnumTests: XCTestCase {
             "latte.focusTrigger.focusIDs",
             "latte.scheduleTrigger.enabled",
             "latte.scheduleTrigger.entries",
+            "latte.externalDisplayTrigger.enabled",
             "latte.requireACForAwake",
             "latte.triggersPaused",
             "latte.keyboardShortcut.enabled"

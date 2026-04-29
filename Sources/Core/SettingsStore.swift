@@ -40,6 +40,11 @@ public enum SettingsKey: String, CaseIterable, Sendable {
     case scheduleTriggerEnabled = "latte.scheduleTrigger.enabled"
     case scheduleTriggerEntries = "latte.scheduleTrigger.entries"
 
+    // External-display trigger (V2-06) — v1.2
+    /// When true and at least one external display is connected, vote awake.
+    /// Default off so installs don't change behaviour for users who never opt in.
+    case externalDisplayEnabled = "latte.externalDisplayTrigger.enabled"
+
     // Battery-aware mode (C-1) and pause-all (C-9) — v1.1
     case requireACForAwake      = "latte.requireACForAwake"
     case triggersPaused         = "latte.triggersPaused"

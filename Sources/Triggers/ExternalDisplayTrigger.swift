@@ -1,0 +1,251 @@
+import Foundation
+#if canImport(AppKit)
+import AppKit
+#endif
+
+// MARK: - DisplaySource protocol
+
+@MainActor
+public protocol DisplaySource: AnyObject {
+    /// Number of attached external displays (excludes the built-in screen).
+    var externalDisplayCount: Int { get }
+
+    /// Localized name of the first external display, when available.
+    /// Used for the vote reason string. `nil` falls back to "External Display".
+    var firstExternalDisplayName: String? { get }
+
+    /// Emits whenever the screen configuration changes (attach, detach,
+    /// resolution change, sleep/wake). The trigger consumes this to decide
+    /// when to re-evaluate. Production adapter coalesces bursts; tests can
+    /// drive it directly through `MockDisplaySource.emitChange()`.
+    var changeStream: AsyncStream<Void> { get }
+}
+
+// MARK: - NSScreen-backed production adapter
+
+#if canImport(AppKit)
+@MainActor
+public final class NSScreenSource: DisplaySource {
+
+    public let changeStream: AsyncStream<Void>
+    private let continuation: AsyncStream<Void>.Continuation
+    private var observer: NSObjectProtocol?
+
+    public init() {
+        let (stream, cont) = AsyncStream<Void>.makeStream()
+        self.changeStream = stream
+        self.continuation = cont
+        self.observer = NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.continuation.yield(())
+        }
+    }
+
+    deinit {
+        if let observer { NotificationCenter.default.removeObserver(observer) }
+        continuation.finish()
+    }
+
+    public var externalDisplayCount: Int {
+        NSScreen.screens.filter { !Self.isBuiltIn($0) }.count
+    }
+
+    public var firstExternalDisplayName: String? {
+        NSScreen.screens.first { !Self.isBuiltIn($0) }?.localizedName
+    }
+
+    private static func isBuiltIn(_ screen: NSScreen) -> Bool {
+        let key = NSDeviceDescriptionKey("NSScreenNumber")
+        guard let displayID = screen.deviceDescription[key] as? CGDirectDisplayID else {
+            return false
+        }
+        return CGDisplayIsBuiltin(displayID) != 0
+    }
+}
+#endif
+
+// MARK: - ExternalDisplayTrigger
+
+@MainActor
+public final class ExternalDisplayTrigger: Trigger {
+
+    public let id = "external-display"
+    public let displayName = "External Display"
+    public let symbol = "display"
+    public let requiresPermission = false
+
+    public var isEnabled: Bool {
+        get { settings.bool(.externalDisplayEnabled, default: false) }
+        set { settings.setBool(newValue, for: .externalDisplayEnabled) }
+    }
+
+    public var permissionStatus: TriggerPermissionStatus { .notRequired }
+
+    public let voteStream: AsyncStream<TriggerVote>
+    private let continuation: AsyncStream<TriggerVote>.Continuation
+
+    private let settings: SettingsStore
+    private let source: DisplaySource
+    private let logger = LatteLog.display
+
+    private var lastVote: Bool? = nil
+    private var observeTask: Task<Void, Never>?
+    /// Gate that lets `evaluate()` emit. `source.changeStream` is single-
+    /// consumer, so the observe task is installed once at the first
+    /// `start()` and lives for the trigger's full lifetime. `stop()` flips
+    /// the gate off (and resets `lastVote`); the next `start()` flips it
+    /// back on and triggers a fresh evaluate against current source state.
+    private var isRunning = false
+
+    public init(settings: SettingsStore, source: DisplaySource? = nil) {
+        self.settings = settings
+        let (stream, cont) = AsyncStream<TriggerVote>.makeStream()
+        self.voteStream = stream
+        self.continuation = cont
+        if let source {
+            self.source = source
+        } else {
+            #if canImport(AppKit)
+            self.source = NSScreenSource()
+            #else
+            self.source = NoopDisplaySource()
+            #endif
+        }
+    }
+
+    deinit {
+        observeTask?.cancel()
+    }
+
+    public func start() async {
+        logger.info("ExternalDisplayTrigger.start")
+        if observeTask == nil {
+            // Install once — see `isRunning` doc. `source.changeStream`
+            // can only be iterated by a single consumer for its entire
+            // lifetime, so we keep this task alive across start/stop
+            // cycles and gate evaluation through `isRunning`.
+            observeTask = Task { @MainActor [weak self] in
+                guard let self else { return }
+                for await _ in self.source.changeStream {
+                    if Task.isCancelled { break }
+                    // Gate observe-driven evaluation on the isRunning
+                    // flag so source events during a stop window are
+                    // ignored; the next start() will pick up fresh state.
+                    if self.isRunning { self.evaluate() }
+                }
+            }
+        }
+        guard !isRunning else { return }
+        isRunning = true
+        evaluate()
+    }
+
+    public func stop() {
+        logger.info("ExternalDisplayTrigger.stop")
+        isRunning = false
+        lastVote = nil
+        // Per S7.11: do NOT call `continuation.finish()`. The AsyncStream
+        // stays open for the trigger's registered lifetime so a future
+        // start() can resume yielding to the existing consumer.
+        // Note: observeTask is intentionally NOT cancelled here — see
+        // `isRunning` doc for the single-consumer rationale.
+    }
+
+    public func requestPermissionIfNeeded() async -> Bool { true }
+
+    /// Live count exposed for the Settings tab status row.
+    public var externalDisplayCount: Int { source.externalDisplayCount }
+
+    /// Live name exposed for the Settings tab status row.
+    public var firstExternalDisplayName: String? { source.firstExternalDisplayName }
+
+    /// V2-02 parity — re-evaluate immediately after a UI edit. No-op when
+    /// stopped (the running indicator is `isRunning`); the next start()
+    /// will read fresh state on its initial evaluate.
+    public func reevaluateWatched() {
+        guard isRunning else { return }
+        evaluate()
+    }
+
+    /// Test seam — evaluate the source against the lastVote and emit only
+    /// on transition. The `isRunning` gate is enforced inside the
+    /// `observeTask` callback (see `start()`) so source events during a
+    /// stop window don't reach this method; tests can still call
+    /// `evaluate()` directly to assert vote semantics.
+    public func evaluate() {
+        guard isEnabled else { return }
+        let count = source.externalDisplayCount
+        let wantsAwake = count >= 1
+
+        if lastVote == nil && !wantsAwake { return }
+        if lastVote == wantsAwake { return }
+        lastVote = wantsAwake
+
+        let reason: String
+        if wantsAwake {
+            let name = source.firstExternalDisplayName ?? "External Display"
+            reason = "Display: \(name)"
+        } else {
+            reason = "Display: disconnected"
+        }
+        continuation.yield(TriggerVote(wantsAwake: wantsAwake, reason: reason))
+    }
+}
+
+// MARK: - Mock source (production-shipped, used only by tests + smoke env-var)
+
+@MainActor
+public final class MockDisplaySource: DisplaySource {
+
+    public var externalDisplayCount: Int
+    public var firstExternalDisplayName: String?
+
+    public let changeStream: AsyncStream<Void>
+    private let continuation: AsyncStream<Void>.Continuation
+
+    public init(externalDisplayCount: Int = 0,
+                firstExternalDisplayName: String? = nil) {
+        self.externalDisplayCount = externalDisplayCount
+        self.firstExternalDisplayName = firstExternalDisplayName
+        let (stream, cont) = AsyncStream<Void>.makeStream()
+        self.changeStream = stream
+        self.continuation = cont
+    }
+
+    /// Update count + emit a change event so the trigger re-evaluates.
+    public func setCount(_ count: Int) {
+        externalDisplayCount = count
+        continuation.yield(())
+    }
+
+    /// Update first-display name + emit a change event.
+    public func setFirstName(_ name: String?) {
+        firstExternalDisplayName = name
+        continuation.yield(())
+    }
+
+    /// Emit a raw change event without changing state — useful for testing
+    /// observe-task wiring without state transitions.
+    public func emitChange() {
+        continuation.yield(())
+    }
+
+    deinit { continuation.finish() }
+}
+
+#if !canImport(AppKit)
+@MainActor
+final class NoopDisplaySource: DisplaySource {
+    var externalDisplayCount: Int { 0 }
+    var firstExternalDisplayName: String? { nil }
+    let changeStream: AsyncStream<Void>
+    init() {
+        let (stream, cont) = AsyncStream<Void>.makeStream()
+        self.changeStream = stream
+        cont.finish()
+    }
+}
+#endif
