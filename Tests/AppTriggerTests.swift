@@ -23,7 +23,10 @@ final class AppTriggerTests: XCTestCase {
         var iterator = trigger.voteStream.makeAsyncIterator()
         let vote = await iterator.next()
         XCTAssertEqual(vote?.wantsAwake, true)
-        XCTAssertTrue(vote?.reason.contains("us.zoom.xos") ?? false)
+        // Friendly name resolved via WorkspaceSource.displayInfo curated table
+        // (us.zoom.xos → "Zoom"); raw bundle id is the fallback only when
+        // displayInfo returns nil.
+        XCTAssertTrue(vote?.reason.contains("Zoom") ?? false)
     }
 
     func testInitialSnapshotNoEmitWhenNoWatchedAppRunning() async throws {
@@ -47,6 +50,43 @@ final class AppTriggerTests: XCTestCase {
         var iterator = trigger.voteStream.makeAsyncIterator()
         let vote = await iterator.next()
         XCTAssertEqual(vote?.wantsAwake, true)
+    }
+
+    func testEmitOnReasonUsesFriendlyNameFromCuratedDisplayInfo() async throws {
+        let (trigger, _, _) = makeFixture(running: ["us.zoom.xos"])
+        await trigger.start()
+        var iterator = trigger.voteStream.makeAsyncIterator()
+        let vote = await iterator.next()
+        XCTAssertEqual(vote?.reason, "App: Zoom",
+                       "curated displayInfo should map us.zoom.xos → Zoom in the vote reason")
+    }
+
+    func testEmitOnReasonFallsBackToBundleIDForUnknownApps() async throws {
+        let settings = InMemorySettingsStore()
+        settings.appTriggerBundleIDs = ["com.example.unknown"]
+        let source = MockWorkspaceSource(runningBundleIDs: ["com.example.unknown"])
+        let trigger = AppTrigger(settings: settings, source: source)
+        await trigger.start()
+        var iterator = trigger.voteStream.makeAsyncIterator()
+        let vote = await iterator.next()
+        XCTAssertEqual(vote?.reason, "App: com.example.unknown",
+                       "unmapped bundle id should fall back to raw id in vote reason")
+    }
+
+    func testEmitOnReasonHonoursExplicitDisplayInfoOverride() async throws {
+        let settings = InMemorySettingsStore()
+        settings.appTriggerBundleIDs = ["com.example.foo"]
+        let source = MockWorkspaceSource(runningBundleIDs: ["com.example.foo"])
+        source.displayInfoLookup["com.example.foo"] = AppDisplayInfo(
+            bundleID: "com.example.foo",
+            displayName: "Foo App"
+        )
+        let trigger = AppTrigger(settings: settings, source: source)
+        await trigger.start()
+        var iterator = trigger.voteStream.makeAsyncIterator()
+        let vote = await iterator.next()
+        XCTAssertEqual(vote?.reason, "App: Foo App",
+                       "explicit displayInfo override should win over the raw bundle id")
     }
 
     func testLaunchOfUnwatchedAppDoesNotEmit() async throws {
@@ -364,7 +404,7 @@ final class AppTriggerTests: XCTestCase {
 
         let vote = await iterator.next()
         XCTAssertEqual(vote?.wantsAwake, true)
-        XCTAssertTrue(vote?.reason.contains("us.zoom.xos") ?? false)
+        XCTAssertTrue(vote?.reason.contains("Zoom") ?? false)
     }
 
     func testReevaluateWatchedAfterRemovingLastMatchEmitsOff() async throws {
@@ -416,7 +456,7 @@ final class AppTriggerTests: XCTestCase {
         await trigger.start()
         var iterator = trigger.voteStream.makeAsyncIterator()
         let firstOn = await iterator.next()
-        XCTAssertEqual(firstOn?.reason, "App: us.zoom.xos")
+        XCTAssertEqual(firstOn?.reason, "App: Zoom")
 
         // Add Teams to watched — now both Zoom + Teams match.
         settings.appTriggerBundleIDs = ["us.zoom.xos", "com.microsoft.teams2"]
@@ -424,7 +464,9 @@ final class AppTriggerTests: XCTestCase {
 
         let secondOn = await iterator.next()
         XCTAssertEqual(secondOn?.wantsAwake, true)
-        XCTAssertTrue(secondOn?.reason.contains("com.microsoft.teams2") ?? false,
+        // Sorted bundle ids: ["com.microsoft.teams2", "us.zoom.xos"] →
+        // friendly: ["Microsoft Teams", "Zoom"] → "App: Microsoft Teams, Zoom".
+        XCTAssertTrue(secondOn?.reason.contains("Microsoft Teams") ?? false,
                       "expected reason to mention the newly-watched matching app")
     }
 

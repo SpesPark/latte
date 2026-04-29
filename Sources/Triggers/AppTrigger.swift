@@ -390,8 +390,14 @@ public final class AppTrigger: Trigger {
     }
 
     private func emitOn() {
-        let names = matchingRunning.sorted().joined(separator: ", ")
-        continuation.yield(TriggerVote(wantsAwake: true, reason: "App: \(names)"))
+        // Resolve each watched bundle id through the WorkspaceSource's
+        // displayInfo so the About tab "Reason" line reads "App: Zoom"
+        // instead of "App: us.zoom.xos". Bundle id is preserved as the
+        // fallback when displayInfo returns nil (unknown / unmapped id).
+        let friendly = matchingRunning.sorted().map { id in
+            source.displayInfo(for: id)?.displayName ?? id
+        }
+        continuation.yield(TriggerVote(wantsAwake: true, reason: "App: \(friendly.joined(separator: ", "))"))
     }
 }
 

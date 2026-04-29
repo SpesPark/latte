@@ -192,7 +192,7 @@ final class TriggerCoordinatorTests: XCTestCase {
         try await Task.sleep(nanoseconds: 100_000_000)
 
         if case .awakeTriggered(let votes) = manager.state {
-            XCTAssertEqual(votes["app"]?.reason, "App: us.zoom.xos")
+            XCTAssertEqual(votes["app"]?.reason, "App: Zoom")
         } else {
             XCTFail("Toggle ON must transition to .awakeTriggered, got \(manager.state)")
         }
