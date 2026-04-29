@@ -119,7 +119,7 @@ public final class AppEnvironment: ObservableObject {
             // constraint, blocked the activate. Surface it so the user
             // (or a future bug-report reader) can see the launch toggle
             // ran but produced no assertion.
-            LatteLog.awake.info("activate-at-launch: no-op — manager not awake after activate (blocked by input-boundary gate)")
+            LatteLog.awake.info("activate-at-launch: no-op - manager not awake after activate (blocked by input-boundary gate)")
         }
     }
 
