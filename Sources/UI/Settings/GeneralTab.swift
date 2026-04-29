@@ -42,15 +42,28 @@ public struct GeneralTab: View {
         // Bridge through environment.keyboardShortcut.isEnabled so toggling
         // also (un)registers the system-wide hotkey via the coordinator's
         // didSet — pure UserDefaults mirroring would not flip the OS-level
-        // registration state.
+        // registration state. The label binds to the live `coordinator.chord`
+        // so the glyph updates instantly when the user customises it.
         Toggle(
-            "Toggle Latte with \(KeyboardShortcutCoordinator.chordGlyph)",
+            "Toggle Latte with \(environment.keyboardShortcut.chord.glyph)",
             isOn: Binding(
                 get: { environment.keyboardShortcut.isEnabled },
                 set: { environment.keyboardShortcut.isEnabled = $0 }
             )
         )
-        .help("Globally toggle Latte awake/asleep with \(KeyboardShortcutCoordinator.chordGlyph). The chord is fixed in v1.1; a custom recorder is planned for v1.2.")
+        .help("Globally toggle Latte awake/asleep with \(environment.keyboardShortcut.chord.glyph). Click the recorder below to assign a different chord.")
+    }
+
+    @ViewBuilder
+    private var shortcutRecorderRow: some View {
+        // Recorder field — only meaningful while the toggle above is enabled,
+        // but we keep it visible regardless so users can stage a chord before
+        // flipping the toggle on.
+        LabeledContent {
+            ShortcutRecorderField(coordinator: environment.keyboardShortcut)
+        } label: {
+            Text("Shortcut").font(Theme.Fonts.body)
+        }
     }
 
     public var body: some View {
@@ -68,6 +81,7 @@ public struct GeneralTab: View {
                 launchAtLoginToggle
                 activateOnLaunchToggle
                 keyboardShortcutToggle
+                shortcutRecorderRow
             } header: {
                 Text("Behavior").font(Theme.Fonts.subheadline)
             }
