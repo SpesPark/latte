@@ -147,6 +147,10 @@ private struct TriggerSection: View {
                     settings: environment.settings
                 )
             }
+        case "external-display":
+            if let display = trigger as? ExternalDisplayTrigger {
+                ExternalDisplayTriggerConfigForm(trigger: display)
+            }
         default:
             EmptyView()
         }
@@ -906,5 +910,49 @@ private struct WeekdayChip: View {
         .buttonStyle(.plain)
         .accessibilityLabel("\(day.shortName), \(isSelected ? "selected" : "not selected")")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
+// MARK: - External Display config form (V2-06)
+
+private struct ExternalDisplayTriggerConfigForm: View {
+
+    let trigger: ExternalDisplayTrigger
+
+    /// Settings tick — bumped via the trigger's voteStream consumer in
+    /// the coordinator. Re-reads `externalDisplayCount` and
+    /// `firstExternalDisplayName` on every body evaluation, which
+    /// happens whenever `coordinator.activeVotes` changes (the parent
+    /// `TriggersTab` observes it).
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            Text("Latte stays awake whenever an external display is connected. Useful when working at a desk with a monitor — even if your MacBook lid is closed.")
+                .font(Theme.Fonts.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            statusRow
+        }
+    }
+
+    @ViewBuilder
+    private var statusRow: some View {
+        let count = trigger.externalDisplayCount
+        if count == 0 {
+            Text("Currently: no external display")
+                .font(Theme.Fonts.caption)
+                .foregroundStyle(.secondary)
+        } else {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Currently: \(count) external \(count == 1 ? "display" : "displays")")
+                    .font(Theme.Fonts.caption)
+                    .foregroundStyle(.secondary)
+                if let name = trigger.firstExternalDisplayName {
+                    Text("Display: \(name)")
+                        .font(Theme.Fonts.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
     }
 }
