@@ -627,6 +627,16 @@ public final class AwakeManager: ObservableObject {
         }
         lastUserDuration = duration
         process(.userActivate(duration))
+        // The FSM hardcodes `.user` as the reason for `.userActivate` inputs
+        // because the input itself doesn't carry one. When the caller wants
+        // a different presentation reason (e.g. `.launch` for the
+        // "Activate at launch" feature), override the published reason
+        // post-step. State + side-effects are unchanged; only the label
+        // swaps. Skip when the FSM short-circuited (e.g. blocked by a
+        // constraint) — `isAwake` would be false in that case.
+        if reason != .user, isAwake {
+            activeReason = reason
+        }
     }
 
     public func deactivate(reason: AwakeReason = .user) {

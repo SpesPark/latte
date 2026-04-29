@@ -87,6 +87,78 @@ final class AppEnvironmentTests: XCTestCase {
         XCTAssertNil(store.string(.coffeeAccent))
     }
 
+    // MARK: - Activate-on-launch ⇆ SettingsStore mirror
+
+    func testActivateOnLaunchDefaultsToFalse() {
+        let env = AppEnvironment(settings: InMemorySettingsStore())
+        XCTAssertFalse(env.activateOnLaunch)
+    }
+
+    func testActivateOnLaunchHydratesFromStoredValue() {
+        let store = InMemorySettingsStore()
+        store.setBool(true, for: .activateOnLaunch)
+        let env = AppEnvironment(settings: store)
+        XCTAssertTrue(env.activateOnLaunch)
+    }
+
+    func testActivateOnLaunchAssignmentWritesThroughToStore() {
+        let store = InMemorySettingsStore()
+        let env = AppEnvironment(settings: store)
+        env.activateOnLaunch = true
+        XCTAssertTrue(store.bool(.activateOnLaunch, default: false))
+        env.activateOnLaunch = false
+        XCTAssertFalse(store.bool(.activateOnLaunch, default: true))
+    }
+
+    func testActivateOnLaunchNoOpAssignmentDoesNotTouchStore() {
+        let store = InMemorySettingsStore()
+        store.setBool(true, for: .activateOnLaunch)
+        let env = AppEnvironment(settings: store)
+        store.remove(.activateOnLaunch) // simulate someone wiping the key after init
+        env.activateOnLaunch = true     // assign the same already-loaded value
+        XCTAssertFalse(store.bool(.activateOnLaunch, default: false),
+                       "Equal-value assignment must not re-persist")
+    }
+
+    // MARK: - applyActivateOnLaunchIfEnabled gating
+
+    func testApplyActivateOnLaunchIsNoOpWhenFlagDisabled() {
+        let store = InMemorySettingsStore()
+        store.setBool(true, for: .firstRunCompleted) // satisfy the onboarding gate
+        let env = AppEnvironment(settings: store)
+        AwakeManager.shared.deactivate() // ensure clean baseline
+        env.applyActivateOnLaunchIfEnabled()
+        XCTAssertFalse(env.manager.isAwake,
+                       "flag-off must leave manager untouched")
+    }
+
+    func testApplyActivateOnLaunchIsNoOpWhenOnboardingIncomplete() {
+        let store = InMemorySettingsStore()
+        store.setBool(true, for: .activateOnLaunch)
+        // firstRunCompleted intentionally NOT set — onboarding gate must
+        // suppress the activation so a brand-new install doesn't auto-awake
+        // before the user finishes the wizard.
+        let env = AppEnvironment(settings: store)
+        AwakeManager.shared.deactivate()
+        env.applyActivateOnLaunchIfEnabled()
+        XCTAssertFalse(env.manager.isAwake,
+                       "onboarding-incomplete must suppress launch activation")
+    }
+
+    func testApplyActivateOnLaunchActivatesUnderLaunchReasonWhenEnabled() {
+        let store = InMemorySettingsStore()
+        store.setBool(true, for: .activateOnLaunch)
+        store.setBool(true, for: .firstRunCompleted)
+        let env = AppEnvironment(settings: store)
+        AwakeManager.shared.deactivate()
+        env.applyActivateOnLaunchIfEnabled()
+        XCTAssertTrue(env.manager.isAwake)
+        XCTAssertEqual(env.manager.activeReason, .launch)
+        // Cleanup: leave the shared manager in a known state for downstream
+        // tests that might run in the same process.
+        AwakeManager.shared.deactivate()
+    }
+
     // MARK: - Trigger registration
 
     func testRegistersFourDefaultTriggers() {

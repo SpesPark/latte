@@ -35,6 +35,12 @@ final class LatteAppDelegate: NSObject, NSApplicationDelegate, ObservableObject 
                     coordinator: env.coordinator,
                     environment: env
                 )
+            } else {
+                // applyActivateOnLaunchIfEnabled internally checks the
+                // onboarding flag too, but the explicit branch here makes
+                // the intent obvious: only auto-awake on already-onboarded
+                // users.
+                env.applyActivateOnLaunchIfEnabled()
             }
         }
     }

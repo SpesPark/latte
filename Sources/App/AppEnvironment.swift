@@ -35,6 +35,18 @@ public final class AppEnvironment: ObservableObject {
         }
     }
 
+    /// "Activate at launch" — when enabled, Latte holds an indefinite awake
+    /// assertion on every app start (after onboarding completes). Mirrors
+    /// `SettingsKey.activateOnLaunch`. The toggle only affects subsequent
+    /// launches; it does NOT auto-activate the current already-running
+    /// session when the user flips it on. See `applyActivateOnLaunchIfEnabled()`.
+    @Published public var activateOnLaunch: Bool {
+        didSet {
+            guard activateOnLaunch != oldValue else { return }
+            settings.setBool(activateOnLaunch, for: .activateOnLaunch)
+        }
+    }
+
     public init(
         settings: SettingsStore = UserDefaultsSettingsStore(),
         launchAtLoginService: LaunchAtLoginService? = nil,
@@ -47,6 +59,7 @@ public final class AppEnvironment: ObservableObject {
         self.coordinator = TriggerCoordinator(awakeManager: AwakeManager.shared, settings: settings)
         self.menuBarIconStyle = MenuBarIconStyle.decode(settings.string(.menuBarIconStyle))
         self.coffeeAccent = CoffeeAccent.decode(settings.string(.coffeeAccent))
+        self.activateOnLaunch = settings.bool(.activateOnLaunch, default: false)
         let resolvedLaunchService: LaunchAtLoginService
         if let launchAtLoginService {
             resolvedLaunchService = launchAtLoginService
@@ -88,6 +101,19 @@ public final class AppEnvironment: ObservableObject {
         // active and the entitlement is provisioned. Tracked as
         // V2-03b in `docs/v2-backlog.md`.
         // coordinator.register(FocusTrigger(settings: settings))
+    }
+
+    /// If the user has "Activate at launch" enabled, hold an indefinite
+    /// awake assertion under `AwakeReason.launch`. Idempotent: a second
+    /// call (e.g. duplicate launch hand-off) is a no-op while the manager
+    /// is already awake. Intended call site is once per cold start, after
+    /// onboarding completes (skipped during first-run wizard so a fresh
+    /// install doesn't hold the system awake before the user even consents).
+    public func applyActivateOnLaunchIfEnabled() {
+        guard activateOnLaunch else { return }
+        guard onboarding.hasCompletedOnboarding else { return }
+        guard !manager.isAwake else { return }
+        manager.activate(for: .indefinite, reason: .launch)
     }
 
     /// Boot path: request permission for each enabled trigger that requires it,

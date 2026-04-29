@@ -25,6 +25,19 @@ public struct GeneralTab: View {
     }
 
     @ViewBuilder
+    private var activateOnLaunchToggle: some View {
+        // Persisted via environment.activateOnLaunch (didSet writes through
+        // to SettingsStore). Takes effect on the *next* app start — flipping
+        // the toggle while already running does not auto-awake the current
+        // session. See `AppEnvironment.applyActivateOnLaunchIfEnabled()`.
+        Toggle(
+            "Activate at launch",
+            isOn: $environment.activateOnLaunch
+        )
+        .help("When Latte starts, immediately hold an indefinite awake assertion. Useful for desktops or always-on workstations. Onboarding always takes precedence on first launch.")
+    }
+
+    @ViewBuilder
     private var keyboardShortcutToggle: some View {
         // Bridge through environment.keyboardShortcut.isEnabled so toggling
         // also (un)registers the system-wide hotkey via the coordinator's
@@ -53,6 +66,7 @@ public struct GeneralTab: View {
                         .foregroundStyle(.secondary)
                 }
                 launchAtLoginToggle
+                activateOnLaunchToggle
                 keyboardShortcutToggle
             } header: {
                 Text("Behavior").font(Theme.Fonts.subheadline)
