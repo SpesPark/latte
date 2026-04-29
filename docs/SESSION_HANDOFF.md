@@ -11,7 +11,7 @@
 | **Session #** | 10 → **S10.1** → **S10.1.1** — S10 (S9-family follow-through + Activate-at-launch) extended same-day with two no-churn passes: a second simplify-pass + plan-only specs for v1.2 + Tier A doc cleanup. 2026-04-30. |
 | **Theme** | After the S10 wrap, owner gave green-light to keep going while context budget allowed. Two extension waves landed, both owner-unblocked and churn-risk-zero. **S10.1**: a second code-reviewer simplify-pass scoped to S10's 4 code commits returned APPROVE-WITH-NITS; both MEDs resolved (observability log for `applyActivateOnLaunchIfEnabled` no-op gate + `setUp`/`tearDown` test isolation in `AppEnvironmentTests`). Plan-only design specs added for v1.2 so the next code session can RED-GREEN immediately: V2-06 external-display trigger + B1.2 custom-chord recorder. **S10.1.1** (Tier A no-churn cleanup): C-7 four-path comparison doc (decision-ready), ROADMAP row 9f, MEMORY index update, two LOW comment fixes. Cold-start cadence verified — `xcodebuild test` ↔ smoke harness must run serially (parallel = phantom rc=137 on `03-icon-states`). |
 | **Status** | ✅ 10 commits across S10 + S10.1 + S10.1.1 (7 + 2 + 1). 388 → **398 tests** (Δ from S10; S10.1+S10.1.1 are no-test-delta). Smoke 18 → **19 scenarios**. Working tree clean. Test run ~4.0 s, smoke run ~5 min. |
-| **Tail commit** | `6d72a81` — `docs: A1+A3+A4+A5 follow-through (S10.1.1)` |
+| **Tail commit** | resolves to the head of the S10/S10.1/S10.1.1 chain when read — typically the latest `docs: SESSION_HANDOFF…` commit. Run `git log --oneline -13` to see the full session. |
 
 ### Commit chain (this session — top is HEAD)
 
@@ -100,8 +100,9 @@ Tests/TriggerCoordinatorTests.swift                (c6c6408: 1 literal update)
 
 ```bash
 cd ~/Documents/Claude/Projects/Latte
-git log --oneline -12
-# Expected top: 6d72a81 docs: A1+A3+A4+A5 follow-through (S10.1.1)
+git log --oneline -13
+# Expected top: latest "docs: SESSION_HANDOFF…" wrap commit for S10.1.1
+# (commit chain in this file's "Last session" → "Commit chain" block).
 
 # Pre-flight (always before Xcode Cmd-R OR xcodebuild test):
 pkill -9 -f "Latte.app" 2>/dev/null
