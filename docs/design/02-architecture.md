@@ -311,6 +311,45 @@ This keeps:
 
 The pattern matches the rules-style guidance in `swift-protocol-di-testing` (small focused protocols, default-parameter constructor injection).
 
+#### 4.4.2 Single-consumer `AsyncStream` gotcha + `isRunning` gate pattern (added session 11)
+
+Triggers that **observe a `*Source`'s notification stream** (rather than poll on a timer) hit a Swift concurrency edge: an `AsyncStream` can only be iterated by **one consumer for its entire lifetime**. The naive pattern — cancel the consumer task on `stop()` and create a new one on `start()` — terminates the underlying stream storage; the second `for await` returns `nil` immediately and the trigger silently never re-evaluates.
+
+Two correct shapes:
+
+**(A) `*Source` exposes an `AsyncStream`** — used by `ExternalDisplayTrigger` (S11). Install the observe task **once**, at the first `start()`, and let it live for the trigger's full lifetime. Add an `isRunning: Bool` flag inside the trigger; gate observe-driven evaluations on it. `stop()` flips the flag off (and resets `lastVote`); the next `start()` flips it back on and triggers a fresh evaluate. The for-await loop never gets cancelled.
+
+```swift
+private var observeTask: Task<Void, Never>?
+private var isRunning = false
+
+public func start() async {
+    if observeTask == nil {
+        observeTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            for await _ in self.source.changeStream {
+                if Task.isCancelled { break }
+                if self.isRunning { self.evaluate() }   // ← gate here
+            }
+        }
+    }
+    guard !isRunning else { return }
+    isRunning = true
+    evaluate()
+}
+
+public func stop() {
+    isRunning = false
+    lastVote = nil
+}
+
+deinit { observeTask?.cancel() }
+```
+
+**(B) Source exposes a callback / per-call query** — used by `WiFiTrigger`, `AppTrigger`, etc. The trigger owns its own polling task; `stop()` cancels it; `start()` creates a fresh one. No shared stream → no single-consumer issue.
+
+The S11 `ExternalDisplayTrigger.swift` inline comment near `isRunning` is the canonical reference; this section codifies the choice for future trigger authors. **If you ever introduce a trigger that wants to observe an OS-provided `AsyncStream` (e.g., a future `BluetoothSource`), use shape (A); never the cancel-and-recreate pattern.**
+
 ### 4.5 `TriggerCoordinator`
 
 ```swift
