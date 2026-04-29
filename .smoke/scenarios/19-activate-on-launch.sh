@@ -23,6 +23,9 @@ bash "$HARNESS_LIB/launch_app.sh" "$SMOKE_APP_PATH" "$SMOKE_BUNDLE_ID" 20 >/dev/
 
 held=0
 # Capture-then-test (see 15-pause-all.sh for the SIGPIPE-pipefail rationale).
+# 8s is generous headroom — applyActivateOnLaunchIfEnabled runs synchronously
+# in applicationDidFinishLaunching so the assertion is typically visible <1s
+# after launch. Loop length is for cold-CI variance, not the production path.
 for i in 1 2 3 4 5 6 7 8; do
   matched="$(pmset -g assertions 2>/dev/null | grep -E "pid [0-9]+\(Latte\):" | head -1 || true)"
   if [[ -n "$matched" ]]; then
