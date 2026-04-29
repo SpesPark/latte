@@ -11,11 +11,13 @@
 | **Session #** | 10 — S9-family follow-through (simplify pass, Settings resizable, AppTrigger friendly reason, smoke comment hygiene, **Activate at launch**). 2026-04-30. |
 | **Theme** | Owner gave green-light to take recommended priorities in parallel while owner-side S8d/S8.5 stays blocked. Spawned a code-reviewer simplify pass on the S9 family and resolved its findings; landed `.resizable` on Settings (handoff-tracked observation); fixed S9d "raw bundle id in Reason" debt with friendly-name resolution + 3 regression tests; cleaned the now-stale 18-schedule smoke comment; closed the deferred `SettingsKey.activateOnLaunch` debt with an end-to-end "Activate at launch" feature (toggle + boot path + 3-gate behavior + 7 unit tests + new smoke scenario 19). Six landed commits, no architectural change. |
 | **Status** | ✅ All landed clean. 388 → **398 tests** (+3 regression for AppTrigger friendly-reason + 7 for activateOnLaunch). Smoke 18 → **19 scenarios**, full batch passes. Working tree clean. Build verified macOS 26.4 SDK + Xcode 26.4.1 (~5.0 s test run). |
-| **Tail commit** | `a2c74a3` (will resolve to S10 head when read — see `git log -5`) |
+| **Tail commit** | resolves to S10 head when read (~`3ebc4af` after ROADMAP/v2-backlog sync) — see `git log -8` |
 
 ### Commit chain (this session)
 
 ```
+3ebc4af  docs: ROADMAP row 9e + v2-backlog S10 shipped section (S10)
+5c06ea9  docs: SESSION_HANDOFF S10 update for Activate-at-launch (S10)
 a2c74a3  feat: Activate at launch (S10)
 cfe9155  smoke: 18-schedule INFO line reflects resizable Settings (S10)
 c6c6408  fix: AppTrigger vote reason uses friendly app names (S10)
