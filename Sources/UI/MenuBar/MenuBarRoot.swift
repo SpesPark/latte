@@ -19,6 +19,10 @@ public struct MenuBarRoot: View {
 
             Divider().opacity(0.5)
 
+            pauseTriggersRow
+
+            Divider().opacity(0.5)
+
             VStack(spacing: 0) {
                 ForEach(AwakeDuration.presets, id: \.label) { duration in
                     DurationPickerRow(
@@ -78,6 +82,32 @@ public struct MenuBarRoot: View {
         }
         .frame(width: Theme.Sizes.menuBarWidth)
         .liquidGlassBackground()
+    }
+
+    @ViewBuilder
+    private var pauseTriggersRow: some View {
+        Toggle(isOn: $manager.triggersPaused) {
+            HStack(spacing: Theme.Spacing.sm) {
+                Image(systemName: manager.triggersPaused ? "pause.circle.fill" : "pause.circle")
+                    .font(.system(size: 13))
+                    .frame(width: 16)
+                    .foregroundStyle(manager.triggersPaused ? environment.coffeeAccent.color : .secondary)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(manager.triggersPaused ? "Triggers paused" : "Pause triggers")
+                        .font(Theme.Fonts.body)
+                    Text(manager.triggersPaused
+                         ? "Manual activation still works."
+                         : "Ignore Calendar / App / Wi-Fi / Schedule votes.")
+                        .font(Theme.Fonts.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+        }
+        .toggleStyle(.switch)
+        .padding(.horizontal, Theme.Spacing.lg)
+        .padding(.vertical, Theme.Spacing.sm)
+        .accessibilityIdentifier("menubar.pauseTriggers")
     }
 
     private func isUnlistedCustomDuration(_ d: AwakeDuration?) -> Bool {

@@ -29,6 +29,13 @@ public struct GeneralTab: View {
             Section {
                 Toggle("Allow display to sleep", isOn: $manager.allowDisplaySleep)
                     .help("When enabled, the system stays awake but the display may sleep.")
+                Toggle("Sleep when on battery", isOn: $manager.requireACForAwake)
+                    .help("When enabled, Latte never holds an awake assertion while the Mac is on battery — saves battery on laptops without disabling the app.")
+                if manager.requireACForAwake && !manager.isOnAC {
+                    Text("Currently on battery — Latte is not holding awake.")
+                        .font(Theme.Fonts.caption)
+                        .foregroundStyle(.secondary)
+                }
                 launchAtLoginToggle
             } header: {
                 Text("Behavior").font(Theme.Fonts.subheadline)

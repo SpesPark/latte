@@ -538,8 +538,36 @@ public final class AwakeManager: ObservableObject {
         }
     }
 
+    /// C-1: when true, Latte never holds an awake assertion while the Mac is
+    /// drawing from battery power. ON votes from triggers and manual
+    /// activations are blocked at the manager input boundary; if the
+    /// constraint flips on while currently awake (or AC is unplugged while
+    /// awake), the manager auto-deactivates.
+    @Published public var requireACForAwake: Bool {
+        didSet {
+            settings.setBool(requireACForAwake, for: .requireACForAwake)
+            enforceConstraintsIfNeeded(reason: "requireACForAwake changed")
+        }
+    }
+
+    /// C-9: when true, all trigger votes are ignored. Manual activation
+    /// (popover Duration rows / Toggle action / AppIntents) still works —
+    /// "pause" is for triggers, not for the user's explicit intent. If
+    /// flipped on while currently in `.awakeTriggered`, the manager
+    /// auto-deactivates so the cup doesn't linger on stale trigger votes.
+    @Published public var triggersPaused: Bool {
+        didSet {
+            settings.setBool(triggersPaused, for: .triggersPaused)
+            enforceConstraintsIfNeeded(reason: "triggersPaused changed")
+        }
+    }
+
+    /// Snapshot of the current AC state. Updated by `powerSource.observe`.
+    @Published public private(set) var isOnAC: Bool
+
     // MARK: Internals
     private let assertion: PowerAssertionType
+    private let powerSource: PowerSourceType
     private let settings: SettingsStore
     private let logger = LatteLog.awake
     private var pendingVotes: [String: TriggerVote] = [:]
@@ -548,16 +576,42 @@ public final class AwakeManager: ObservableObject {
     private var durationTask: Task<Void, Never>?
     private var coolDownTask: Task<Void, Never>?
     private var snoozeTask: Task<Void, Never>?
+    private var powerObservation: PowerSourceObservation?
 
     private static var signalHandlerInstalled = false
 
     public init(
         assertion: PowerAssertionType = PowerAssertion(),
-        settings: SettingsStore = UserDefaultsSettingsStore()
+        settings: SettingsStore = UserDefaultsSettingsStore(),
+        powerSource: PowerSourceType? = nil
     ) {
         self.assertion = assertion
         self.settings = settings
+        if let powerSource {
+            self.powerSource = powerSource
+        } else {
+            #if canImport(IOKit)
+            self.powerSource = IOPowerSource()
+            #else
+            self.powerSource = MockPowerSource(isOnAC: true)
+            #endif
+        }
         self.allowDisplaySleep = settings.bool(.allowDisplaySleep, default: false)
+        self.requireACForAwake = settings.bool(.requireACForAwake, default: false)
+        self.triggersPaused = settings.bool(.triggersPaused, default: false)
+        self.isOnAC = self.powerSource.isOnAC
+        self.powerObservation = self.powerSource.observe { [weak self] onAC in
+            guard let self else { return }
+            self.isOnAC = onAC
+            self.enforceConstraintsIfNeeded(reason: "AC state \(onAC ? "ON" : "OFF")")
+        }
+    }
+
+    deinit {
+        // PowerSourceObservation cancellation is @MainActor; deinit isn't.
+        // Best-effort: drop the strong ref. The IOPowerSource observer table
+        // also drops via [weak self], so the run-loop callback no-ops.
+        powerObservation = nil
     }
 
     // MARK: Public API
@@ -567,6 +621,10 @@ public final class AwakeManager: ObservableObject {
     }
 
     public func activate(for duration: AwakeDuration, reason: AwakeReason = .user) {
+        if let block = blockReason(forManualActivation: true) {
+            logger.info("manual activation blocked: \(block, privacy: .public)")
+            return
+        }
         lastUserDuration = duration
         process(.userActivate(duration))
     }
@@ -577,8 +635,14 @@ public final class AwakeManager: ObservableObject {
 
     public func receiveTriggerVote(_ vote: TriggerVote, from triggerId: String) {
         if vote.wantsAwake {
+            if let block = blockReason(forManualActivation: false) {
+                logger.info("trigger ON vote dropped (\(triggerId, privacy: .public)): \(block, privacy: .public)")
+                return
+            }
             process(.triggerVoteOn(id: triggerId, vote: vote))
         } else {
+            // OFF votes always flow so pendingVotes stays in sync; if the
+            // user un-pauses or plugs back in, we don't replay stale ON state.
             process(.triggerVoteOff(id: triggerId, graceSeconds: vote.graceSecondsAfterOff))
         }
     }
@@ -599,6 +663,42 @@ public final class AwakeManager: ObservableObject {
         signal(SIGINT, handler)
         signal(SIGTERM, handler)
         signal(SIGABRT, handler)
+    }
+
+    // MARK: Constraint enforcement (C-1, C-9)
+
+    /// Returns a non-nil reason string if the current input should be
+    /// blocked. `forManualActivation` distinguishes user-explicit
+    /// activation (popover/intent/menu) from trigger ON votes — pause-all
+    /// affects only triggers, AC requirement affects both.
+    private func blockReason(forManualActivation: Bool) -> String? {
+        if requireACForAwake && !isOnAC {
+            return "battery-aware mode active and Mac is on battery"
+        }
+        if !forManualActivation && triggersPaused {
+            return "triggers are paused"
+        }
+        return nil
+    }
+
+    /// Called from constraint-flag `didSet` and AC-state observer. If the
+    /// new state forbids the current awake state, drive `process(.userDeactivate)`
+    /// to release the assertion and unwind to `.asleep`. Idempotent.
+    private func enforceConstraintsIfNeeded(reason: String) {
+        guard state.assertionHeld else { return }
+        // Manual awake states (.awakeUserIndefinite, .awakeUserTimed) are only
+        // affected by the AC constraint — pause-all does not override the
+        // user's explicit intent. Trigger-driven states (.awakeTriggered,
+        // .coolingDown) are affected by both.
+        let isManualState: Bool
+        switch state {
+        case .awakeUserIndefinite, .awakeUserTimed: isManualState = true
+        default: isManualState = false
+        }
+        if let block = blockReason(forManualActivation: isManualState) {
+            logger.info("constraint-driven deactivate (\(reason, privacy: .public)): \(block, privacy: .public)")
+            process(.userDeactivate)
+        }
     }
 
     // MARK: Step + side effects

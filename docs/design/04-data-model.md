@@ -262,6 +262,10 @@ public enum SettingsKey: String, CaseIterable {
     // Schedule trigger (V2-05, v1.1)
     case scheduleTriggerEnabled = "latte.scheduleTrigger.enabled"
     case scheduleTriggerEntries = "latte.scheduleTrigger.entries"
+
+    // Battery-aware (C-1) and pause-all (C-9) — v1.1
+    case requireACForAwake      = "latte.requireACForAwake"
+    case triggersPaused         = "latte.triggersPaused"
 }
 ```
 

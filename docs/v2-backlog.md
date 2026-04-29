@@ -23,15 +23,17 @@
 
 **Shipped in v1.1** (S9, 2026-04-29):
 - ✅ **V2-05** Time-of-day / schedule trigger — see entry below for details
+- ✅ **C-1** Battery-aware mode (Amphetamine parity) — `Sources/Core/PowerSource.swift` + `AwakeManager.requireACForAwake`. Settings → General → "Sleep when on battery". Constraint enforced at manager input boundary; AC-unplug while awake auto-releases the assertion; explicit re-engage required when AC returns (no auto-resume). 11 new tests.
+- ✅ **C-9** Pause-all triggers — `AwakeManager.triggersPaused` + popover top-row toggle. Trigger ON votes dropped while paused; OFF votes still flow so post-unpause state is clean. Manual activation explicitly outlives pause. 12 new tests.
 
 **Recommended ship order** (post v1.0):
 
 | Window | Item | Rationale |
 |---|---|---|
 | ~~v1.1~~ ✅ | **V2-05** Time-of-day / schedule trigger | Shipped 2026-04-29 (S9) |
+| ~~v1.1~~ ✅ | **C-1** Battery-aware mode | Shipped 2026-04-29 (S9.5) |
+| ~~v1.1~~ ✅ | **C-9** Pause-all triggers | Shipped 2026-04-29 (S9.5) |
 | v1.1 | Keyboard shortcut for manual toggle | Power-user signal; deferred from v1.0 |
-| v1.1 | **C-1** Battery-aware mode (Amphetamine parity) | Session-2 candidate; sleep when on battery |
-| v1.1 | **C-9** Pause-all triggers | Session-2 candidate; quick override during meetings/movies |
 | v1.2 | **V2-06** External display trigger (NEW) | Lightweight, validated demand (KYA #235) |
 | v1.2 | **V2-11** Icon dark/tinted variants | Owner-side Icon Composer pass; cosmetic polish |
 | v1.x | **V2-02** Calendar/WiFi watched-list immediate-edit | Polling cycle ≤60s makes it tolerable |

@@ -178,7 +178,9 @@ final class SettingsKeyEnumTests: XCTestCase {
             "latte.focusTrigger.enabled",
             "latte.focusTrigger.focusIDs",
             "latte.scheduleTrigger.enabled",
-            "latte.scheduleTrigger.entries"
+            "latte.scheduleTrigger.entries",
+            "latte.requireACForAwake",
+            "latte.triggersPaused"
         ]
         let actual = Set(SettingsKey.allCases.map { $0.rawValue })
         XCTAssertEqual(actual, required)
