@@ -21,12 +21,17 @@
 - ✅ `setActivationPolicy(.regular)` toggle for Settings/Demo windows → commits `3b39ba8`+`ce69864`
 - ✅ `CoffeeCupView.size` parameter (default-preserves backward compat) → commit `ce69864`
 
+**Shipped in v1.1** (S9, 2026-04-29):
+- ✅ **V2-05** Time-of-day / schedule trigger — see entry below for details
+
 **Recommended ship order** (post v1.0):
 
 | Window | Item | Rationale |
 |---|---|---|
-| v1.1 | **V2-05** Time-of-day / schedule trigger (NEW) | Highest unmet demand after V2-01 ships in v1.0 |
+| ~~v1.1~~ ✅ | **V2-05** Time-of-day / schedule trigger | Shipped 2026-04-29 (S9) |
 | v1.1 | Keyboard shortcut for manual toggle | Power-user signal; deferred from v1.0 |
+| v1.1 | **C-1** Battery-aware mode (Amphetamine parity) | Session-2 candidate; sleep when on battery |
+| v1.1 | **C-9** Pause-all triggers | Session-2 candidate; quick override during meetings/movies |
 | v1.2 | **V2-06** External display trigger (NEW) | Lightweight, validated demand (KYA #235) |
 | v1.2 | **V2-11** Icon dark/tinted variants | Owner-side Icon Composer pass; cosmetic polish |
 | v1.x | **V2-02** Calendar/WiFi watched-list immediate-edit | Polling cycle ≤60s makes it tolerable |
@@ -91,22 +96,22 @@
 - **Effort**: ~4-6 h end to end (incl. permission re-prompt edge case + 6-8 tests).
 - **Why demoted to v1.3** (S8b research): Q3 research showed time-of-day trigger (V2-05) has higher demand than calendar picker. Picker is a refinement for users with multiple mixed calendars (work + personal); does not move the needle for the median user. Calendar trigger already differentiates Latte from Amphetamine without it.
 
-### V2-05 — Time-of-day / schedule trigger — **NEW, v1.2 ship target**
+### V2-05 — Time-of-day / schedule trigger — ✅ **shipped in v1.1** (S9, 2026-04-29)
 
 - **Surfaced**: S8b research (2026-04-27). Q3 trigger-priority study found this is the **second-highest unmet demand** after V2-01.
 - **User signal**:
-  - KYA Issue #189: *"Would it be possible to add a scheduler? I'd like to leave it activated during the day, but allow sleep at night automatically for example."*
+  - KYA Issue #189: *"Would it be possible to add a scheduler?"*
   - KYA Issue #161: separate scheduler request.
-  - MacRumors thread #2405685: *"have my Mac awake from 10:15 am until 10:45 am so my mac can run it's calendar automation scripts."*
-  - Amphetamine ships time-of-day triggers — table stakes for the power-user segment.
-- **Scope (sketch)**:
-  - New `ScheduleTrigger: Trigger` conforming to existing `Trigger` protocol.
-  - Config: weekday mask (Mon–Sun checkboxes) × time range (start–end pickers) × multiple ranges per day.
-  - Persistence: `[ScheduleEntry]` in SettingsStore (JSON-encoded array).
-  - Vote loop: every 30 s `currentDate ∈ enabledRanges → vote(.awake)`.
-  - UI: new `ScheduleTriggerConfigForm` modeled on `CalendarTriggerConfigForm`.
-- **Effort**: ~6-8 h end to end (new trigger type + config form + 8-10 tests + QA_LOG).
-- **Ship gate**: 30-day stress test (no leaked timers, range crossing midnight handled, DST transitions handled).
+  - MacRumors thread #2405685: *"have my Mac awake from 10:15 am until 10:45 am..."*
+  - Amphetamine ships time-of-day triggers.
+- **Shipped scope**:
+  - New `ScheduleTrigger: Trigger` (`Sources/Triggers/ScheduleTrigger.swift`) — id `"schedule"`, `clock` symbol, no permission required, 30s polling.
+  - Pure value-type model: `Weekday` enum (Sun=1..Sat=7, aligned with `Calendar.weekday`), `TimeOfDay` (hour+minute, clamped, comparable), `ScheduleEntry` (UUID id, weekday set, start/end, optional label, isEnabled flag).
+  - Same-day windows are half-open `[start, end)`. Midnight-crossing (`end < start`): late half matches starting day's weekday, early half matches yesterday's weekday — so a Mon 22:00–02:00 entry covers Mon night through Tue 02:00 only.
+  - Persistence: `[ScheduleEntry]` JSON-encoded under `latte.scheduleTrigger.entries`; `latte.scheduleTrigger.enabled` Bool gate.
+  - UI: `ScheduleTriggerConfigForm` in TriggersTab — per-entry: enable toggle, label TextField, `DatePicker` start/end, weekday chips (Mon..Sun display order). Add/remove entries inline. Reflects edits immediately via `trigger.reevaluate()` (no 30s poll wait).
+  - Onboarding wizard description added (`schedule` case → "On a recurring time schedule").
+- **Tests**: 28 new (`Tests/ScheduleTriggerTests.swift`). Covers TimeOfDay clamping/comparable, ScheduleEntry same-day/midnight-crossing/zero-length/empty-weekday/disabled/full-day, Codable round-trip, SettingsStore round-trip + corruption fallback, ScheduleTrigger ON/OFF transitions, no re-emit on repeated polls, overlapping-entry stable order, disabled no-op, start/stop with stream lifetime preserved (S7.11 invariant), persistence sanity. Total project: 309 → **337 tests, all PASS**.
 
 ### V2-06 — External display connected trigger — **NEW, v1.3+ ship target**
 

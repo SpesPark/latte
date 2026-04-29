@@ -140,6 +140,13 @@ private struct TriggerSection: View {
             }
         case "focus":
             FocusTriggerConfigInfo()
+        case "schedule":
+            if let schedule = trigger as? ScheduleTrigger {
+                ScheduleTriggerConfigForm(
+                    trigger: schedule,
+                    settings: environment.settings
+                )
+            }
         default:
             EmptyView()
         }
@@ -678,5 +685,228 @@ private struct FocusTriggerConfigInfo: View {
         Text("Latte stays awake whenever any Focus filter is active. macOS does not expose individual Focus identifiers to third-party apps in a stable way, so per-Focus selection is deferred until Apple opens that API.")
             .font(Theme.Fonts.caption)
             .foregroundStyle(.secondary)
+    }
+}
+
+// MARK: - Schedule config form (V2-05 — recurring time-of-day windows)
+
+private struct ScheduleTriggerConfigForm: View {
+
+    let trigger: ScheduleTrigger
+    let settings: SettingsStore
+
+    @State private var entries: [ScheduleEntry]
+
+    init(trigger: ScheduleTrigger, settings: SettingsStore) {
+        self.trigger = trigger
+        self.settings = settings
+        self._entries = State(initialValue: settings.scheduleTriggerEntries)
+    }
+
+    var body: some View {
+        Group {
+            Text("Latte stays awake during these recurring time windows. Useful for working hours, scheduled batch jobs, or "
+                 + "any \u{201C}keep awake from X to Y\u{201D} routine.")
+                .font(Theme.Fonts.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            ForEach(entries) { entry in
+                ScheduleEntryRow(
+                    entry: entry,
+                    onUpdate: { updated in update(entry.id, with: updated) },
+                    onRemove: { remove(entry.id) }
+                )
+            }
+
+            if entries.isEmpty {
+                Text("No schedules configured. Add one below — e.g. \u{201C}Mon–Fri, 09:00–18:00\u{201D} for working hours.")
+                    .font(Theme.Fonts.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Button {
+                addNew()
+            } label: {
+                Label("Add schedule", systemImage: "plus.circle")
+                    .font(Theme.Fonts.caption)
+            }
+            .buttonStyle(.borderless)
+        }
+    }
+
+    private func addNew() {
+        let new = ScheduleEntry(
+            weekdays: [.monday, .tuesday, .wednesday, .thursday, .friday],
+            start: TimeOfDay(hour: 9, minute: 0),
+            end: TimeOfDay(hour: 18, minute: 0),
+            label: ""
+        )
+        commit(entries + [new])
+    }
+
+    private func update(_ id: UUID, with updated: ScheduleEntry) {
+        commit(entries.map { $0.id == id ? updated : $0 })
+    }
+
+    private func remove(_ id: UUID) {
+        commit(entries.filter { $0.id != id })
+    }
+
+    private func commit(_ next: [ScheduleEntry]) {
+        entries = next
+        settings.scheduleTriggerEntries = next
+        // Mirror App/WiFi/Calendar: edits should reflect within one render
+        // pass instead of waiting up to 30s for the next poll.
+        trigger.reevaluate()
+    }
+}
+
+private struct ScheduleEntryRow: View {
+
+    let entry: ScheduleEntry
+    let onUpdate: (ScheduleEntry) -> Void
+    let onRemove: () -> Void
+
+    @State private var startDate: Date
+    @State private var endDate: Date
+    @State private var label: String
+    @State private var weekdays: Set<Weekday>
+    @State private var isEnabled: Bool
+
+    init(
+        entry: ScheduleEntry,
+        onUpdate: @escaping (ScheduleEntry) -> Void,
+        onRemove: @escaping () -> Void
+    ) {
+        self.entry = entry
+        self.onUpdate = onUpdate
+        self.onRemove = onRemove
+        self._startDate = State(initialValue: Self.dateFromTime(entry.start))
+        self._endDate = State(initialValue: Self.dateFromTime(entry.end))
+        self._label = State(initialValue: entry.label)
+        self._weekdays = State(initialValue: entry.weekdays)
+        self._isEnabled = State(initialValue: entry.isEnabled)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            HStack(spacing: Theme.Spacing.sm) {
+                Toggle("", isOn: $isEnabled)
+                    .labelsHidden()
+                    .onChange(of: isEnabled) { _ in commitEdit() }
+                TextField("Label (optional)", text: $label)
+                    .textFieldStyle(.roundedBorder)
+                    .font(Theme.Fonts.body)
+                    .onSubmit { commitEdit() }
+                Button {
+                    onRemove()
+                } label: {
+                    Image(systemName: "minus.circle.fill")
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Remove schedule")
+            }
+
+            HStack(spacing: Theme.Spacing.sm) {
+                DatePicker("From", selection: $startDate, displayedComponents: .hourAndMinute)
+                    .labelsHidden()
+                    .onChange(of: startDate) { _ in commitEdit() }
+                Text("→").foregroundStyle(.secondary)
+                DatePicker("To", selection: $endDate, displayedComponents: .hourAndMinute)
+                    .labelsHidden()
+                    .onChange(of: endDate) { _ in commitEdit() }
+                Spacer()
+            }
+
+            HStack(spacing: 4) {
+                ForEach(Weekday.displayOrder) { day in
+                    WeekdayChip(
+                        day: day,
+                        isSelected: weekdays.contains(day),
+                        onToggle: {
+                            if weekdays.contains(day) {
+                                weekdays.remove(day)
+                            } else {
+                                weekdays.insert(day)
+                            }
+                            commitEdit()
+                        }
+                    )
+                }
+            }
+
+            if endDate <= startDate {
+                Text("Crosses midnight — runs from start time on the selected day(s) until the end time the next morning.")
+                    .font(Theme.Fonts.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.vertical, Theme.Spacing.xs)
+    }
+
+    private func commitEdit() {
+        let updated = ScheduleEntry(
+            id: entry.id,
+            weekdays: weekdays,
+            start: Self.timeFromDate(startDate),
+            end: Self.timeFromDate(endDate),
+            label: label,
+            isEnabled: isEnabled
+        )
+        onUpdate(updated)
+    }
+
+    /// DatePicker binds to Date, but ScheduleEntry persists wall-clock time.
+    /// Use the system calendar to extract / inject hour+minute on a fixed
+    /// reference date so DatePicker doesn't drift across launches.
+    private static let referenceDay: Date = {
+        var comps = DateComponents()
+        comps.year = 2000; comps.month = 1; comps.day = 1
+        return Calendar.current.date(from: comps) ?? Date()
+    }()
+
+    private static func dateFromTime(_ time: TimeOfDay) -> Date {
+        var comps = Calendar.current.dateComponents([.year, .month, .day], from: referenceDay)
+        comps.hour = time.hour
+        comps.minute = time.minute
+        return Calendar.current.date(from: comps) ?? referenceDay
+    }
+
+    private static func timeFromDate(_ date: Date) -> TimeOfDay {
+        let comps = Calendar.current.dateComponents([.hour, .minute], from: date)
+        return TimeOfDay(hour: comps.hour ?? 0, minute: comps.minute ?? 0)
+    }
+}
+
+private struct WeekdayChip: View {
+    let day: Weekday
+    let isSelected: Bool
+    let onToggle: () -> Void
+
+    var body: some View {
+        Button(action: onToggle) {
+            Text(day.shortName)
+                .font(Theme.Fonts.caption)
+                .frame(width: 36, height: 24)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(isSelected ? Color.accentColor.opacity(0.2) : Color.secondary.opacity(0.08))
+                )
+                .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .strokeBorder(
+                            isSelected ? Color.accentColor.opacity(0.5) : Color.secondary.opacity(0.15),
+                            lineWidth: 0.5
+                        )
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(day.shortName), \(isSelected ? "selected" : "not selected")")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

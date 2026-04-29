@@ -35,6 +35,10 @@ public enum SettingsKey: String, CaseIterable, Sendable {
     // Focus trigger
     case focusTriggerEnabled   = "latte.focusTrigger.enabled"
     case focusTriggerFocusIDs  = "latte.focusTrigger.focusIDs"
+
+    // Schedule trigger (V2-05)
+    case scheduleTriggerEnabled = "latte.scheduleTrigger.enabled"
+    case scheduleTriggerEntries = "latte.scheduleTrigger.entries"
 }
 
 public protocol SettingsStore: AnyObject {

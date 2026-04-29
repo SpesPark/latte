@@ -185,6 +185,40 @@ SSID strings can be arbitrary UTF-8 bytes (Wi-Fi standard); we don't restrict ch
 
 > **v1 limitation (added session 4)**: `INFocusStatusCenter` exposes only `focusStatus.isFocused: Bool?` for privacy reasons — it does **not** disclose the active Focus's identifier. Therefore `FocusTrigger` in v1 treats `focusTriggerFocusIDs` as a list-presence flag: if the list is non-empty AND any Focus is active, vote ON. Per-Focus filtering will require either an Apple API change or `INSetFocusStatusIntent` workaround; tracked as **Phase 1.5 follow-up**, not a blocker for v1 launch. The Settings UI will say "Active when any Focus mode is on" rather than offering a Focus-mode picker. Existing key shape is preserved so future per-Focus filtering can ship without a schema bump.
 
+### 4.6 Schedule trigger (V2-05, added session 9 — v1.1)
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `scheduleTriggerEnabled` | `Bool` | `false` | Master enable. |
+| `scheduleTriggerEntries` | `Data` (JSON `[ScheduleEntry]`) | `[]` | Recurring time-of-day windows. |
+
+`ScheduleEntry` shape:
+
+```swift
+public struct ScheduleEntry: Codable, Sendable, Equatable, Identifiable {
+    public let id: UUID
+    public var weekdays: Set<Weekday>     // Sun=1..Sat=7 (Calendar.weekday alignment)
+    public var start: TimeOfDay           // hour: 0..23, minute: 0..59
+    public var end: TimeOfDay
+    public var label: String              // optional display label (default "")
+    public var isEnabled: Bool            // per-entry enable toggle (default true)
+}
+```
+
+**Membership semantics** (`ScheduleEntry.contains(_:in:)`):
+
+- Same-day (`start < end`): half-open `[start, end)`, weekday must match the entry's weekday set.
+- Midnight-crossing (`start > end`): late half `[start, 24:00)` matches entry's listed weekdays (today); early half `[00:00, end)` matches *yesterday's* weekday. A Mon 22:00–02:00 entry covers Mon 22:00 through Tue 02:00 only — Tue 22:00–24:00 does **not** match unless Tue is also in the weekday set.
+- `start == end` is treated as a zero-length window — never matches. Users wanting a 24-hour entry use 00:00–23:59.
+- Empty `weekdays` set: never matches (UI hint).
+- `isEnabled == false`: never matches.
+
+**Persistence**: JSON-encoded as a flat array. UUIDs are persisted, so reordering does not change identity. Decode failures fall back to `[]` (logged at `notice` level via `settingsLogger`).
+
+**Polling**: 30 s cadence, identical lifecycle pattern to `CalendarTrigger.pollOnce()`. The trigger emits exactly **one** ON vote on enter and **one** OFF vote on exit — `activeEntryID: UUID?` is held between polls so re-poll inside the same window is a no-op. UI edits call `trigger.reevaluate()` which dispatches an immediate `pollOnce()` (no need to wait the 30 s cadence — same contract as App/WiFi/Calendar after S8b).
+
+**DST**: handled by the system `Calendar` reading wall-clock `hour`/`minute` from the local timezone. Spring-forward gaps (clock jumps 02:00 → 03:00) cause that minute range to simply not poll-match; fall-back duplicates (01:30 happens twice) cause the entry to remain active across both — both behaviors match user expectation for a wall-clock schedule.
+
 ---
 
 ## 5. `SettingsStore` extended
@@ -224,6 +258,10 @@ public enum SettingsKey: String, CaseIterable {
     // Focus trigger
     case focusTriggerEnabled   = "latte.focusTrigger.enabled"
     case focusTriggerFocusIDs  = "latte.focusTrigger.focusIDs"
+
+    // Schedule trigger (V2-05, v1.1)
+    case scheduleTriggerEnabled = "latte.scheduleTrigger.enabled"
+    case scheduleTriggerEntries = "latte.scheduleTrigger.entries"
 }
 ```
 

@@ -67,6 +67,7 @@ public final class AppEnvironment: ObservableObject {
         coordinator.register(CalendarTrigger(settings: settings))
         coordinator.register(AppTrigger(settings: settings))
         coordinator.register(WiFiTrigger(settings: settings))
+        coordinator.register(ScheduleTrigger(settings: settings))
         // FocusTrigger is intentionally **not registered for v1.0**.
         // S8b smoke confirmed `INFocusStatusCenter.focusStatus.isFocused`
         // returns false even when a Focus mode is active — sandboxed

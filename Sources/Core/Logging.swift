@@ -14,6 +14,7 @@ public enum LatteLog {
     public static let app = logger("trigger.app")
     public static let wifi = logger("trigger.wifi")
     public static let focus = logger("trigger.focus")
+    public static let schedule = logger("trigger.schedule")
     public static let intents = logger("intents")
     public static let ui = logger("ui")
 }

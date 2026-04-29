@@ -246,6 +246,8 @@ public struct OnboardingView: View {
             return "Only on networks you trust (or never on networks you avoid)."
         case "focus":
             return "While any macOS Focus mode is active."
+        case "schedule":
+            return "On a recurring time schedule (e.g. weekday working hours)."
         default:
             return ""
         }
