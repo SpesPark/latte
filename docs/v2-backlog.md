@@ -130,11 +130,19 @@
 - **Shipped scope (S11)**: `DisplaySource` protocol + `NSScreenSource` adapter (`NSScreen.screens` filtered through `CGDisplayIsBuiltin`, observing `NSApplication.didChangeScreenParametersNotification`) + `MockDisplaySource` + `ExternalDisplayTrigger` registered as the 5th default trigger. Vote `wantsAwake=true` when ≥1 external display attached; `reason: "Display: <localizedName ?? External Display>"` mirrors S10 friendly format. Settings → Triggers → External Display section with live status row. Smoke scenario 20 covers the no-monitor branch automatically; "monitor attached" path covered by 9 unit + 2 coordinator tests + owner manual smoke (handoff step 7).
 - **Effort actual**: 4 commits, ~398→409 tests (+11), smoke 19→20.
 - **Out of scope (deferred to v1.3+)**: clamshell-aware refinement, per-display whitelist (UUID via `CGDisplayCreateUUIDFromDisplayID`), `LATTE_TEST_MOCK_DISPLAY_COUNT` env-var injection (decided against — production code stays free of test-only branches; physical-attach simulation is owner manual smoke territory).
+- **Future polish (NSScreenSource debounce)** — adapter currently forwards every `didChangeScreenParametersNotification` raw; resolution-change-on-wake can fire several within milliseconds. The trigger's `lastVote == wantsAwake` guard already swallows same-state bursts, so this is theoretical only. If telemetry surfaces spurious flicker, add a 100 ms debounce in `NSScreenSource` before yielding to the continuation. Surfaced by S11 4th simplify-pass (2026-04-30).
 - **Spec**: see [docs/design/06-display-trigger.md](design/06-display-trigger.md).
 
 ---
 
 ## P2 candidates (cleanup / hygiene)
+
+### V2-13 — Extract per-trigger config forms out of `TriggersTab.swift`
+
+- **Surfaced**: S11 4th simplify-pass (2026-04-30). File now 958 lines, breaches the project's 800-line ceiling. Pre-existing breach (already over 800 before V2-06's 48-line addition); each new trigger adds another inline form, so the file keeps drifting.
+- **Action**: split each `*ConfigForm` (App / WiFi / Calendar / Schedule / ExternalDisplay) into its own file under `Sources/UI/Settings/Triggers/`. `TriggersTab.swift` keeps only the dispatch + `TriggerSection` shell.
+- **Effort**: ~45 min mechanical extraction. No behaviour change. Net token cost on context budgets matters more than line count — extraction makes future feature work read smaller diffs.
+- **Risk**: low. Pure SwiftUI move; no protocol changes; tests are headless and won't shift.
 
 ### V2-10 — Drop `Theme.Colors.accentAwake` static alias — ✅ **shipped in v1.0** (commit `05f8c2d`)
 

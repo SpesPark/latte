@@ -16,8 +16,11 @@ public protocol DisplaySource: AnyObject {
 
     /// Emits whenever the screen configuration changes (attach, detach,
     /// resolution change, sleep/wake). The trigger consumes this to decide
-    /// when to re-evaluate. Production adapter coalesces bursts; tests can
-    /// drive it directly through `MockDisplaySource.emitChange()`.
+    /// when to re-evaluate. The production adapter forwards every
+    /// `NSApplication.didChangeScreenParametersNotification` raw — burst
+    /// dedup actually lives in `ExternalDisplayTrigger.evaluate()` via
+    /// the `lastVote == wantsAwake` guard. Tests drive change events
+    /// directly through `MockDisplaySource.emitChange()`.
     var changeStream: AsyncStream<Void> { get }
 }
 

@@ -100,12 +100,12 @@ final class ExternalDisplayTriggerTests: XCTestCase {
         trigger.stop()
 
         // After stop, source change events must NOT drive evaluate (the
-        // observeTask gates on `isRunning`). Verify with a brief probe.
+        // observeTask gates on `isRunning`). Verify with a brief probe
+        // through the same iterator — `AsyncStream` is single-consumer
+        // and creating a second iterator competes for buffered elements
+        // in undefined ways.
         source.emitChange()
-        let probe = Task { @MainActor () -> TriggerVote? in
-            var probeIt = trigger.voteStream.makeAsyncIterator()
-            return await probeIt.next()
-        }
+        let probe = Task { @MainActor () -> TriggerVote? in await it.next() }
         try await Task.sleep(nanoseconds: 50_000_000)
         probe.cancel()
         let nothing = await probe.value
