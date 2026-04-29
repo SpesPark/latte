@@ -100,6 +100,12 @@ xcodebuild test -scheme Latte -destination 'platform=macOS,arch=arm64' 2>&1 | gr
 xcodebuild build -scheme Latte -configuration Release -destination 'platform=macOS,arch=arm64'
 ~/dev/smoke-harness/run.sh --project .
 # Expected: all scenarios passed (19/19)
+
+# IMPORTANT: run `xcodebuild test` and `~/dev/smoke-harness/run.sh` SERIALLY,
+# never in parallel — both launch `com.parkbyeongjun.latte` and the test
+# runner's failed launch (LSMultipleInstancesProhibited) propagates SIGKILL
+# to the smoke scenario's Latte instance, surfacing as a phantom rc=137 fail
+# (typically on `03-icon-states`). Verified S10 cold-start 2026-04-30.
 ```
 
 ---
