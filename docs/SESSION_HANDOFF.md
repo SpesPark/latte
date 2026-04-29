@@ -92,13 +92,23 @@ xcodebuild test -scheme Latte -destination 'platform=macOS,arch=arm64' 2>&1 | gr
 
 The S9 family added 71 tests but **none of them exercise the new SwiftUI views in a real popover**. The unit tests verify the formatters, gate logic, and trigger semantics; they do not verify that the new UI surfaces look correct. Before piling more code on, please spend ~5 minutes on:
 
+> **Pre-flight (always)** — `pkill -9 -f "Latte.app"` before Cmd-R. `LSMultipleInstancesProhibited` makes a stale background Latte block all subsequent launches with a confusing LaunchServices error (test runner rejects, popover never appears, frontmost reports as "Latte" but no UI). Verified during S9-family post-session check (2026-04-29 11:24 — pid 32088 was a zombie from earlier smoke; killing it instantly unblocked `xcodebuild test` from `Could not launch "LatteTests"` → 380/380 PASS in 5.1 s).
+
 1. **Build + launch** Latte from Xcode (Cmd-R) on a real macOS 13+ install.
 2. **Pause-all toggle (C-9)** — open the menu-bar popover. New row at top under HeaderView: "Pause triggers" / "Triggers paused" with sub-text. Toggle it; the cup should stay live for manual activation but trigger votes should be ignored.
-3. **Battery-aware (C-1)** — Settings → General → Behavior. Toggle "Sleep when on battery". On a laptop, unplug the AC adapter while awake; expect cup to drop to asleep within ~1 s. Re-plug; cup stays asleep (explicit non-feature: no auto-resume).
-4. **About status card (A-1)** — Settings → About. Below the hero card, a status card now shows State / Mode / Reason / Power. Verify Mode flips between "System + display awake" and "System awake (display may sleep)" when toggling Settings → General → "Allow display to sleep".
-5. **Schedule trigger (V2-05)** — Settings → Triggers → Schedule. Enable, add an entry covering "now"; cup should activate. Cross-midnight entries (e.g. 23:00–01:00) need late-night verification or manual `now()` injection in dev.
+3. **Battery-aware (C-1)** — Settings → General → Behavior. Toggle "Sleep when on battery". On a laptop, unplug the AC adapter while awake; expect cup to drop to asleep within ~1 s. Re-plug; cup stays asleep (explicit non-feature: no auto-resume). Caption "Currently on battery — Latte is not holding awake." should appear under the toggle while unplugged.
+4. **About status card (A-1)** — Settings → About. Below the hero card, a status card now shows State / Mode / Reason / Power. Verify Mode flips between "System + display awake" and "System awake (display may sleep)" when toggling Settings → General → "Allow display to sleep". **Note**: Power row is hidden by design when "Sleep when on battery" is OFF (see `AssertionStatusFormatter.powerLabel` returning nil); this is intentional clutter-avoidance, but confirm it reads correctly when both are off (no row) and when battery-aware is on (row shows AC vs battery).
+5. **Schedule trigger (V2-05)** — Settings → Triggers → Schedule. Enable, add an entry covering "now"; cup should activate. Cross-midnight entries (e.g. 23:00–01:00) auto-render a caption "Crosses midnight — runs from start time on the selected day(s) until the end time the next morning." (verified to exist in code at `TriggersTab.swift:839-844`); confirm it reads correctly. Late-night verification or manual `now()` injection in dev for the runtime path.
 
 If any of these surfaces are awkward, file as P1 follow-up before piling on more v1.1 features.
+
+### Pre-emptive code-review observations (before owner smoke)
+
+A walk-through of the new SwiftUI surfaces during session-end verification surfaced two latent items worth flagging *before* owner runs the smoke — neither is a P1 bug, but recording so they don't get re-discovered:
+
+- **A-1 Power row conditional rendering** — verified the `nil`-suppression is intentional (per code comment in `AssertionStatusFormatter.powerLabel`). Owner should confirm during step 4.
+- **V2-05 cross-midnight visual hint** — *already implemented* (`TriggersTab.swift:839-844`): caption "Crosses midnight — runs from start time on the selected day(s) until the end time the next morning." auto-renders when `endDate <= startDate`. Earlier handoff observation that this was missing was incorrect; verified by file read during smoke pre-flight.
+- **Smoke harness coverage** — extended in this same session: `15-pause-all.sh`, `16-battery-aware.sh`, `17-about-status.sh`, `18-schedule.sh` added (4 scenarios, ~12 KB). Now 18 scenarios total. The new four exercise the C-9 gate (paused → no assertion; unpaused → assertion held), C-1 settings round-trip + power-source-conditional gate, A-1 status card in 3 modes, and V2-05 runtime + cross-midnight visual capture. Run them via `~/dev/smoke-harness/run.sh --project ~/Documents/Claude/Projects/Latte`.
 
 ---
 
