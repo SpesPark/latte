@@ -797,7 +797,7 @@ private struct ScheduleEntryRow: View {
                 TextField("Label (optional)", text: $label)
                     .textFieldStyle(.roundedBorder)
                     .font(Theme.Fonts.body)
-                    .onSubmit { commitEdit() }
+                    .onChange(of: label) { _ in commitEdit() }
                 Button {
                     onRemove()
                 } label: {

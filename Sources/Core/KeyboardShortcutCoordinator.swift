@@ -93,10 +93,19 @@ public protocol HotKeyRegistrar: AnyObject {
 // MARK: - Carbon implementation
 
 /// Default `HotKeyRegistrar`. Wraps Carbon `RegisterEventHotKey` for ⌘⇧L.
+///
+/// **Process-global state** — `activeHandler` and `eventHandlerInstalled` are
+/// `static` so the single Carbon EventHandler installed on first `register()`
+/// can dispatch to whichever instance currently owns the chord. Consequence:
+/// only one `CarbonHotKeyRegistrar` should be live per process. Production
+/// instantiates one (`AppEnvironment.keyboardShortcutCoordinator`); tests
+/// substitute `MockHotKeyRegistrar`. Direct unit tests of this class would
+/// share global state across cases — the static handler latches and is not
+/// reset between runs.
 @MainActor
 public final class CarbonHotKeyRegistrar: HotKeyRegistrar {
 
-    private static let logger = Logger(subsystem: "com.parkbyeongjun.latte", category: "shortcut")
+    private static let logger = LatteLog.shortcut
     private static let signature: OSType = 0x4C617474  // 'Latt'
     private static let hotKeyID: UInt32 = 1
 

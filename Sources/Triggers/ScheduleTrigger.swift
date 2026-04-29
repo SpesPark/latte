@@ -269,12 +269,11 @@ public final class ScheduleTrigger: Trigger {
         }
     }
 
-    /// V2-02 — surface-parity wrapper for `AppTrigger.reevaluateWatched()`.
-    /// Calls `pollOnce()` only when the trigger is currently running, so
-    /// UI edits made before the trigger has been started are no-ops (the
-    /// next `start()` will read fresh entries on its initial poll). Mirrors
-    /// the AppTrigger contract: edits commit immediately within one render
-    /// pass instead of waiting up to 30 s for the next poll cycle.
+    /// V2-02 — re-evaluate immediately after a UI edit so settings changes
+    /// commit within one render pass instead of waiting up to 30 s for the
+    /// next poll. No-op when the trigger is stopped (running indicator is
+    /// `pollTask`); the next `start()` will read fresh entries on its
+    /// initial poll.
     public func reevaluateWatched() {
         guard pollTask != nil else { return }
         Task { await pollOnce() }

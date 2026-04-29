@@ -49,7 +49,7 @@ public final class PowerSourceObservation {
 @MainActor
 public final class IOPowerSource: PowerSourceType {
 
-    private let logger = Logger(subsystem: "com.parkbyeongjun.latte", category: "power.source")
+    private let logger = LatteLog.powerSource
     private var runLoopSource: CFRunLoopSource?
     private var observers: [UUID: @MainActor (Bool) -> Void] = [:]
 
