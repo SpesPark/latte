@@ -26,6 +26,6 @@ public struct SettingsRoot: View {
                 .tabItem { Label("About", systemImage: "info.circle") }
                 .tag(SettingsTab.about)
         }
-        .frame(width: 460, height: 360)
+        .frame(minWidth: 460, minHeight: 360)
     }
 }
