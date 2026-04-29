@@ -168,6 +168,17 @@ public final class WiFiTrigger: Trigger {
         source.currentSSID
     }
 
+    /// V2-02 — surface-parity wrapper for `AppTrigger.reevaluateWatched()`.
+    /// Calls `evaluate()` only when the trigger is currently running, so
+    /// UI edits made before the trigger has been started are no-ops (the
+    /// next `start()` will read fresh settings on its initial evaluate).
+    /// Mirrors the AppTrigger contract: edits commit immediately within
+    /// one render pass instead of waiting up to 30 s for the next poll.
+    public func reevaluateWatched() {
+        guard pollTask != nil else { return }
+        evaluate()
+    }
+
     /// Test seam — evaluate current SSID against settings and emit if vote changed.
     public func evaluate() {
         guard isEnabled else { return }

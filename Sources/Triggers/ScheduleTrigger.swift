@@ -269,11 +269,14 @@ public final class ScheduleTrigger: Trigger {
         }
     }
 
-    /// Re-evaluate after the user edits the entry list in Settings. Mirrors
-    /// the App/WiFi/Calendar contract: a UI edit should reflect within one
-    /// render pass, not wait for the next poll. Bypasses the running guard
-    /// so tests / UI commits work even if the trigger is briefly stopped.
-    public func reevaluate() {
+    /// V2-02 — surface-parity wrapper for `AppTrigger.reevaluateWatched()`.
+    /// Calls `pollOnce()` only when the trigger is currently running, so
+    /// UI edits made before the trigger has been started are no-ops (the
+    /// next `start()` will read fresh entries on its initial poll). Mirrors
+    /// the AppTrigger contract: edits commit immediately within one render
+    /// pass instead of waiting up to 30 s for the next poll cycle.
+    public func reevaluateWatched() {
+        guard pollTask != nil else { return }
         Task { await pollOnce() }
     }
 

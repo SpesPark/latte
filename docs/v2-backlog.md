@@ -25,6 +25,8 @@
 - ✅ **V2-05** Time-of-day / schedule trigger — see entry below for details
 - ✅ **C-1** Battery-aware mode (Amphetamine parity) — `Sources/Core/PowerSource.swift` + `AwakeManager.requireACForAwake`. Settings → General → "Sleep when on battery". Constraint enforced at manager input boundary; AC-unplug while awake auto-releases the assertion; explicit re-engage required when AC returns (no auto-resume). 11 new tests.
 - ✅ **C-9** Pause-all triggers — `AwakeManager.triggersPaused` + popover top-row toggle. Trigger ON votes dropped while paused; OFF votes still flow so post-unpause state is clean. Manual activation explicitly outlives pause. 12 new tests.
+- ✅ **A-1** About tab active assertion display — Settings → About now shows live State / Mode / Reason / Power rows backed by pure `AssertionStatusFormatter` helpers (14 tests). Surfaces `allowDisplaySleep` mode visibly so the user can verify which assertion type is held without checking `pmset -g assertions`.
+- ✅ **V2-02** Calendar/WiFi watched-list immediate reflection — was effectively shipped during S8b (forms already called `pollOnce`/`evaluate` on commit), now formalised: `CalendarTrigger.reevaluateWatched()`, `WiFiTrigger.reevaluateWatched()`, `ScheduleTrigger.reevaluateWatched()` — surface-parity wrappers with `AppTrigger.reevaluateWatched()`'s S7.9 contract (running-state guard; no-op when stopped). 6 new tests verify the running-state guard + transition-emit behaviour.
 
 **Recommended ship order** (post v1.0):
 
@@ -56,13 +58,11 @@
 - **Decision needed before build**: which approach. A is simplest; C is most readable; B is most lightweight.
 - **Ship gate for v2**: visual diff verified across all 3 icon styles + both light/dark menu bar.
 
-### V2-02 — Calendar/WiFi watched-list edits not immediate
+### V2-02 — Calendar/WiFi watched-list edits not immediate — ✅ **shipped in v1.1** (S9.6, 2026-04-29)
 
 - **Surfaced**: S7.9 follow-up; deferred at end of S7-family review.
-- **Current behavior**: AppTrigger picked up `reevaluateWatched()` so config-form edits flow into live votes within one render pass. Calendar (60 s polling) and WiFi (30 s polling) do not — owner must wait one polling cycle for an add/remove to take effect.
-- **v2 fix**: add `reevaluateWatched()` to `CalendarTrigger` and `WiFiTrigger` mirroring the `AppTrigger` shape. Wire to the corresponding `*ConfigForm.commit(_:)` methods.
-- **Effort**: ~2 h each (new method + 4-5 tests + ConfigForm wiring + QA_LOG note).
-- **Why deferred**: owner did not surface in S7.10 smoke; no concrete user complaint yet. Polling cycle is short enough (≤60 s) that it's not painful.
+- **Original behavior**: AppTrigger had `reevaluateWatched()` so config-form edits flow into live votes within one render pass. Calendar (60 s polling) and WiFi (30 s polling) did not — owner had to wait one polling cycle for an add/remove to take effect.
+- **Effective shipping**: by S8b owner-feedback the forms already called `pollOnce()`/`evaluate()` on commit, so the user-facing behavior was already correct. S9.6 formalises the surface: `CalendarTrigger.reevaluateWatched()`, `WiFiTrigger.reevaluateWatched()`, and (extended to v1.1) `ScheduleTrigger.reevaluateWatched()` are now public methods with the same S7.9 contract — running-state guard (no-op when stopped) + immediate evaluate when running. Forms switched to use the unified API. 6 new tests in `Tests/ReevaluateWatchedTests.swift` verify running/stopped behaviour and transition emission.
 
 ### V2-03 — Per-Focus mode selection — **deferred (confirmed low demand)**
 

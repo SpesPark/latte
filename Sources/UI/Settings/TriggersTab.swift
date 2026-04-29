@@ -393,10 +393,10 @@ private struct WiFiTriggerConfigForm: View {
             .pickerStyle(.segmented)
             .onChange(of: inverse) { newValue in
                 settings.wifiTriggerInverseLogic = newValue
-                // S8b smoke owner-feedback: re-evaluate immediately so
-                // mode changes reflect within one render pass instead
-                // of waiting for the 30s poll cycle.
-                trigger.evaluate()
+                // S8b smoke owner-feedback + V2-02 (S9.6): re-evaluate
+                // immediately so mode changes reflect within one render
+                // pass instead of waiting for the 30s poll cycle.
+                trigger.reevaluateWatched()
             }
 
             ForEach(ssids, id: \.self) { ssid in
@@ -473,11 +473,11 @@ private struct WiFiTriggerConfigForm: View {
     private func commit(_ next: [String]) {
         ssids = next
         settings.wifiTriggerSSIDs = next
-        // S8b smoke owner-feedback: re-evaluate immediately on add /
-        // remove so the cup reflects within one render pass instead of
-        // waiting up to 30 s for the next poll cycle. Mirrors the
-        // existing AppTrigger.reevaluateWatched contract (S7.9).
-        trigger.evaluate()
+        // S8b smoke owner-feedback + V2-02 (S9.6): re-evaluate immediately
+        // on add/remove so the cup reflects within one render pass instead
+        // of waiting up to 30 s for the next poll cycle. Mirrors the
+        // AppTrigger.reevaluateWatched contract (S7.9).
+        trigger.reevaluateWatched()
     }
 }
 
@@ -520,7 +520,7 @@ private struct CalendarTriggerConfigForm: View {
             }
             .onChange(of: leadMinutes) { newValue in
                 settings.calendarTriggerLeadTimeMinutes = newValue
-                Task { await trigger.pollOnce() }
+                trigger.reevaluateWatched()
             }
 
             Stepper(value: $trailingMinutes, in: 0...15) {
@@ -532,13 +532,13 @@ private struct CalendarTriggerConfigForm: View {
             }
             .onChange(of: trailingMinutes) { newValue in
                 settings.calendarTriggerTrailingMinutes = newValue
-                Task { await trigger.pollOnce() }
+                trigger.reevaluateWatched()
             }
 
             Toggle("Exclude all-day events", isOn: $excludeAllDay)
                 .onChange(of: excludeAllDay) { newValue in
                     settings.calendarTriggerExcludeAllDay = newValue
-                    Task { await trigger.pollOnce() }
+                    trigger.reevaluateWatched()
                 }
 
             calendarPickerSection
@@ -629,10 +629,8 @@ private struct CalendarTriggerConfigForm: View {
         // UserDefaults snapshots and helps the next read yield a
         // predictable ordering).
         settings.calendarTriggerCalendarIDs = selectedCalendarIDs.sorted()
-        // Same immediate-reflect contract as WiFi (S8b owner-feedback):
-        // changing the watched-calendar set should update the cup
-        // within one render pass, not wait for the 60s poll cycle.
-        Task { await trigger.pollOnce() }
+        // V2-02 (S9.6): same immediate-reflect contract as WiFi/App.
+        trigger.reevaluateWatched()
     }
 }
 
@@ -757,9 +755,9 @@ private struct ScheduleTriggerConfigForm: View {
     private func commit(_ next: [ScheduleEntry]) {
         entries = next
         settings.scheduleTriggerEntries = next
-        // Mirror App/WiFi/Calendar: edits should reflect within one render
-        // pass instead of waiting up to 30s for the next poll.
-        trigger.reevaluate()
+        // V2-02 (S9.6): edits reflect within one render pass instead of
+        // waiting up to 30 s for the next poll. Surface mirrors AppTrigger.
+        trigger.reevaluateWatched()
     }
 }
 

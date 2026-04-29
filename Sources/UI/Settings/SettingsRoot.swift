@@ -22,7 +22,7 @@ public struct SettingsRoot: View {
                 .tabItem { Label("Triggers", systemImage: "bolt") }
                 .tag(SettingsTab.triggers)
 
-            AboutTab()
+            AboutTab(manager: manager, coordinator: coordinator)
                 .tabItem { Label("About", systemImage: "info.circle") }
                 .tag(SettingsTab.about)
         }

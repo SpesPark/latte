@@ -275,6 +275,17 @@ public final class CalendarTrigger: Trigger {
         source.availableCalendars()
     }
 
+    /// V2-02 — surface-parity wrapper for `AppTrigger.reevaluateWatched()`.
+    /// Calls `pollOnce()` only when the trigger is currently running, so
+    /// UI edits made before the trigger has been started are no-ops (the
+    /// next `start()` will read fresh settings on its initial poll). Mirrors
+    /// the AppTrigger contract: edits commit immediately within one render
+    /// pass instead of waiting up to 60 s for the next poll cycle.
+    public func reevaluateWatched() {
+        guard pollTask != nil else { return }
+        Task { await pollOnce() }
+    }
+
     /// Test seam — invoked by `start`'s polling loop, also callable directly from tests.
     public func pollOnce() async {
         guard isEnabled else { return }
