@@ -66,15 +66,16 @@ smoke_ok "schedule: 'now' entry held assertion"
 
 bash "$HARNESS_LIB/open_settings.sh" latte triggers >/dev/null
 sleep 3
-# NOTE: Schedule is the 4th trigger and the Settings window has a fixed
-# `.frame(height: 360)` + non-resizable styleMask, so the Schedule row sits
-# below the fold in 18a/18b captures. The runtime check above (assertion
-# fires for an entry covering 'now') is the primary regression signal.
-# Owner needs to scroll the Triggers tab manually to visually verify the
-# Schedule form + cross-midnight caption. Future improvement: add
-# `.resizable` to SettingsWindowController + grant AX permission to enable
-# AppleScript resize from harness.
-smoke_info "18a/18b show Calendar/App/WiFi only — Schedule below fold (window not resizable)"
+# NOTE: Settings window is now resizable (commit 66e8628), but driving
+# AppleScript-based window resize from the harness still requires
+# Accessibility permission for the smoke runner — currently not granted.
+# So 18a/18b open at the default 460×360 size and the Schedule row (4th
+# trigger) sits below the fold; SwiftUI's Form auto-scrolls so it's
+# manually reachable. The runtime check above (assertion fires for an
+# entry covering 'now') is the primary regression signal. Future
+# improvement: grant AX to the harness runner + add a resize_window
+# helper to enable a single full-page Triggers capture.
+smoke_info "18a/18b open at default size — Schedule below fold (AX permission needed for harness-driven resize)"
 bash "$HARNESS_LIB/capture_window.sh" "$SMOKE_SCREENSHOTS_DIR/18a-schedule-now.png" "Latte" "Latte Settings"
 bash "$HARNESS_LIB/quit_app.sh" "$SMOKE_BUNDLE_ID" >/dev/null
 sleep 1
