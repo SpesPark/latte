@@ -114,6 +114,13 @@ public final class AppEnvironment: ObservableObject {
         guard onboarding.hasCompletedOnboarding else { return }
         guard !manager.isAwake else { return }
         manager.activate(for: .indefinite, reason: .launch)
+        if !manager.isAwake {
+            // requireACForAwake + battery, or another input-boundary
+            // constraint, blocked the activate. Surface it so the user
+            // (or a future bug-report reader) can see the launch toggle
+            // ran but produced no assertion.
+            LatteLog.awake.info("activate-at-launch: no-op — manager not awake after activate (blocked by input-boundary gate)")
+        }
     }
 
     /// Boot path: request permission for each enabled trigger that requires it,

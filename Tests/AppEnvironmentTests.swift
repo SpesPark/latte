@@ -4,6 +4,22 @@ import XCTest
 @MainActor
 final class AppEnvironmentTests: XCTestCase {
 
+    /// `AppEnvironment` deliberately routes through `AwakeManager.shared` so
+    /// AppIntents (out-of-process) and the in-process app share one FSM.
+    /// That means tests in this file all observe the same singleton state.
+    /// Defensively reset it before AND after each test so a crash in one
+    /// `applyActivateOnLaunchIfEnabled` test cannot leak awake state into
+    /// the next.
+    override func setUp() {
+        super.setUp()
+        AwakeManager.shared.deactivate()
+    }
+
+    override func tearDown() {
+        AwakeManager.shared.deactivate()
+        super.tearDown()
+    }
+
     // MARK: - Menu bar icon style ⇆ SettingsStore mirror
 
     func testMenuBarIconStyleDefaultsToFilledWhenNoneStored() {
@@ -126,7 +142,6 @@ final class AppEnvironmentTests: XCTestCase {
         let store = InMemorySettingsStore()
         store.setBool(true, for: .firstRunCompleted) // satisfy the onboarding gate
         let env = AppEnvironment(settings: store)
-        AwakeManager.shared.deactivate() // ensure clean baseline
         env.applyActivateOnLaunchIfEnabled()
         XCTAssertFalse(env.manager.isAwake,
                        "flag-off must leave manager untouched")
@@ -139,7 +154,6 @@ final class AppEnvironmentTests: XCTestCase {
         // suppress the activation so a brand-new install doesn't auto-awake
         // before the user finishes the wizard.
         let env = AppEnvironment(settings: store)
-        AwakeManager.shared.deactivate()
         env.applyActivateOnLaunchIfEnabled()
         XCTAssertFalse(env.manager.isAwake,
                        "onboarding-incomplete must suppress launch activation")
@@ -150,13 +164,10 @@ final class AppEnvironmentTests: XCTestCase {
         store.setBool(true, for: .activateOnLaunch)
         store.setBool(true, for: .firstRunCompleted)
         let env = AppEnvironment(settings: store)
-        AwakeManager.shared.deactivate()
         env.applyActivateOnLaunchIfEnabled()
         XCTAssertTrue(env.manager.isAwake)
         XCTAssertEqual(env.manager.activeReason, .launch)
-        // Cleanup: leave the shared manager in a known state for downstream
-        // tests that might run in the same process.
-        AwakeManager.shared.deactivate()
+        // tearDown deactivates the shared manager.
     }
 
     // MARK: - Trigger registration
