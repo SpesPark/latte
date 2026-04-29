@@ -27,6 +27,7 @@
 - ✅ **C-9** Pause-all triggers — `AwakeManager.triggersPaused` + popover top-row toggle. Trigger ON votes dropped while paused; OFF votes still flow so post-unpause state is clean. Manual activation explicitly outlives pause. 12 new tests.
 - ✅ **A-1** About tab active assertion display — Settings → About now shows live State / Mode / Reason / Power rows backed by pure `AssertionStatusFormatter` helpers (14 tests). Surfaces `allowDisplaySleep` mode visibly so the user can verify which assertion type is held without checking `pmset -g assertions`.
 - ✅ **V2-02** Calendar/WiFi watched-list immediate reflection — was effectively shipped during S8b (forms already called `pollOnce`/`evaluate` on commit), now formalised: `CalendarTrigger.reevaluateWatched()`, `WiFiTrigger.reevaluateWatched()`, `ScheduleTrigger.reevaluateWatched()` — surface-parity wrappers with `AppTrigger.reevaluateWatched()`'s S7.9 contract (running-state guard; no-op when stopped). 6 new tests verify the running-state guard + transition-emit behaviour.
+- ✅ **B1** Keyboard shortcut for manual toggle (S9d, 2026-04-29) — Carbon `RegisterEventHotKey` (no entitlement, works in adhoc-signed/sandboxed apps) toggles `manager.toggle()` on `⌘⇧L`. `KeyboardShortcutCoordinator` with `HotKeyRegistrar` protocol + `MockHotKeyRegistrar` for tests. `SettingsKey.keyboardShortcutEnabled` (off by default). Toggle in Settings → General → "Toggle Latte with ⌘⇧L". 8 new tests. Custom-shortcut recorder remains v1.2.
 
 **Recommended ship order** (post v1.0):
 
@@ -35,8 +36,9 @@
 | ~~v1.1~~ ✅ | **V2-05** Time-of-day / schedule trigger | Shipped 2026-04-29 (S9) |
 | ~~v1.1~~ ✅ | **C-1** Battery-aware mode | Shipped 2026-04-29 (S9.5) |
 | ~~v1.1~~ ✅ | **C-9** Pause-all triggers | Shipped 2026-04-29 (S9.5) |
-| v1.1 | Keyboard shortcut for manual toggle | Power-user signal; deferred from v1.0 |
+| ~~v1.1~~ ✅ | **B1** Keyboard shortcut for manual toggle (⌘⇧L) | Shipped 2026-04-29 (S9d) |
 | v1.2 | **V2-06** External display trigger (NEW) | Lightweight, validated demand (KYA #235) |
+| v1.2 | **B1.2** Custom keyboard-shortcut recorder | v1.1 ships fixed ⌘⇧L; recorder UI is the v1.2 polish |
 | v1.2 | **V2-11** Icon dark/tinted variants | Owner-side Icon Composer pass; cosmetic polish |
 | v1.x | **V2-02** Calendar/WiFi watched-list immediate-edit | Polling cycle ≤60s makes it tolerable |
 | v1.x | **V2-12** macOS 13/14/15 matrix smoke | Surfaced via TestFlight beta in S10 |

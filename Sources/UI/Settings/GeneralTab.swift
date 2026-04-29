@@ -24,6 +24,22 @@ public struct GeneralTab: View {
         .help("Latte starts automatically when you sign in to your Mac. Recommended for set-and-forget use.")
     }
 
+    @ViewBuilder
+    private var keyboardShortcutToggle: some View {
+        // Bridge through environment.keyboardShortcut.isEnabled so toggling
+        // also (un)registers the system-wide hotkey via the coordinator's
+        // didSet — pure UserDefaults mirroring would not flip the OS-level
+        // registration state.
+        Toggle(
+            "Toggle Latte with \(KeyboardShortcutCoordinator.chordGlyph)",
+            isOn: Binding(
+                get: { environment.keyboardShortcut.isEnabled },
+                set: { environment.keyboardShortcut.isEnabled = $0 }
+            )
+        )
+        .help("Globally toggle Latte awake/asleep with \(KeyboardShortcutCoordinator.chordGlyph). The chord is fixed in v1.1; a custom recorder is planned for v1.2.")
+    }
+
     public var body: some View {
         Form {
             Section {
@@ -37,6 +53,7 @@ public struct GeneralTab: View {
                         .foregroundStyle(.secondary)
                 }
                 launchAtLoginToggle
+                keyboardShortcutToggle
             } header: {
                 Text("Behavior").font(Theme.Fonts.subheadline)
             }

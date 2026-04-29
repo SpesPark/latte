@@ -44,9 +44,13 @@ done
 defaults write "$SMOKE_BUNDLE_ID" latte.appTrigger.enabled -bool false
 sleep 5
 
-# 1) No assertion leaked.
-if pmset -g assertions 2>/dev/null | grep -q "PreventUserIdleSystemSleep.*Latte"; then
-  smoke_error "soak: PreventUserIdleSystemSleep leaked after $cycles cycles + idle"
+# 1) No assertion leaked. Match by owning-pid line (catches both
+# NoDisplaySleepAssertion and NoIdleSleepAssertion) and capture-then-test
+# to dodge the pipefail+SIGPIPE false-negative — see scenarios 15-18 / 08
+# for the rationale.
+matched_leak="$(pmset -g assertions 2>/dev/null | grep -E "pid [0-9]+\(Latte\):" | head -1 || true)"
+if [[ -n "$matched_leak" ]]; then
+  smoke_error "soak: Latte assertion leaked after $cycles cycles + idle: '$matched_leak'"
   bash "$HARNESS_LIB/quit_app.sh" "$SMOKE_BUNDLE_ID" >/dev/null
   exit 1
 fi

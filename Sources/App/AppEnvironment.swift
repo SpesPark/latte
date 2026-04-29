@@ -14,6 +14,7 @@ public final class AppEnvironment: ObservableObject {
     public let coordinator: TriggerCoordinator
     public let launchAtLogin: LaunchAtLoginCoordinator
     public let onboarding: OnboardingState
+    public let keyboardShortcut: KeyboardShortcutCoordinator
 
     /// User-selected menu bar icon variant. Mirrors `SettingsKey.menuBarIconStyle`
     /// — writing here persists to the underlying `SettingsStore`.
@@ -36,7 +37,8 @@ public final class AppEnvironment: ObservableObject {
 
     public init(
         settings: SettingsStore = UserDefaultsSettingsStore(),
-        launchAtLoginService: LaunchAtLoginService? = nil
+        launchAtLoginService: LaunchAtLoginService? = nil,
+        hotKeyRegistrar: HotKeyRegistrar? = nil
     ) {
         self.settings = settings
         // Use AwakeManager.shared so AppIntents (out-of-process) and the in-process app
@@ -60,6 +62,15 @@ public final class AppEnvironment: ObservableObject {
             settings: settings
         )
         self.onboarding = OnboardingState(settings: settings)
+        let resolvedRegistrar: HotKeyRegistrar = hotKeyRegistrar ?? CarbonHotKeyRegistrar()
+        // Capture AwakeManager.shared by reference so the closure does not
+        // retain `self` (which would be unavailable inside this initializer).
+        let managerRef = AwakeManager.shared
+        self.keyboardShortcut = KeyboardShortcutCoordinator(
+            settings: settings,
+            registrar: resolvedRegistrar,
+            onToggleAwake: { managerRef.toggle() }
+        )
         registerDefaultTriggers()
     }
 

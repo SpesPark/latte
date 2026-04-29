@@ -43,6 +43,12 @@ public enum SettingsKey: String, CaseIterable, Sendable {
     // Battery-aware mode (C-1) and pause-all (C-9) — v1.1
     case requireACForAwake      = "latte.requireACForAwake"
     case triggersPaused         = "latte.triggersPaused"
+
+    // Global keyboard shortcut (B1) — v1.1
+    /// When true, ⌘⇧L globally toggles Latte awake/asleep. Off by default to
+    /// avoid stomping a system-wide chord on first launch — user opts in via
+    /// Settings → General → "Toggle with ⌘⇧L". v1.2 adds a custom recorder.
+    case keyboardShortcutEnabled = "latte.keyboardShortcut.enabled"
 }
 
 public protocol SettingsStore: AnyObject {

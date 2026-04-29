@@ -8,18 +8,21 @@
 
 | Field | Value |
 |---|---|
-| **Session #** | 9 family — v1.1 feature pass (S9 + S9.5 + S9.6, all 2026-04-29 same-day) |
-| **Theme** | First post-v1.0 feature work while owner-side S8d/S8.5 still blocked. Owner picked 1+2+3 from a feature menu (V2-05 schedule trigger, C-1 battery-aware, C-9 pause-all); a follow-up polish pass added A-1 About status card and V2-02 surface parity. |
-| **Status** | ✅ All landed clean. 309 → **380 tests** (+71). Working tree clean. Build verified macOS 26.4 SDK + Xcode 26.4.1 (~5.2 s test run). |
-| **Tail commit** | `f37d3d4` |
+| **Session #** | 9 family — v1.1 feature pass (S9 + S9.5 + S9.6 + S9d, all 2026-04-29 same-day) |
+| **Theme** | First post-v1.0 feature work while owner-side S8d/S8.5 still blocked. Owner picked 1+2+3 from a feature menu (V2-05 schedule trigger, C-1 battery-aware, C-9 pause-all); a follow-up polish pass added A-1 About status card and V2-02 surface parity; S9d closed the loop with B1 (⌘⇧L global hotkey), 4 new smoke scenarios covering the S9 family, and a patch to existing 08/13 scenarios for a pipefail+SIGPIPE false-negative. |
+| **Status** | ✅ All landed clean. 309 → **388 tests** (+79). 14 → **18 smoke scenarios**, full batch passes. Working tree clean. Build verified macOS 26.4 SDK + Xcode 26.4.1 (~5.4 s test run). |
+| **Tail commit** | (S9d head — see git log) |
 
 ### Commit chain (this session)
 
 ```
-f37d3d4 feat: A-1 About status card + V2-02 reevaluateWatched parity (v1.1, S9.6)
-70ab76a feat: C-1 battery-aware mode + C-9 pause-all triggers          (v1.1, S9.5)
-0a5cc9e feat: V2-05 Schedule trigger — recurring time-of-day windows   (v1.1, S9)
-ca2d3ff docs+ci+smoke: S8c-final wrap                                  (S8c base)
+(S9d head)  feat: B1 keyboard shortcut + smoke S9 coverage + 08/13 pipefail patch (v1.1, S9d)
+61289a9    smoke: cover S9 family — 4 new scenarios + handoff observations    (S9d step 1)
+39a3d2a    docs: rewrite SESSION_HANDOFF for S9 family                          (S9 family wrap)
+f37d3d4    feat: A-1 About status card + V2-02 reevaluateWatched parity        (v1.1, S9.6)
+70ab76a    feat: C-1 battery-aware mode + C-9 pause-all triggers               (v1.1, S9.5)
+0a5cc9e    feat: V2-05 Schedule trigger — recurring time-of-day windows        (v1.1, S9)
+ca2d3ff    docs+ci+smoke: S8c-final wrap                                       (S8c base)
 ```
 
 ### What landed
@@ -31,6 +34,8 @@ ca2d3ff docs+ci+smoke: S8c-final wrap                                  (S8c base
 | **S9.5** | **C-9** Pause-all triggers | +12 | `AwakeManager.triggersPaused`, MenuBarRoot popover top-row toggle, OFF-vote pass-through invariant |
 | **S9.6** | **A-1** About status card | +14 | `AssertionStatusFormatter` (pure helpers, no SwiftUI), AboutTab signature change `(manager:coordinator:)`, Mode/Reason/Power rows |
 | **S9.6** | **V2-02** reevaluateWatched parity | +6 | `reevaluateWatched()` added to Calendar / WiFi / Schedule (matching AppTrigger S7.9 contract — running-state guard); 4 config forms unified to call it |
+| **S9d** | **B1** Global keyboard shortcut (⌘⇧L) | +8 | `Sources/Core/KeyboardShortcutCoordinator.swift` (Carbon `RegisterEventHotKey` + `HotKeyRegistrar` protocol + `MockHotKeyRegistrar`); off by default; Settings → General toggle. Custom-shortcut recorder = v1.2. |
+| **S9d** | Smoke harness — S9 family coverage | (smoke only) | 14 → 18 scenarios (15 pause-all / 16 battery-aware / 17 about-status / 18 schedule). Existing 08 / 13 patched for `pipefail` + `grep -Eq` SIGPIPE false-negative; pmset grep broadened to match by owning-pid line (catches both `NoDisplaySleepAssertion` and `NoIdleSleepAssertion`). |
 
 ### Architectural invariants preserved
 
@@ -117,9 +122,9 @@ A walk-through of the new SwiftUI surfaces during session-end verification surfa
 1. **Owner smoke results** — the 5-step list above. P1 from there comes first.
 2. **Owner-side blocked actions** (still): S8d ~5 min capture + Pages deploy; S8.5 Apple Developer Program enrollment ($99/yr, 1–2 day review).
 3. **Remaining v1.1 candidates** (not yet picked):
-   - Keyboard shortcut for manual toggle (backlog row, still pending — needs conflict-avoidance UI)
    - C-7 Quick presets in menu bar
    - C-3 Activity history (Charts framework, new Settings tab — single-session size)
+   - **B1.2** Custom keyboard-shortcut recorder (v1.2 polish on top of the fixed ⌘⇧L shipped in S9d)
 4. **simplify pass** on the S9 family — best done in a fresh session with a fresh reviewer, not in continuation.
 
 ---
@@ -141,11 +146,13 @@ A walk-through of the new SwiftUI surfaces during session-end verification surfa
 
 ## Recap stats (S9 family end)
 
-| | S8c end | S9.6 end | Δ |
+| | S8c end | S9d end | Δ |
 |---|---|---|---|
-| Tests | 309 | **380** | +71 |
+| Tests | 309 | **388** | +79 |
+| Smoke scenarios | 14 | **18** | +4 |
 | Default triggers | 3 | **4** | +1 (Schedule) |
 | AwakeManager `@Published` settings | 1 (allowDisplaySleep) | **3** (+ requireACForAwake, triggersPaused) | +2 |
-| Settings keys total | 22 | **26** | +4 |
+| Settings keys total | 22 | **27** | +5 |
 | Power-source DI surface | none | `PowerSourceType` | +1 protocol |
-| Tail commit | `ca2d3ff` | `f37d3d4` | +3 commits |
+| Hotkey DI surface | none | `HotKeyRegistrar` | +1 protocol |
+| Global hotkeys | 0 | **1** (⌘⇧L) | +1 |

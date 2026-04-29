@@ -17,9 +17,18 @@ bash "$HARNESS_LIB/defaults_helper.sh" write "$SMOKE_BUNDLE_ID" latte.appTrigger
 bash "$HARNESS_LIB/launch_app.sh" "$SMOKE_APP_PATH" "$SMOKE_BUNDLE_ID" 20 >/dev/null
 sleep 3
 
-# Assertion check 1: idle → must NOT hold PreventUserIdleSystemSleep
-if bash "$HARNESS_LIB/verify_assertion.sh" Latte 2>/dev/null; then
-  smoke_error "Latte held a power assertion at idle (leak)"
+# Assertion check 1: idle → Latte must hold no assertion of any type.
+# Match by owning-pid line so we catch BOTH:
+#   .displayAndSystem mode → "NoDisplaySleepAssertion" (default at allowDisplaySleep=false)
+#   .systemOnly mode       → "NoIdleSleepAssertion" / "PreventUserIdleSystemSleep"
+# Capture-then-test (not `grep -q`) avoids the `set -o pipefail` SIGPIPE
+# false-negative: when grep -q matches and exits, pmset gets SIGPIPE,
+# pipefail propagates that as the pipeline's exit code, and the surrounding
+# `if` evaluates as false — silently masking real leaks. Documented in
+# scenarios 15-18.
+matched_idle="$(pmset -g assertions 2>/dev/null | grep -E "pid [0-9]+\(Latte\):" | head -1 || true)"
+if [[ -n "$matched_idle" ]]; then
+  smoke_error "Latte held a power assertion at idle (leak): '$matched_idle'"
   bash "$HARNESS_LIB/quit_app.sh" "$SMOKE_BUNDLE_ID" >/dev/null
   exit 1
 fi
@@ -29,8 +38,9 @@ smoke_ok "idle: no power assertion held (good)"
 bash "$HARNESS_LIB/quit_app.sh" "$SMOKE_BUNDLE_ID" >/dev/null
 sleep 2
 
-if pmset -g assertions 2>/dev/null | grep -q "PreventUserIdleSystemSleep.*Latte"; then
-  smoke_error "Latte assertion leaked after quit"
+matched_post="$(pmset -g assertions 2>/dev/null | grep -E "pid [0-9]+\(Latte\):" | head -1 || true)"
+if [[ -n "$matched_post" ]]; then
+  smoke_error "Latte assertion leaked after quit: '$matched_post'"
   exit 1
 fi
 smoke_ok "post-quit: no leaked assertion (good)"
