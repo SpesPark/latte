@@ -24,9 +24,10 @@ import os
 @MainActor
 public final class KeyboardShortcutCoordinator: ObservableObject {
 
-    /// User-visible glyph for the chord, kept here so UI strings don't
-    /// drift from the chord that's actually wired up.
-    public static let chordGlyph: String = "⌘⇧L"
+    /// User-visible glyph for the **default** chord. Kept for callers that
+    /// want a stable label without observing the live `chord` (legacy API).
+    /// New code should read `chord.glyph` instead.
+    public static let chordGlyph: String = KeyChord.default.glyph
 
     private let settings: SettingsStore
     private let onToggleAwake: @MainActor () -> Void
@@ -42,6 +43,11 @@ public final class KeyboardShortcutCoordinator: ObservableObject {
         }
     }
 
+    /// Currently configured chord. Hydrated from `SettingsKey.shortcutChord`
+    /// at init; falls back to `KeyChord.default` (⌘⇧L) when absent or
+    /// corrupt — see spec §8 Q4 silent-default migration.
+    @Published public private(set) var chord: KeyChord
+
     public init(
         settings: SettingsStore,
         registrar: HotKeyRegistrar = CarbonHotKeyRegistrar(),
@@ -52,9 +58,29 @@ public final class KeyboardShortcutCoordinator: ObservableObject {
         self.onToggleAwake = onToggleAwake
         let initial = settings.bool(.keyboardShortcutEnabled, default: false)
         self.isEnabled = initial
+        self.chord = settings.keyChord(.shortcutChord) ?? .default
         if initial {
             applyEnabledState()
         }
+    }
+
+    /// Persist + re-register a new chord. Idempotent if `newChord == chord`.
+    /// User-explicit action — assumes the recorder UI already validated
+    /// (modifier present, not in `ReservedChord.blocklist`).
+    public func setChord(_ newChord: KeyChord) {
+        guard newChord != chord else { return }
+        chord = newChord
+        settings.setKeyChord(newChord, for: .shortcutChord)
+        if isEnabled {
+            // Replace the active OS-level registration with the new chord.
+            registrar.unregister()
+            applyEnabledState()
+        }
+    }
+
+    /// Reset to the default chord (⌘⇧L). Idempotent if already default.
+    public func resetChord() {
+        setChord(.default)
     }
 
     // No deinit-time unregister: deinit is nonisolated and the registrar is
@@ -67,7 +93,10 @@ public final class KeyboardShortcutCoordinator: ObservableObject {
 
     private func applyEnabledState() {
         if isEnabled {
-            registrar.register(handler: { [weak self] in self?.onToggleAwake() })
+            registrar.register(
+                chord: chord,
+                handler: { [weak self] in self?.onToggleAwake() }
+            )
         } else {
             registrar.unregister()
         }
@@ -77,10 +106,19 @@ public final class KeyboardShortcutCoordinator: ObservableObject {
 // MARK: - HotKeyRegistrar protocol (DI for tests)
 
 /// Indirection for the OS-level hotkey API so tests can substitute a mock.
+///
+/// v1.2 (B1.2) introduced the `chord:` overload. The legacy `register(handler:)`
+/// is kept as a default-impl shim that delegates to the new method with the
+/// default chord — existing callers that haven't migrated still compile and
+/// behave identically.
 @MainActor
 public protocol HotKeyRegistrar: AnyObject {
-    /// Register the chord. Calling twice without an intervening unregister
-    /// is a no-op (existing handler is preserved).
+    /// Register a specific chord. Calling twice without an intervening
+    /// unregister is a no-op (existing handler is preserved).
+    func register(chord: KeyChord, handler: @escaping @MainActor () -> Void)
+
+    /// Legacy entry-point — registers the default chord (⌘⇧L). New callers
+    /// should use `register(chord:handler:)`.
     func register(handler: @escaping @MainActor () -> Void)
 
     /// Unregister the chord. No-op if not currently registered.
@@ -88,6 +126,18 @@ public protocol HotKeyRegistrar: AnyObject {
 
     /// True between a successful `register` and the matching `unregister`.
     var isRegistered: Bool { get }
+
+    /// The chord the registrar currently has installed at the OS level,
+    /// or nil when not registered. Settings UI uses this to display the
+    /// active chord without round-tripping through the store.
+    var currentChord: KeyChord? { get }
+}
+
+public extension HotKeyRegistrar {
+    /// Default-impl shim for the legacy `register(handler:)` callsite.
+    func register(handler: @escaping @MainActor () -> Void) {
+        register(chord: .default, handler: handler)
+    }
 }
 
 // MARK: - Carbon implementation
@@ -117,12 +167,13 @@ public final class CarbonHotKeyRegistrar: HotKeyRegistrar {
     private static var eventHandlerInstalled = false
 
     private var hotKeyRef: EventHotKeyRef?
+    public private(set) var currentChord: KeyChord?
 
     public init() {}
 
     public var isRegistered: Bool { hotKeyRef != nil }
 
-    public func register(handler: @escaping @MainActor () -> Void) {
+    public func register(chord: KeyChord, handler: @escaping @MainActor () -> Void) {
         if hotKeyRef != nil {
             // Existing registration — keep the prior handler. Idempotent.
             return
@@ -130,15 +181,20 @@ public final class CarbonHotKeyRegistrar: HotKeyRegistrar {
         Self.installEventHandlerIfNeeded()
         Self.activeHandler = handler
 
-        var id = EventHotKeyID(signature: Self.signature, id: Self.hotKeyID)
-        let modifiers: UInt32 = UInt32(cmdKey | shiftKey)
-        let keyCode: UInt32 = UInt32(kVK_ANSI_L)
-
+        let id = EventHotKeyID(signature: Self.signature, id: Self.hotKeyID)
         var ref: EventHotKeyRef?
-        let status = RegisterEventHotKey(keyCode, modifiers, id, GetApplicationEventTarget(), 0, &ref)
+        let status = RegisterEventHotKey(
+            chord.keyCode,
+            chord.modifiers,
+            id,
+            GetApplicationEventTarget(),
+            0,
+            &ref
+        )
         if status == noErr, let ref {
             hotKeyRef = ref
-            Self.logger.info("global hotkey ⌘⇧L registered")
+            currentChord = chord
+            Self.logger.info("global hotkey \(chord.glyph, privacy: .public) registered")
         } else {
             Self.logger.error("RegisterEventHotKey failed status=\(status)")
             Self.activeHandler = nil
@@ -149,11 +205,13 @@ public final class CarbonHotKeyRegistrar: HotKeyRegistrar {
         guard let ref = hotKeyRef else { return }
         let status = UnregisterEventHotKey(ref)
         hotKeyRef = nil
+        let glyph = currentChord?.glyph ?? "?"
+        currentChord = nil
         Self.activeHandler = nil
         if status != noErr {
             Self.logger.error("UnregisterEventHotKey failed status=\(status)")
         } else {
-            Self.logger.info("global hotkey ⌘⇧L unregistered")
+            Self.logger.info("global hotkey \(glyph, privacy: .public) unregistered")
         }
     }
 

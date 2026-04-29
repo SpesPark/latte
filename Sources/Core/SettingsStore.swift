@@ -50,10 +50,15 @@ public enum SettingsKey: String, CaseIterable, Sendable {
     case triggersPaused         = "latte.triggersPaused"
 
     // Global keyboard shortcut (B1) — v1.1
-    /// When true, ⌘⇧L globally toggles Latte awake/asleep. Off by default to
-    /// avoid stomping a system-wide chord on first launch — user opts in via
-    /// Settings → General → "Toggle with ⌘⇧L". v1.2 adds a custom recorder.
+    /// When true, the configured chord globally toggles Latte awake/asleep.
+    /// Off by default to avoid stomping a system-wide chord on first launch.
     case keyboardShortcutEnabled = "latte.keyboardShortcut.enabled"
+
+    // Custom keyboard-shortcut chord (B1.2) — v1.2
+    /// JSON-encoded `KeyChord`; nil/missing → falls back to the default ⌘⇧L.
+    /// Persisted only after the user actually customises the chord; stays
+    /// absent for fresh installs (silent-default migration per 07-spec §8 Q4).
+    case shortcutChord = "latte.keyboardShortcut.chord"
 }
 
 public protocol SettingsStore: AnyObject {

@@ -13,20 +13,31 @@ final class KeyboardShortcutCoordinatorTests: XCTestCase {
         private(set) var isRegistered: Bool = false
         private(set) var registerCallCount: Int = 0
         private(set) var unregisterCallCount: Int = 0
+        private(set) var currentChord: KeyChord?
         private var handler: (@MainActor () -> Void)?
+        /// When true, the next `register(chord:handler:)` returns without
+        /// flipping `isRegistered` true — used to simulate `RegisterEventHotKey`
+        /// failure (e.g. chord already taken globally).
+        var failNextRegister: Bool = false
 
-        func register(handler: @escaping @MainActor () -> Void) {
+        func register(chord: KeyChord, handler: @escaping @MainActor () -> Void) {
             // Mirror the production contract: re-registering without an
             // intervening unregister is a no-op (handler preserved).
             registerCallCount += 1
             if isRegistered { return }
+            if failNextRegister {
+                failNextRegister = false
+                return
+            }
             isRegistered = true
+            currentChord = chord
             self.handler = handler
         }
 
         func unregister() {
             unregisterCallCount += 1
             isRegistered = false
+            currentChord = nil
             handler = nil
         }
 
@@ -155,5 +166,132 @@ final class KeyboardShortcutCoordinatorTests: XCTestCase {
         // honest (mirrors SettingsStoreTests testRequiredKeysExist style).
         XCTAssertEqual(SettingsKey.keyboardShortcutEnabled.rawValue,
                        "latte.keyboardShortcut.enabled")
+        XCTAssertEqual(SettingsKey.shortcutChord.rawValue,
+                       "latte.keyboardShortcut.chord")
     }
+
+    // MARK: - B1.2 chord management
+
+    private func makeFixtureForChordTests(
+        initialChord: KeyChord? = nil,
+        enabled: Bool = false
+    ) -> (KeyboardShortcutCoordinator, MockHotKeyRegistrar, InMemorySettingsStore) {
+        let store = InMemorySettingsStore()
+        if let initialChord {
+            store.setKeyChord(initialChord, for: .shortcutChord)
+        }
+        store.setBool(enabled, for: .keyboardShortcutEnabled)
+        let registrar = MockHotKeyRegistrar()
+        let coord = KeyboardShortcutCoordinator(
+            settings: store,
+            registrar: registrar,
+            onToggleAwake: {}
+        )
+        return (coord, registrar, store)
+    }
+
+    func testInitFallsBackToDefaultChordWhenStoreIsEmpty() {
+        let (coord, _, _) = makeFixtureForChordTests()
+        XCTAssertEqual(coord.chord, .default)
+        XCTAssertEqual(coord.chord.glyph, "⌘⇧L")
+    }
+
+    func testInitHydratesChordFromStoreWhenPresent() {
+        let custom = KeyChord(
+            modifiers: UInt32(KeyChord.cmdMask | KeyChord.optionMask),
+            keyCode: 0x28  // K
+        )
+        let (coord, _, _) = makeFixtureForChordTests(initialChord: custom)
+        XCTAssertEqual(coord.chord, custom)
+        XCTAssertEqual(coord.chord.glyph, "⌘⌥K")
+    }
+
+    func testSetChordPersistsAndReRegistersWhenEnabled() {
+        let (coord, registrar, store) = makeFixtureForChordTests(enabled: true)
+        XCTAssertTrue(registrar.isRegistered)
+        XCTAssertEqual(registrar.currentChord, .default)
+        let initialRegisterCalls = registrar.registerCallCount
+
+        let newChord = KeyChord(
+            modifiers: UInt32(KeyChord.cmdMask | KeyChord.optionMask),
+            keyCode: 0x28  // K
+        )
+        coord.setChord(newChord)
+
+        XCTAssertEqual(coord.chord, newChord)
+        // The `unregister + applyEnabledState` path → 1 unregister + 1 register.
+        XCTAssertEqual(registrar.unregisterCallCount, 1)
+        XCTAssertEqual(registrar.registerCallCount, initialRegisterCalls + 1)
+        XCTAssertEqual(registrar.currentChord, newChord)
+
+        // Persisted to store.
+        let stored = store.keyChord(.shortcutChord)
+        XCTAssertEqual(stored, newChord)
+    }
+
+    func testSetChordWithSameValueIsNoOp() {
+        let (coord, registrar, _) = makeFixtureForChordTests(enabled: true)
+        let beforeReg = registrar.registerCallCount
+        let beforeUnreg = registrar.unregisterCallCount
+
+        coord.setChord(.default)  // same as current
+
+        XCTAssertEqual(registrar.registerCallCount, beforeReg,
+                       "Same-value setChord must not re-register")
+        XCTAssertEqual(registrar.unregisterCallCount, beforeUnreg)
+    }
+
+    func testResetChordReturnsToDefaultAndReRegisters() {
+        let custom = KeyChord(
+            modifiers: UInt32(KeyChord.cmdMask | KeyChord.controlMaskAlias),
+            keyCode: 0x06  // Z
+        )
+        let (coord, registrar, store) = makeFixtureForChordTests(
+            initialChord: custom,
+            enabled: true
+        )
+        XCTAssertEqual(coord.chord, custom)
+        XCTAssertEqual(registrar.currentChord, custom)
+
+        coord.resetChord()
+
+        XCTAssertEqual(coord.chord, .default)
+        XCTAssertEqual(registrar.currentChord, .default)
+        XCTAssertEqual(store.keyChord(.shortcutChord), .default)
+    }
+
+    func testInitFallsBackToDefaultWhenStoredValueIsGarbage() {
+        let store = InMemorySettingsStore()
+        // Bogus blob that won't decode as KeyChord JSON.
+        store.setData(Data([0xDE, 0xAD, 0xBE, 0xEF]), for: .shortcutChord)
+        let registrar = MockHotKeyRegistrar()
+        let coord = KeyboardShortcutCoordinator(
+            settings: store,
+            registrar: registrar,
+            onToggleAwake: {}
+        )
+        XCTAssertEqual(coord.chord, .default,
+                       "Corrupt stored chord must fall back to .default silently")
+    }
+
+    func testRegistrarFailureLeavesIsRegisteredFalse() {
+        let store = InMemorySettingsStore()
+        let registrar = MockHotKeyRegistrar()
+        registrar.failNextRegister = true
+        let coord = KeyboardShortcutCoordinator(
+            settings: store,
+            registrar: registrar,
+            onToggleAwake: {}
+        )
+        coord.isEnabled = true
+        XCTAssertFalse(registrar.isRegistered,
+                       "Register failure must not flip the registrar's flag")
+        XCTAssertNil(registrar.currentChord)
+    }
+}
+
+private extension KeyChord {
+    /// Convenience alias used in tests so the literal Carbon control-mask
+    /// constant doesn't need to be re-stated each time. Mirrors `cmdMask`.
+    static var controlMaskAlias: Int { ctrlMask }
 }
