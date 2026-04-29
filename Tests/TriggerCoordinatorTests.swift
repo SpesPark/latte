@@ -313,4 +313,75 @@ final class TriggerCoordinatorTests: XCTestCase {
             XCTAssertFalse(manager.isAwake, "cycle \(cycle) stop must deactivate")
         }
     }
+
+    // MARK: - V2-06 ExternalDisplayTrigger integration
+
+    /// External-display votes combine OR with other triggers — when a
+    /// monitor is attached the cup stays awake even if no other trigger
+    /// votes ON. Removing the monitor while another trigger is voting
+    /// keeps the cup awake.
+    func testExternalDisplayVoteCombinesORWithOtherTrigger() async throws {
+        let (coordinator, manager, _, _) = makeCoordinator()
+        let other = MockTrigger(id: "calendar-mock")
+        let displaySettings = InMemorySettingsStore()
+        displaySettings.setBool(true, for: .externalDisplayEnabled)
+        let displaySource = MockDisplaySource(externalDisplayCount: 1,
+                                              firstExternalDisplayName: "Studio Display")
+        let display = ExternalDisplayTrigger(settings: displaySettings, source: displaySource)
+        coordinator.register(other)
+        coordinator.register(display)
+
+        await coordinator.start(other)
+        await coordinator.start(display)
+
+        // Display fires its initial ON vote on start.
+        try await Task.sleep(nanoseconds: 80_000_000)
+        XCTAssertTrue(manager.isAwake, "external-display vote alone must activate cup")
+        if case .awakeTriggered(let votes) = manager.state {
+            XCTAssertEqual(votes["external-display"]?.reason, "Display: Studio Display")
+        } else {
+            XCTFail("expected .awakeTriggered, got \(manager.state)")
+        }
+
+        // Other trigger now votes ON — both votes coexist (OR).
+        other.emit(TriggerVote(wantsAwake: true, reason: "Meeting"))
+        try await Task.sleep(nanoseconds: 80_000_000)
+        if case .awakeTriggered(let votes) = manager.state {
+            XCTAssertEqual(votes.count, 2)
+        } else {
+            XCTFail("expected awakeTriggered with 2 votes, got \(manager.state)")
+        }
+
+        // Detach monitor — other vote keeps cup awake.
+        displaySource.externalDisplayCount = 0
+        displaySource.firstExternalDisplayName = nil
+        display.evaluate()
+        try await Task.sleep(nanoseconds: 80_000_000)
+        XCTAssertTrue(manager.isAwake, "still awake via other trigger after display detach")
+    }
+
+    /// Pause-all (C-9) gates ALL trigger votes including the new
+    /// ExternalDisplayTrigger — cup must NOT activate while paused even
+    /// with a monitor attached.
+    func testPauseAllIgnoresExternalDisplayVote() async throws {
+        let assertion = MockPowerAssertion()
+        let settings = InMemorySettingsStore()
+        // Pause-all engaged before the trigger emits.
+        settings.setBool(true, for: .triggersPaused)
+        settings.setBool(true, for: .externalDisplayEnabled)
+
+        let manager = AwakeManager(assertion: assertion, settings: settings)
+        let coordinator = TriggerCoordinator(awakeManager: manager, settings: settings)
+        let displaySource = MockDisplaySource(externalDisplayCount: 1,
+                                              firstExternalDisplayName: "Studio Display")
+        let display = ExternalDisplayTrigger(settings: settings, source: displaySource)
+        coordinator.register(display)
+
+        await coordinator.start(display)
+        try await Task.sleep(nanoseconds: 100_000_000)
+
+        XCTAssertFalse(manager.isAwake,
+                       "pause-all must suppress external-display vote (C-9 parity)")
+        XCTAssertFalse(assertion.isActive)
+    }
 }
