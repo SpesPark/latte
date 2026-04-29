@@ -302,7 +302,7 @@ The `voteStream` is an async sequence emitted whenever the trigger's opinion cha
 
 #### 4.4.1 `*Source` DI pattern (added session 4)
 
-Each concrete trigger (`CalendarTrigger`, `AppTrigger`, `WiFiTrigger`, `FocusTrigger`) wraps its system API behind a small protocol — `CalendarSource`, `WorkspaceSource`, `WiFiSource`, `FocusSource` — injected via the trigger's initializer. Production binds the protocol to a real adapter (`EKCalendarSource`, `NSWorkspaceSource`, `CoreWLANSource`, `INFocusSource`); tests inject `MockCalendarSource`, `MockWorkspaceSource`, etc.
+Each concrete trigger (`CalendarTrigger`, `AppTrigger`, `WiFiTrigger`, `FocusTrigger`, `ScheduleTrigger`, `ExternalDisplayTrigger`) wraps its system API behind a small protocol — `CalendarSource`, `WorkspaceSource`, `WiFiSource`, `FocusSource`, (Schedule needs no adapter — it's pure clock + entries), `DisplaySource` — injected via the trigger's initializer. Production binds the protocol to a real adapter (`EKCalendarSource`, `NSWorkspaceSource`, `CoreWLANSource`, `INFocusSource`, `NSScreenSource`); tests inject `MockCalendarSource`, `MockWorkspaceSource`, etc.
 
 This keeps:
 - Triggers' state machines (which event windows are "active", which apps are running, current SSID/Focus state) **testable without touching real EventKit, NSWorkspace, CoreWLAN, or INFocusStatusCenter**.

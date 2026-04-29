@@ -2,8 +2,8 @@
 
 | Field | Value |
 |---|---|
-| **Document version** | 0.1 |
-| **Status** | Plan-only — implementation deferred to v1.2 (after S10 owner UI smoke clears) |
+| **Document version** | 1.0 |
+| **Status** | ✅ Shipped in S11 (2026-04-30). See ROADMAP row 11a. |
 | **Audience** | Implementing engineer for v1.2 |
 | **Depends on** | 02-architecture.md §4.4 (Trigger protocol) + §4.4.1 (Source DI pattern) |
 | **Backlog ref** | `v2-backlog.md` V2-06 |
@@ -104,14 +104,25 @@ Reason format mirrors `AppTrigger`'s post-S10 friendly format
 `TriggerCoordinator` already aggregates votes via "any-OR" — no policy
 change needed. ExternalDisplayTrigger is one more vote in the OR.
 
-### No-auto-replay
+### Re-enable behaviour (matches WiFi/AppTrigger pattern)
 
-When user disables the trigger while it is currently the only awake-causing
-vote, the coordinator drops the vote (current behaviour); awake state goes
-through the normal cool-down before settling. **Do NOT** re-emit the vote
-on re-enable if the display is still attached — match the C-1 / C-9
-no-auto-replay policy from S9. The next genuine
-`didChangeScreenParametersNotification` triggers a fresh vote naturally.
+When the user disables the trigger while it is currently the only
+awake-causing vote, `TriggerCoordinator.stop()` synthesises an immediate
+grace-0 vote-OFF; the FSM transitions to `.asleep` (or `.coolingDown` if
+the trigger declares `graceSecondsAfterOff > 0`).
+
+When the user re-enables the trigger, `start()` calls `evaluate()` which
+reads the current source state and yields a fresh vote if the display is
+still attached. This matches WiFi/App/Schedule trigger semantics — every
+v1 trigger re-evaluates on Toggle ON, the user expects "I just turned
+this on, my monitor is plugged in, the cup should be active." The C-1
+(battery) and C-9 (pause-all) no-auto-replay policies from S9 apply at
+the **manager input boundary** (auto-resume on AC re-plug or unpause is
+suppressed there), not at the per-trigger toggle level.
+
+*(Earlier draft of this spec proposed waiting for the next genuine
+`didChangeScreenParametersNotification` to vote; that was rejected during
+S11 implementation in favour of WiFi consistency. See commit `4895d35`.)*
 
 ---
 
@@ -227,12 +238,33 @@ Within S8b's original ~3-4h estimate.
 
 ---
 
-## 11. Implementation order (when owner gives go-ahead)
+## 11. Implementation order — **as shipped in S11**
 
-1. RED: write 8 unit tests with `MockDisplaySource` (failing).
-2. GREEN: implement `DisplaySource` protocol + `MockDisplaySource` + `ExternalDisplayTrigger`.
-3. GREEN: production `NSScreenSource` adapter.
-4. WIRE: register trigger in `LatteApp.bootTriggers()`; add settings key.
-5. UI: TriggersTab section.
-6. SMOKE: scenario 20 + env-var injection.
-7. DOCS: update 02-architecture.md §4.4.1 trigger list, ROADMAP row, v2-backlog "Shipped".
+Five-commit sequence landed 2026-04-30:
+
+1. `4895d35` — **Core RED+GREEN**: `DisplaySource` protocol, `NSScreenSource`,
+   `MockDisplaySource`, `ExternalDisplayTrigger`, `SettingsKey.externalDisplayEnabled`,
+   9 unit tests (1 over the spec ≥8 floor — restart-after-stop split out as
+   its own test once the single-consumer changeStream gotcha surfaced).
+2. `9c6504c` — **Wire**: register in `AppEnvironment.registerDefaultTriggers`;
+   2 coordinator integration tests (vote OR with another trigger; pause-all
+   suppression).
+3. `fd9df79` — **UI**: TriggersTab section + `ExternalDisplayTriggerConfigForm`.
+4. `5642bbc` — **Smoke**: scenario 20 (no-monitor branch automated; CI hosts
+   have no external monitor, so the natural OFF branch is what's verified
+   automatically).
+5. *(this commit)* — **Docs**: this spec marked Shipped, 02-architecture
+   §4.4.1 updated, ROADMAP row 11a, v2-backlog V2-06 marked Shipped,
+   SESSION_HANDOFF wrap.
+
+The `LATTE_TEST_MOCK_DISPLAY_COUNT` env-var hack proposed in §7 was
+**not** implemented — keeping production code free of test-only branches
+proved cleaner; physical-attach simulation is owner manual smoke (handoff
+step 7) territory.
+
+The single-consumer `source.changeStream` gotcha that emerged during
+implementation (`for await` can only be consumed once for the lifetime
+of an `AsyncStream`) was solved with the `isRunning` gate pattern: the
+observe task lives once, gated by a flag, instead of being cancelled
+and recreated on each stop/start cycle. Documented inline in
+`ExternalDisplayTrigger.swift`.

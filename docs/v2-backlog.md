@@ -123,13 +123,14 @@
   - Onboarding wizard description added (`schedule` case → "On a recurring time schedule").
 - **Tests**: 28 new (`Tests/ScheduleTriggerTests.swift`). Covers TimeOfDay clamping/comparable, ScheduleEntry same-day/midnight-crossing/zero-length/empty-weekday/disabled/full-day, Codable round-trip, SettingsStore round-trip + corruption fallback, ScheduleTrigger ON/OFF transitions, no re-emit on repeated polls, overlapping-entry stable order, disabled no-op, start/stop with stream lifetime preserved (S7.11 invariant), persistence sanity. Total project: 309 → **337 tests, all PASS**.
 
-### V2-06 — External display connected trigger — **NEW, v1.3+ ship target**
+### V2-06 — External display connected trigger — ✅ **SHIPPED in S11 (2026-04-30)**
 
 - **Surfaced**: S8b research (2026-04-27). KYA Issue #235; also Amphetamine ships it.
 - **User signal**: laptop-at-desk workflow — *"plugged into monitor → keep awake"* is a real pattern, especially for MacBook Air/Pro users who close the lid.
-- **Scope**: monitor `NSScreen.screens` count via `NSApplication.didChangeScreenParametersNotification`; vote `.awake` when external display present.
-- **Effort**: ~3-4 h (new trigger + 4-5 tests).
-- **Why deferred to v1.3+**: lower demand than V2-05; not v1.0-blocking; potentially overlaps with closed-lid power assertions which need careful interaction with macOS lid-close-sleep policy.
+- **Shipped scope (S11)**: `DisplaySource` protocol + `NSScreenSource` adapter (`NSScreen.screens` filtered through `CGDisplayIsBuiltin`, observing `NSApplication.didChangeScreenParametersNotification`) + `MockDisplaySource` + `ExternalDisplayTrigger` registered as the 5th default trigger. Vote `wantsAwake=true` when ≥1 external display attached; `reason: "Display: <localizedName ?? External Display>"` mirrors S10 friendly format. Settings → Triggers → External Display section with live status row. Smoke scenario 20 covers the no-monitor branch automatically; "monitor attached" path covered by 9 unit + 2 coordinator tests + owner manual smoke (handoff step 7).
+- **Effort actual**: 4 commits, ~398→409 tests (+11), smoke 19→20.
+- **Out of scope (deferred to v1.3+)**: clamshell-aware refinement, per-display whitelist (UUID via `CGDisplayCreateUUIDFromDisplayID`), `LATTE_TEST_MOCK_DISPLAY_COUNT` env-var injection (decided against — production code stays free of test-only branches; physical-attach simulation is owner manual smoke territory).
+- **Spec**: see [docs/design/06-display-trigger.md](design/06-display-trigger.md).
 
 ---
 
