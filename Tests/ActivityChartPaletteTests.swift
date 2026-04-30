@@ -6,14 +6,23 @@ final class ActivityChartPaletteTests: XCTestCase {
 
     // MARK: - Default palette
 
-    func testTriggerOrderMatchesActivityTabDomain() {
-        // The 24h chart's chartForegroundStyleScale uses the same six-trigger
-        // domain — drift between palette and chart silently mis-renders the
-        // legend swatches. Anchor the order here.
+    func testTriggerOrderIsAnchoredToExpectedValues() {
+        // The 24h chart's chartForegroundStyleScale reads this list directly
+        // so any reorder/rename here flows through to the legend swatches.
+        // Anchor the canonical order so future additions can't silently
+        // shuffle existing trigger colours.
         XCTAssertEqual(
             ActivityChartPalette.triggerOrder,
             ["wifi", "calendar", "focus", "app", "schedule", "external-display"]
         )
+    }
+
+    /// Latent defect from S18-2 simplify-pass LOW-4: leading whitespace +
+    /// "#" prefix used to drop the wrong character and return nil. Pin
+    /// the contract so a future edit can't reintroduce it.
+    func testColorHexToleratesLeadingWhitespace() {
+        XCTAssertEqual(Color(hex: "  #FF0000"), Color(red: 1, green: 0, blue: 0))
+        XCTAssertEqual(Color(hex: " 00FF00 "), Color(red: 0, green: 1, blue: 0))
     }
 
     func testDefaultHexHasOneEntryPerTrigger() {

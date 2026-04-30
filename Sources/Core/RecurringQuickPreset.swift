@@ -42,9 +42,11 @@ public struct RecurringQuickPreset: Codable, Equatable, Identifiable, Sendable {
     }
 
     /// Computes the next future wall-clock occurrence of `targetHour:targetMinute`
-    /// on a configured weekday. Looks ahead up to 7 days. Returns `now` for
-    /// an empty weekday set so `minutes(from:)` stays defined (clamped to 1
-    /// at the call site).
+    /// on a configured weekday. Looks at today and up to 7 days ahead
+    /// (8 candidates) — worst case is "today is the right weekday but
+    /// the target time just passed", which requires a full week forward.
+    /// Returns `now` for an empty weekday set so `minutes(from:)` stays
+    /// defined (clamped to 1 at the call site).
     public func nextOccurrence(after now: Date, calendar: Calendar = .current) -> Date {
         guard !weekdays.isEmpty else { return now }
         for offset in 0...7 {

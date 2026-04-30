@@ -121,14 +121,11 @@ public final class TriggerCoordinator: ObservableObject {
         // Live-refresh signal for an open Activity tab. Posting from
         // @MainActor synchronously (the actor task above is queued; by the
         // time a subscriber's reload `await`s a snapshot, FIFO actor
-        // ordering guarantees the append has committed). userInfo carries
-        // the triggerId so subscribers can debounce per-trigger if they
-        // care; the canonical consumer (ActivityTab) just refetches.
-        NotificationCenter.default.post(
-            name: .activityLogDidAppend,
-            object: self,
-            userInfo: ["triggerId": triggerId, "kind": kind.rawValue]
-        )
+        // ordering guarantees the append has committed). No userInfo —
+        // the canonical consumer just refetches the snapshot, so emitting
+        // triggerId/kind to every in-process observer would be needless
+        // payload.
+        NotificationCenter.default.post(name: .activityLogDidAppend, object: self)
     }
 }
 

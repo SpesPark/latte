@@ -10,9 +10,9 @@ import SwiftUI
 /// absent on disk). See `docs/design/09-c3-activity-history.md` §15.
 public enum ActivityChartPalette {
 
-    /// Canonical render order — matches `HourlyAwakeChart.triggerDomain`
-    /// so the legend swatches don't drift between palette and chart. Any
-    /// new trigger added to the project must extend BOTH lists.
+    /// Canonical render order. `HourlyAwakeChart` reads this directly so
+    /// the chart domain and the legend swatches cannot drift. Any new
+    /// trigger added to the project must extend this list.
     public static let triggerOrder: [String] = [
         "wifi", "calendar", "focus", "app", "schedule", "external-display"
     ]
@@ -69,11 +69,10 @@ extension Color {
     /// the chart settings UI never produces. 8-bit precision per channel
     /// is sufficient for the picker round-trip.
     public init?(hex: String) {
-        let trimmed = hex.trimmingCharacters(in: .whitespaces).hasPrefix("#")
-            ? String(hex.dropFirst())
-            : hex
-        guard trimmed.count == 6,
-              let value = UInt32(trimmed, radix: 16) else { return nil }
+        let trimmed = hex.trimmingCharacters(in: .whitespaces)
+        let stripped = trimmed.hasPrefix("#") ? String(trimmed.dropFirst()) : trimmed
+        guard stripped.count == 6,
+              let value = UInt32(stripped, radix: 16) else { return nil }
         let r = Double((value >> 16) & 0xFF) / 255.0
         let g = Double((value >> 8) & 0xFF) / 255.0
         let b = Double(value & 0xFF) / 255.0

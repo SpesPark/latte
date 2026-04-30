@@ -112,13 +112,16 @@ public struct ActivityTab: View {
 
     /// Cancels any pending reload and schedules a new one 300 ms in the
     /// future — bursty trigger fires (e.g. all triggers boot together)
-    /// collapse to a single snapshot fetch.
+    /// collapse to a single snapshot fetch. Letting `Task.sleep` throw
+    /// `CancellationError` is the single mechanism that aborts reload —
+    /// no separate `Task.isCancelled` guard needed.
     private func scheduleLiveReload() {
         liveReloadTask?.cancel()
         liveReloadTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 300_000_000)
-            guard !Task.isCancelled else { return }
-            await reload()
+            do {
+                try await Task.sleep(nanoseconds: 300_000_000)
+                await reload()
+            } catch { /* cancelled — newer notification superseded this one */ }
         }
     }
 
