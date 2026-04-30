@@ -59,6 +59,11 @@ public enum SettingsKey: String, CaseIterable, Sendable {
     /// Persisted only after the user actually customises the chord; stays
     /// absent for fresh installs (silent-default migration per 07-spec §8 Q4).
     case shortcutChord = "latte.keyboardShortcut.chord"
+
+    // Activity history retention (C-3 deferred F) — v1.3.1
+    /// Days of activity history to retain. Default 14, valid range 1…90 —
+    /// values outside the range fall back to 14 via `clampedInteger`.
+    case activityRetentionDays = "latte.activityHistory.retentionDays"
 }
 
 public protocol SettingsStore: AnyObject {

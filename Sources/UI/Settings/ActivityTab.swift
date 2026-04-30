@@ -8,6 +8,7 @@ public struct ActivityTab: View {
 
     @ObservedObject public var coordinator: TriggerCoordinator
     public let store: ActivityLogStore?
+    @EnvironmentObject private var environment: AppEnvironment
 
     @State private var entries: [ActivityLogEntry] = []
     @State private var isLoading = true
@@ -49,6 +50,9 @@ public struct ActivityTab: View {
             }
             Section("Currently active") {
                 CurrentlyActiveList(activeVotes: coordinator.activeVotes)
+            }
+            Section("Retention") {
+                RetentionStepper(days: $environment.activityRetentionDays)
             }
         }
         .formStyle(.grouped)
@@ -106,6 +110,32 @@ private struct DailyHeatmapChart: View {
         }
         .chartForegroundStyleScale(range: Gradient(colors: [Color.clear, Color.accentColor]))
         .chartYAxis { AxisMarks(values: [0, 6, 12, 18]) }
+    }
+}
+
+// MARK: - Retention stepper (F)
+
+/// Owner-facing knob for `SettingsKey.activityRetentionDays`. The binding
+/// flows through `AppEnvironment` whose `didSet` writes to `SettingsStore`
+/// AND propagates the new window into the live `ActivityLogStore` actor —
+/// shrinking the window GCs stale entries on the spot.
+private struct RetentionStepper: View {
+
+    @Binding var days: Int
+
+    var body: some View {
+        Stepper(value: $days,
+                in: ActivityLogStore.retentionDayRange,
+                step: 1) {
+            HStack {
+                Text("Keep history for")
+                Spacer()
+                Text("\(days) day\(days == 1 ? "" : "s")")
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+        }
+        .accessibilityIdentifier("activity.retention.stepper")
     }
 }
 

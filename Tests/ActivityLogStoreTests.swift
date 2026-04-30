@@ -150,6 +150,57 @@ final class ActivityLogStoreTests: XCTestCase {
         let snap = await store.snapshot()
         XCTAssertTrue(snap.isEmpty, "corrupt file must be treated as empty, not crash")
     }
+
+    // MARK: - F: customisable retention window (S15)
+
+    func testSetRetentionShrinksWindowAndGCsImmediately() async throws {
+        let dir = try makeTempDirectory()
+        defer { cleanup(dir) }
+
+        // Start with a 1-day retention, then shrink to 1 second — the 12h-old
+        // entry must be GCed by the shrink, not wait for the next append.
+        let store = ActivityLogStore(directory: dir, retention: 86_400)
+        let stale = makeEntry(timestamp: Date(timeIntervalSinceNow: -43_200))   // 12h ago
+        let fresh = makeEntry(timestamp: .now)
+        await store.append(stale)
+        await store.append(fresh)
+        let preCount = await store.snapshot().count
+        XCTAssertEqual(preCount, 2)
+
+        await store.setRetention(1.0)
+        let snap = await store.snapshot()
+        XCTAssertEqual(snap.count, 1, "shrinking retention must GC stale entries on the spot")
+        XCTAssertEqual(snap.first?.id, fresh.id)
+    }
+
+    func testSetRetentionGrowsWindowKeepsExistingEntries() async throws {
+        let dir = try makeTempDirectory()
+        defer { cleanup(dir) }
+
+        let store = ActivityLogStore(directory: dir, retention: 1.0)
+        let fresh = makeEntry(timestamp: .now)
+        await store.append(fresh)
+
+        await store.setRetention(86_400 * 30)
+        let snap = await store.snapshot()
+        XCTAssertEqual(snap.count, 1, "growing retention is a no-op for existing entries")
+    }
+
+    func testSetRetentionPersistsAcrossReloads() async throws {
+        let dir = try makeTempDirectory()
+        defer { cleanup(dir) }
+
+        // Retention is a runtime knob (not file-persisted) — but the post-GC
+        // entries set must be on disk so a reload sees the GCed shape.
+        let store = ActivityLogStore(directory: dir, retention: 86_400)
+        await store.append(makeEntry(timestamp: Date(timeIntervalSinceNow: -43_200)))
+        await store.append(makeEntry(timestamp: .now))
+        await store.setRetention(1.0)
+
+        let reloaded = ActivityLogStore(directory: dir, retention: 86_400)
+        let snap = await reloaded.snapshot()
+        XCTAssertEqual(snap.count, 1, "shrink-GC must flush, so a reload sees the trimmed entries")
+    }
 }
 
 // MARK: - AwakeSegment merge (heatmap union — 7th simplify-pass MED-2 regression gate)

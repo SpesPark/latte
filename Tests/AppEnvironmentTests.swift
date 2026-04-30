@@ -183,4 +183,53 @@ final class AppEnvironmentTests: XCTestCase {
         XCTAssertFalse(ids.contains("focus"),
                        "FocusTrigger must not be registered until V2-03b lands")
     }
+
+    // MARK: - F: activity retention plumbing (S15)
+
+    func testActivityRetentionDaysDefaultsTo14() {
+        let env = AppEnvironment(settings: InMemorySettingsStore())
+        XCTAssertEqual(env.activityRetentionDays, 14)
+    }
+
+    func testActivityRetentionDaysHydratesFromStoredValue() {
+        let store = InMemorySettingsStore(initial: [.activityRetentionDays: 30])
+        let env = AppEnvironment(settings: store)
+        XCTAssertEqual(env.activityRetentionDays, 30)
+    }
+
+    func testActivityRetentionDaysClampsOutOfRangeStoredValue() {
+        // 0 (or negative) is meaningless; >90 days is unbounded write — both
+        // fall back to the 14-day default rather than crash.
+        let store = InMemorySettingsStore(initial: [.activityRetentionDays: 9999])
+        let env = AppEnvironment(settings: store)
+        XCTAssertEqual(env.activityRetentionDays, 14)
+    }
+
+    func testActivityRetentionDaysAssignmentWritesThroughToStore() {
+        let store = InMemorySettingsStore()
+        let env = AppEnvironment(settings: store)
+        env.activityRetentionDays = 7
+        XCTAssertEqual(store.integer(.activityRetentionDays, default: -1), 7)
+    }
+
+    func testActivityRetentionDaysAssignmentPropagatesToStore() async {
+        let env = AppEnvironment(settings: InMemorySettingsStore())
+        guard let actor = env.activityStore else {
+            XCTFail("activityStore unexpectedly nil — sandbox boot failure?")
+            return
+        }
+        env.activityRetentionDays = 1
+
+        // didSet schedules a Task to update the actor — give it up to ~1s
+        // (well over a single MainActor → actor hop) before asserting.
+        let target: TimeInterval = 86_400
+        var observed: TimeInterval = -1
+        for _ in 0..<50 {
+            observed = await actor.currentRetention()
+            if abs(observed - target) < 0.001 { break }
+            try? await Task.sleep(nanoseconds: 20_000_000)
+        }
+        XCTAssertEqual(observed, target, accuracy: 0.001,
+                       "didSet should propagate the new retention to the actor within ~1s")
+    }
 }

@@ -183,7 +183,8 @@ final class SettingsKeyEnumTests: XCTestCase {
             "latte.requireACForAwake",
             "latte.triggersPaused",
             "latte.keyboardShortcut.enabled",
-            "latte.keyboardShortcut.chord"
+            "latte.keyboardShortcut.chord",
+            "latte.activityHistory.retentionDays"
         ]
         let actual = Set(SettingsKey.allCases.map { $0.rawValue })
         XCTAssertEqual(actual, required)

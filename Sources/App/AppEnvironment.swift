@@ -51,6 +51,22 @@ public final class AppEnvironment: ObservableObject {
         }
     }
 
+    /// Days of activity history retained on disk. Default 14, valid range
+    /// `ActivityLogStore.retentionDayRange` (1…90). Mirrors
+    /// `SettingsKey.activityRetentionDays`. Writing here also propagates the
+    /// new window into the live actor (`setRetention`) so a shrink GCs
+    /// stale entries on the spot — no app restart needed.
+    @Published public var activityRetentionDays: Int {
+        didSet {
+            guard activityRetentionDays != oldValue else { return }
+            settings.setInteger(activityRetentionDays, for: .activityRetentionDays)
+            if let store = activityStore {
+                let seconds = TimeInterval(activityRetentionDays) * 86_400
+                Task { await store.setRetention(seconds) }
+            }
+        }
+    }
+
     public init(
         settings: SettingsStore = UserDefaultsSettingsStore(),
         launchAtLoginService: LaunchAtLoginService? = nil,
@@ -60,8 +76,14 @@ public final class AppEnvironment: ObservableObject {
         // Use AwakeManager.shared so AppIntents (out-of-process) and the in-process app
         // operate on the same FSM. Re-creating would split state.
         self.manager = AwakeManager.shared
+        let retentionDays = settings.clampedInteger(
+            .activityRetentionDays,
+            default: 14,
+            range: ActivityLogStore.retentionDayRange
+        )
+        let retentionSeconds = TimeInterval(retentionDays) * 86_400
         let store: ActivityLogStore? = ActivityLogStore.defaultDirectory().map { dir in
-            ActivityLogStore(directory: dir)
+            ActivityLogStore(directory: dir, retention: retentionSeconds)
         }
         self.activityStore = store
         self.coordinator = TriggerCoordinator(
@@ -72,6 +94,7 @@ public final class AppEnvironment: ObservableObject {
         self.menuBarIconStyle = MenuBarIconStyle.decode(settings.string(.menuBarIconStyle))
         self.coffeeAccent = CoffeeAccent.decode(settings.string(.coffeeAccent))
         self.activateOnLaunch = settings.bool(.activateOnLaunch, default: false)
+        self.activityRetentionDays = retentionDays
         let resolvedLaunchService: LaunchAtLoginService
         if let launchAtLoginService {
             resolvedLaunchService = launchAtLoginService

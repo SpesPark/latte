@@ -14,9 +14,16 @@ public actor ActivityLogStore {
 
     public static let defaultRetention: TimeInterval = 14 * 24 * 60 * 60   // 14 days
     public static let fileName = "activity-log.json"
+    /// Owner-facing lower/upper bounds on the retention window setting.
+    /// 1 day = "show me what fired today only"; 90 days = three months
+    /// of history without unbounded file growth on heavy users.
+    public static let retentionDayRange: ClosedRange<Int> = 1...90
 
     private let url: URL
-    private let retention: TimeInterval
+    /// Mutable so the user can adjust retention from Settings (F deferred,
+    /// S15) without restarting the app. `setRetention` runs an immediate GC
+    /// + flush so a shrink takes effect on the spot.
+    private var retention: TimeInterval
     private let logger = LatteLog.activity
     private var entries: [ActivityLogEntry] = []
     private var loaded = false
@@ -73,6 +80,19 @@ public actor ActivityLogStore {
         loadIfNeeded()
         return entries.filter { $0.timestamp >= since }
     }
+
+    /// Updates the retention window and immediately GCs entries that no
+    /// longer fit, flushing the trimmed set to disk so a subsequent reload
+    /// sees the post-shrink state. A grow is a no-op for existing entries.
+    public func setRetention(_ newValue: TimeInterval) async {
+        loadIfNeeded()
+        retention = newValue
+        gc()
+        flush()
+    }
+
+    /// Test/observability hook — returns the current retention in seconds.
+    public func currentRetention() async -> TimeInterval { retention }
 
     /// Empties the store and removes the file.
     public func clear() async {
