@@ -138,12 +138,11 @@
 
 ## P2 candidates (cleanup / hygiene)
 
-### V2-13 — Extract per-trigger config forms out of `TriggersTab.swift`
+### V2-13 — Extract per-trigger config forms out of `TriggersTab.swift` — ✅ **shipped in v1.2** (S13, 2026-04-30)
 
-- **Surfaced**: S11 4th simplify-pass (2026-04-30). File now 958 lines, breaches the project's 800-line ceiling. Pre-existing breach (already over 800 before V2-06's 48-line addition); each new trigger adds another inline form, so the file keeps drifting.
-- **Action**: split each `*ConfigForm` (App / WiFi / Calendar / Schedule / ExternalDisplay) into its own file under `Sources/UI/Settings/Triggers/`. `TriggersTab.swift` keeps only the dispatch + `TriggerSection` shell.
-- **Effort**: ~45 min mechanical extraction. No behaviour change. Net token cost on context budgets matters more than line count — extraction makes future feature work read smaller diffs.
-- **Risk**: low. Pure SwiftUI move; no protocol changes; tests are headless and won't shift.
+- **Surfaced**: S11 4th simplify-pass (2026-04-30). File was 958 lines, over the 800 ceiling.
+- **Outcome**: 6 forms (`AppTriggerConfigForm` + `AppRow` / `WiFiTriggerConfigForm` / `CalendarTriggerConfigForm` + `CalendarPickerRow` / `FocusTriggerConfigInfo` / `ScheduleTriggerConfigForm` + `ScheduleEntryRow` + `WeekdayChip` / `ExternalDisplayTriggerConfigForm`) moved to a single sibling file `Sources/UI/Settings/TriggerConfigForms.swift` (799 LOC). `TriggersTab.swift` now 161 LOC (TriggersTab + TriggerSection dispatcher only). Forms changed from `private struct` to default-internal access; helpers (`AppRow`, `CalendarPickerRow`, `ScheduleEntryRow`, `WeekdayChip`) stay file-private to the new file. Behaviour unchanged: 423 tests still PASS.
+- **Decision note**: kept to a single extracted file rather than 6 per-trigger files because the xcodeproj is explicit-reference (no synced groups) — each new file costs 4 pbxproj edits. Single-file split is the minimum churn that gets both files under the 800 ceiling. Future re-split if either file drifts past the ceiling again.
 
 ### V2-10 — Drop `Theme.Colors.accentAwake` static alias — ✅ **shipped in v1.0** (commit `05f8c2d`)
 
