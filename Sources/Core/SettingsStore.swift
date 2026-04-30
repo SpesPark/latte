@@ -44,6 +44,11 @@ public enum SettingsKey: String, CaseIterable, Sendable {
     /// When true and at least one external display is connected, vote awake.
     /// Default off so installs don't change behaviour for users who never opt in.
     case externalDisplayEnabled = "latte.externalDisplayTrigger.enabled"
+    /// JSON-encoded `[String]` of CGDisplay UUIDs to match against. Empty
+    /// or missing → match any external (preserves v1.2 behaviour). Non-empty
+    /// → vote awake only when at least one of the listed UUIDs is attached.
+    /// V2-06 deferred H — v1.5.
+    case externalDisplayWhitelist = "latte.externalDisplayTrigger.whitelist"
 
     // Battery-aware mode (C-1) and pause-all (C-9) — v1.1
     case requireACForAwake      = "latte.requireACForAwake"

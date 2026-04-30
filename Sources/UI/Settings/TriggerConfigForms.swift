@@ -766,6 +766,12 @@ struct ExternalDisplayTriggerConfigForm: View {
 
     let trigger: ExternalDisplayTrigger
 
+    /// Selection state for the per-display whitelist (V2-06 deferred H).
+    /// Hydrated from `trigger.whitelistedUUIDs` on appear; commits write
+    /// back through `trigger.setWhitelistedUUIDs` (which persists +
+    /// re-evaluates).
+    @State private var selectedUUIDs: Set<String> = []
+
     /// Re-reads `externalDisplayCount` / `firstExternalDisplayName` on every
     /// body evaluation; refreshed whenever `coordinator.activeVotes` changes.
     var body: some View {
@@ -776,6 +782,10 @@ struct ExternalDisplayTriggerConfigForm: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             statusRow
+            whitelistSection
+        }
+        .onAppear {
+            selectedUUIDs = Set(trigger.whitelistedUUIDs)
         }
     }
 
@@ -796,6 +806,40 @@ struct ExternalDisplayTriggerConfigForm: View {
                         .font(Theme.Fonts.caption)
                         .foregroundStyle(.secondary)
                 }
+            }
+        }
+    }
+
+    /// Per-display whitelist toggles. Empty selection means "match any
+    /// external" (preserves v1.2 behaviour); checking even one display
+    /// narrows the trigger to those UUIDs only. Hidden when no displays
+    /// are attached so a fresh user without an external monitor isn't
+    /// confused by an empty list.
+    @ViewBuilder
+    private var whitelistSection: some View {
+        let attached = trigger.attachedExternalDisplays
+        if !attached.isEmpty {
+            Divider().padding(.vertical, 2)
+            Text("Match only these displays")
+                .font(Theme.Fonts.caption)
+                .foregroundStyle(.secondary)
+            ForEach(attached) { display in
+                Toggle(isOn: Binding(
+                    get: { selectedUUIDs.contains(display.uuid) },
+                    set: { isOn in
+                        if isOn { selectedUUIDs.insert(display.uuid) }
+                        else    { selectedUUIDs.remove(display.uuid) }
+                        trigger.setWhitelistedUUIDs(Array(selectedUUIDs).sorted())
+                    }
+                )) {
+                    Text(display.name).font(Theme.Fonts.caption)
+                }
+                .accessibilityIdentifier("trigger.external-display.whitelist.\(display.uuid)")
+            }
+            if selectedUUIDs.isEmpty {
+                Text("No filter — any external display awakes Latte.")
+                    .font(Theme.Fonts.caption)
+                    .foregroundStyle(.secondary)
             }
         }
     }

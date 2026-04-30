@@ -5,6 +5,23 @@ import AppKit
 
 // MARK: - DisplaySource protocol
 
+/// Stable identity + display name for a single attached external screen.
+/// Used by the per-display whitelist (V2-06 deferred H) and surfaced in
+/// Settings → Triggers → External Display.
+public struct DisplayInfo: Equatable, Sendable, Identifiable {
+    /// CGDisplay UUID (stable across reboots and display reorders).
+    public let uuid: String
+    /// Localized display name (e.g. "DELL U2723QE", "Studio Display").
+    public let name: String
+
+    public var id: String { uuid }
+
+    public init(uuid: String, name: String) {
+        self.uuid = uuid
+        self.name = name
+    }
+}
+
 @MainActor
 public protocol DisplaySource: AnyObject {
     /// Number of attached external displays (excludes the built-in screen).
@@ -20,6 +37,12 @@ public protocol DisplaySource: AnyObject {
     /// the built-in is present (lid open) OR no external is attached.
     /// V2-06 deferred G — surfaces in the vote reason for owner debugging.
     var isInClamshellMode: Bool { get }
+
+    /// All currently-attached external displays with their stable UUIDs.
+    /// V2-06 deferred H — used by the per-display whitelist setting.
+    /// Order is implementation-defined; whitelist matching is by UUID,
+    /// not position.
+    var attachedExternalDisplays: [DisplayInfo] { get }
 
     /// Emits whenever the screen configuration changes (attach, detach,
     /// resolution change, sleep/wake). The trigger consumes this to decide
@@ -72,6 +95,21 @@ public final class NSScreenSource: DisplaySource {
         let hasExternal = screens.contains { !Self.isBuiltIn($0) }
         let hasBuiltIn = screens.contains { Self.isBuiltIn($0) }
         return hasExternal && !hasBuiltIn
+    }
+
+    public var attachedExternalDisplays: [DisplayInfo] {
+        NSScreen.screens.compactMap { screen -> DisplayInfo? in
+            guard !Self.isBuiltIn(screen) else { return nil }
+            guard let id = Self.displayID(screen) else { return nil }
+            guard let uuidRef = CGDisplayCreateUUIDFromDisplayID(id)?.takeRetainedValue() else { return nil }
+            let uuid = CFUUIDCreateString(nil, uuidRef) as String? ?? ""
+            return DisplayInfo(uuid: uuid, name: screen.localizedName)
+        }
+    }
+
+    private static func displayID(_ screen: NSScreen) -> CGDirectDisplayID? {
+        let key = NSDeviceDescriptionKey("NSScreenNumber")
+        return screen.deviceDescription[key] as? CGDirectDisplayID
     }
 
     private static func isBuiltIn(_ screen: NSScreen) -> Bool {
@@ -132,6 +170,7 @@ public final class DebouncingDisplaySource: DisplaySource {
     public var externalDisplayCount: Int { upstream.externalDisplayCount }
     public var firstExternalDisplayName: String? { upstream.firstExternalDisplayName }
     public var isInClamshellMode: Bool { upstream.isInClamshellMode }
+    public var attachedExternalDisplays: [DisplayInfo] { upstream.attachedExternalDisplays }
 
     private func scheduleFlush() {
         pendingSeq += 1
@@ -264,8 +303,7 @@ public final class ExternalDisplayTrigger: Trigger {
     /// `evaluate()` directly to assert vote semantics.
     public func evaluate() {
         guard isEnabled else { return }
-        let count = source.externalDisplayCount
-        let wantsAwake = count >= 1
+        let (wantsAwake, preferredName) = resolveVoteState()
 
         if lastVote == nil && !wantsAwake { return }
         if lastVote == wantsAwake { return }
@@ -273,7 +311,7 @@ public final class ExternalDisplayTrigger: Trigger {
 
         let reason: String
         if wantsAwake {
-            let name = source.firstExternalDisplayName ?? "External Display"
+            let name = preferredName ?? source.firstExternalDisplayName ?? "External Display"
             // V2-06 deferred G — surface clamshell so the owner reading
             // About → Status (or the Activity tab "Currently active" row)
             // can tell "is the lid closed" at a glance.
@@ -285,6 +323,45 @@ public final class ExternalDisplayTrigger: Trigger {
         }
         continuation.yield(TriggerVote(wantsAwake: wantsAwake, reason: reason))
     }
+
+    /// V2-06 deferred H — folds the whitelist setting into the source state.
+    /// Returns the awake decision plus an optional preferred display name
+    /// (the first whitelist match, when filtering is in effect; nil when
+    /// the legacy bare-count path applies and the caller should fall back
+    /// to `source.firstExternalDisplayName`).
+    private func resolveVoteState() -> (wantsAwake: Bool, preferredName: String?) {
+        let whitelist = settings.decodeStringArray(.externalDisplayWhitelist)
+        if whitelist.isEmpty {
+            // No filter — preserve v1.2 behaviour. `attachedExternalDisplays`
+            // may be empty even with count >= 1 if the source is a count-only
+            // mock fixture, so fall back to the bare count signal.
+            let attached = source.attachedExternalDisplays
+            if !attached.isEmpty {
+                return (true, attached.first?.name)
+            }
+            return (source.externalDisplayCount >= 1, nil)
+        }
+        let allow = Set(whitelist)
+        let matches = source.attachedExternalDisplays.filter { allow.contains($0.uuid) }
+        return (!matches.isEmpty, matches.first?.name)
+    }
+
+    /// V2-06 deferred H — exposes the live attached list for the Settings
+    /// picker. Non-mutating; the picker writes its selection back to
+    /// `SettingsKey.externalDisplayWhitelist`.
+    public var attachedExternalDisplays: [DisplayInfo] { source.attachedExternalDisplays }
+
+    /// V2-06 deferred H — returns the currently-stored whitelist UUIDs.
+    public var whitelistedUUIDs: [String] {
+        settings.decodeStringArray(.externalDisplayWhitelist)
+    }
+
+    /// V2-06 deferred H — persists a new whitelist + re-evaluates so the
+    /// vote flips on the spot when the owner narrows or widens the filter.
+    public func setWhitelistedUUIDs(_ uuids: [String]) {
+        settings.encodeStringArray(uuids, for: .externalDisplayWhitelist)
+        if isRunning { evaluate() }
+    }
 }
 
 // MARK: - Mock source (production-shipped, used only by tests + smoke env-var)
@@ -295,19 +372,31 @@ public final class MockDisplaySource: DisplaySource {
     public var externalDisplayCount: Int
     public var firstExternalDisplayName: String?
     public var isInClamshellMode: Bool
+    public var attachedExternalDisplays: [DisplayInfo]
 
     public let changeStream: AsyncStream<Void>
     private let continuation: AsyncStream<Void>.Continuation
 
     public init(externalDisplayCount: Int = 0,
                 firstExternalDisplayName: String? = nil,
-                isInClamshellMode: Bool = false) {
+                isInClamshellMode: Bool = false,
+                attachedExternalDisplays: [DisplayInfo] = []) {
         self.externalDisplayCount = externalDisplayCount
         self.firstExternalDisplayName = firstExternalDisplayName
         self.isInClamshellMode = isInClamshellMode
+        self.attachedExternalDisplays = attachedExternalDisplays
         let (stream, cont) = AsyncStream<Void>.makeStream()
         self.changeStream = stream
         self.continuation = cont
+    }
+
+    /// Update attached display list + emit a change event so the trigger
+    /// re-evaluates against the new whitelist match set.
+    public func setAttachedDisplays(_ displays: [DisplayInfo]) {
+        attachedExternalDisplays = displays
+        externalDisplayCount = displays.count
+        firstExternalDisplayName = displays.first?.name
+        continuation.yield(())
     }
 
     /// Update clamshell flag + emit a change event so the trigger
@@ -344,6 +433,7 @@ final class NoopDisplaySource: DisplaySource {
     var externalDisplayCount: Int { 0 }
     var firstExternalDisplayName: String? { nil }
     var isInClamshellMode: Bool { false }
+    var attachedExternalDisplays: [DisplayInfo] { [] }
     let changeStream: AsyncStream<Void>
     init() {
         let (stream, cont) = AsyncStream<Void>.makeStream()

@@ -141,6 +141,72 @@ final class ExternalDisplayTriggerTests: XCTestCase {
         XCTAssertNil(vote, "disabled trigger must not vote even with display attached")
     }
 
+    // MARK: - V2-06 deferred H — per-display whitelist
+
+    func testEmptyWhitelistMatchesAnyAttachedDisplay() async throws {
+        // Default behaviour preserved — no whitelist means any external
+        // attaches awake the cup, exactly like v1.2.
+        let (trigger, _, _) = makeFixture(count: 1, name: "DELL")
+        trigger.evaluate()
+        var it = trigger.voteStream.makeAsyncIterator()
+        let vote = await it.next()
+        XCTAssertEqual(vote?.wantsAwake, true)
+    }
+
+    func testWhitelistMatchesByUUIDAndIgnoresOthers() async throws {
+        let settings = InMemorySettingsStore()
+        settings.setBool(true, for: .externalDisplayEnabled)
+        let dell = DisplayInfo(uuid: "DELL-UUID", name: "DELL U2723QE")
+        let asus = DisplayInfo(uuid: "ASUS-UUID", name: "ASUS PA32")
+        let source = MockDisplaySource(
+            externalDisplayCount: 2,
+            firstExternalDisplayName: "DELL U2723QE",
+            attachedExternalDisplays: [dell, asus]
+        )
+        let trigger = ExternalDisplayTrigger(settings: settings, source: source)
+
+        // Whitelist only the ASUS — the DELL is attached but ignored.
+        trigger.setWhitelistedUUIDs(["ASUS-UUID"])
+        await trigger.start()
+
+        var it = trigger.voteStream.makeAsyncIterator()
+        let vote = await it.next()
+        XCTAssertEqual(vote?.wantsAwake, true)
+        XCTAssertTrue(vote?.reason.contains("ASUS PA32") == true,
+                      "matched display name must drive the reason, got: \(vote?.reason ?? "nil")")
+    }
+
+    func testWhitelistWithNoMatchingAttachedDisplaysVotesOff() async throws {
+        let settings = InMemorySettingsStore()
+        settings.setBool(true, for: .externalDisplayEnabled)
+        let dell = DisplayInfo(uuid: "DELL-UUID", name: "DELL")
+        let source = MockDisplaySource(
+            externalDisplayCount: 1,
+            firstExternalDisplayName: "DELL",
+            attachedExternalDisplays: [dell]
+        )
+        let trigger = ExternalDisplayTrigger(settings: settings, source: source)
+        // Whitelist a UUID that isn't attached.
+        trigger.setWhitelistedUUIDs(["UNKNOWN-UUID"])
+
+        // Walk through ON state first so the OFF transition can fire.
+        trigger.setWhitelistedUUIDs([])
+        await trigger.start()
+        var it = trigger.voteStream.makeAsyncIterator()
+        _ = await it.next()    // ON
+
+        trigger.setWhitelistedUUIDs(["UNKNOWN-UUID"])
+        let off = await it.next()
+        XCTAssertEqual(off?.wantsAwake, false)
+    }
+
+    func testSetWhitelistPersistsToSettings() {
+        let (trigger, _, settings) = makeFixture(count: 0)
+        trigger.setWhitelistedUUIDs(["A", "B", "C"])
+        XCTAssertEqual(settings.decodeStringArray(.externalDisplayWhitelist), ["A", "B", "C"])
+        XCTAssertEqual(trigger.whitelistedUUIDs, ["A", "B", "C"])
+    }
+
     // MARK: - V2-06 deferred G — clamshell-aware reason
 
     func testClamshellModeReasonAppendsTag() async throws {
