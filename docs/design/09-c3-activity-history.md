@@ -238,7 +238,54 @@ Match repo standard (≥80%). `ActivityTab` SwiftUI snippets covered manually vi
 | Live polling (refresh while tab open) | `.task`-on-appear is simpler; revisit if needed |
 | iCloud sync of history | Not v1.x scope |
 
-## §11. As shipped
+## §11. As shipped (S14, 2026-04-30)
 
-(Filled in at end of S14 once C-3 lands. Mirror pattern from 06-display-trigger §10
-and 07-shortcut-recorder §10/§11.)
+Shipped in 4 commits same-day after the design doc was approved:
+
+| # | Commit | Scope |
+|---|---|---|
+| 1 | `e4a401c` | C-3 part 1 — ActivityLogEntry + ActivityLogStore actor + TriggerCoordinator hooks (handleVote + stop) + LatteLog.activity. 426 → 438 tests (+12). |
+| 2 | `c4dac06` | C-3 part 2 — SettingsTab.activity + 4th tab in SettingsRoot + ActivityTab UI (Charts: 24h bar + 14d heatmap + Currently active) + AppEnvironment wiring + microsecond timestamp quantisation. 438 → 439 tests. |
+| 3 | `6ef4e45` | 7th simplify-pass follow-through — 0 CRIT/HIGH, 2 MED + 2 LOW all addressed. AwakeSegment.merge added with 3 regression tests. 439 → 442 tests. |
+| 4 | `7bfa1b7` | Smoke scenario 22 — file-absence on fresh launch + 4th-tab capture + jq schema assertion. Smoke 21 → 22, all PASS. |
+
+**Deviations from §3 plan**:
+- Persistence init was originally specified as `async`; pivoted to **lazy-load**
+  (sync `init` + first `append`/`snapshot` triggers disk read once) so the store
+  composes cleanly with `AppEnvironment.init` without an async hop. Behavior
+  equivalent — actor isolation guarantees the load-once flag is race-safe.
+- §3 schedule called `JSONEncoder.dateEncodingStrategy = .iso8601`. Switched to
+  `.secondsSince1970` and added a microsecond quantisation in
+  `ActivityLogEntry.init` because ISO8601 (whole or millisecond seconds)
+  truncates `Date.now`'s nanosecond precision and breaks round-trip equality.
+  Tradeoff noted in `ActivityLogStore.swift` — file is slightly less
+  human-readable than ISO timestamps, but jq-friendly and the activity log is
+  owner-facing only via Charts, not raw text inspection.
+
+**Deviations from §5 plan**:
+- `ContentUnavailableView` empty-state replaced with a manual `VStack` (Image
+  + Text) because `ContentUnavailableView` is macOS 14+ and Latte targets
+  macOS 13.
+- `Color+ActivityTrigger` extension was inlined as `static let triggerDomain` /
+  `triggerRange` arrays inside `HourlyAwakeChart` — the extension would have
+  added a file with one helper used by one view, simpler to keep local.
+
+**MED bugs fixed by 7th simplify-pass** (preserved here for changelog
+durability — the design doc was technically correct, the implementation
+drifted):
+- `triggerDomain` had `"externalDisplay"` (camelCase) instead of
+  `"external-display"` (matches `ExternalDisplayTrigger.id`). External display
+  events were rendering with a fallback Charts colour outside the palette.
+- `DailyHeatmapChart.compute` was passing the full sorted cross-trigger entry
+  list to `AwakeSegment.pair`, which has a single-state machine that gets
+  confused by interleaved triggers (a second trigger's `.on` while another is
+  open is silently ignored, then closed by an unrelated `.off`). Now pairs
+  per-trigger then unions overlapping intervals via `AwakeSegment.merge`.
+
+**Smoke 22 limitations**: bash cannot deterministically force a real trigger
+fire (Wi-Fi SSID match needs TCC; calendar event needs EventKit permission;
+Schedule needs running through a real time window). The smoke verifies the
+**file-absence-on-fresh-launch** lazy-load contract and the **Activity-tab
+deep-link path**, plus a **schema privacy assertion** (jq) if any entry happens
+to be written during the run. The "real trigger fires → entry recorded → tab
+shows it" flow is owner manual smoke (handoff step 8).
