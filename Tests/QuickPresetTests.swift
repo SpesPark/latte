@@ -63,18 +63,11 @@ final class QuickPresetTests: XCTestCase {
     }
 
     func testMinutesNeverReturnsZeroOrNegative() {
-        // Pathological: target == now to the millisecond. The min(1) clamp
-        // guarantees a meaningful at-least-one-minute activation regardless.
-        let exactlyAtTarget = nineAM   // 9 AM, but pretend target is 9 AM via .minutes
-        // Use a custom computation: target time is now + 0 → expect 1 min via clamp
-        // (this exercises the clamp through a 0-second target — synthetic but
-        // documents the contract).
-        let cal = utcCalendar
-        // Synthetic: compute how until-current-hour behaves at the boundary.
-        // Since QuickPreset doesn't expose 9 AM, exercise the clamp via a
-        // very-near-target path: 4:59:59 PM → until 5 PM = 1 minute (rounded).
-        let almostFivePM = nineAM.addingTimeInterval(8 * 3600 - 1)   // 4:59:59 PM
-        let mins = QuickPreset.until5PM.minutes(from: almostFivePM, calendar: cal)
+        // 4:59:59 PM → until 5 PM: 1 second away rounds to 0 min; the
+        // clamp must bump it to 1 so a 0-min "instant deactivation"
+        // never reaches the FSM.
+        let almostFivePM = nineAM.addingTimeInterval(8 * 3600 - 1)
+        let mins = QuickPreset.until5PM.minutes(from: almostFivePM, calendar: utcCalendar)
         XCTAssertGreaterThanOrEqual(mins, 1)
     }
 

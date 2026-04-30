@@ -72,6 +72,12 @@ public struct ShortcutRecorderField: View {
                     .foregroundStyle(.secondary)
             }
         }
+        // 10th simplify-pass LOW-5: if the toggle flips off while the
+        // recorder is mid-record, cancel so the "Press shortcut…" prompt
+        // doesn't linger behind a dimmed/disabled widget.
+        .onChange(of: coordinator.isEnabled) { enabled in
+            if !enabled && isRecording { cancel() }
+        }
     }
 
     /// Surfaces `coordinator.registrationError` as inline copy. Drops back to
