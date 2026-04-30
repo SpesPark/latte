@@ -61,7 +61,7 @@ public final class AppEnvironment: ObservableObject {
             guard activityRetentionDays != oldValue else { return }
             settings.setInteger(activityRetentionDays, for: .activityRetentionDays)
             if let store = activityStore {
-                let seconds = TimeInterval(activityRetentionDays) * 86_400
+                let seconds = TimeInterval(activityRetentionDays) * ActivityLogStore.secondsPerDay
                 Task { await store.setRetention(seconds) }
             }
         }
@@ -81,7 +81,7 @@ public final class AppEnvironment: ObservableObject {
             default: 14,
             range: ActivityLogStore.retentionDayRange
         )
-        let retentionSeconds = TimeInterval(retentionDays) * 86_400
+        let retentionSeconds = TimeInterval(retentionDays) * ActivityLogStore.secondsPerDay
         let store: ActivityLogStore? = ActivityLogStore.defaultDirectory().map { dir in
             ActivityLogStore(directory: dir, retention: retentionSeconds)
         }

@@ -41,6 +41,14 @@ final class ActivityFilterTests: XCTestCase {
         XCTAssertEqual(observed, ["calendar", "schedule", "wifi"])
     }
 
+    func testTriggerLabelTitleCasesKebabIds() {
+        // 8th simplify-pass LOW-7 fix — the picker label helper must Title-Case
+        // every kebab segment without relying on locale-sensitive `.capitalized`.
+        XCTAssertEqual(ActivityFilter.label(for: "external-display"), "External Display")
+        XCTAssertEqual(ActivityFilter.label(for: "wifi"), "Wifi")
+        XCTAssertEqual(ActivityFilter.label(for: "schedule"), "Schedule")
+    }
+
     func testEquatableForPickerSelection() {
         // Picker requires Hashable selection — also exercises Equatable.
         XCTAssertEqual(ActivityFilter.all, ActivityFilter.all)

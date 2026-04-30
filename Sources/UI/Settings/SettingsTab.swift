@@ -41,8 +41,9 @@ public enum SettingsURLHandler {
     /// Query parameter name for the focused trigger ID (D).
     public static let focusQueryParam = "focus"
 
-    /// Tab-only parse — preserved for callers that don't need focus
-    /// metadata (e.g. `LatteApp.application(_:open:)`).
+    /// Tab-only parse — kept as a thin convenience wrapper. New callers
+    /// should prefer `parseRoute(_:)`, which also surfaces the optional
+    /// focused trigger ID for the Triggers tab.
     public static func parse(_ url: URL) -> SettingsTab? {
         parseRoute(url)?.tab
     }

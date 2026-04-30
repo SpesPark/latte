@@ -83,6 +83,12 @@ public struct ActivityTab: View {
         }
         .formStyle(.grouped)
         .task { await reload() }
+        .onChange(of: environment.activityRetentionDays) { _ in
+            // Grow path: actor stays in sync via setRetention(), but the
+            // UI's `entries` snapshot was scoped to the old cutoff. Re-fetch
+            // so the recovered older history shows up without a tab bounce.
+            Task { await reload() }
+        }
     }
 
     /// Routes the filtered snapshot through `ActivityLogExporter` and a
@@ -110,12 +116,16 @@ public struct ActivityTab: View {
     }
 
     private func reload() async {
+        // Flip back to loading so a retention-change re-fetch shows the
+        // spinner instead of stale data. `defer` clears it after the actor
+        // hop completes.
+        isLoading = true
         defer { isLoading = false }
         guard let store else {
             entries = []
             return
         }
-        let cutoff = Date().addingTimeInterval(-Double(environment.activityRetentionDays) * 86_400)
+        let cutoff = Date().addingTimeInterval(-Double(environment.activityRetentionDays) * ActivityLogStore.secondsPerDay)
         entries = await store.snapshot(since: cutoff)
     }
 }
@@ -198,7 +208,7 @@ private struct TriggerFilterPicker: View {
         Picker(selection: $filter) {
             Text("All triggers").tag(ActivityFilter.all)
             ForEach(observed, id: \.self) { id in
-                Text(id.replacingOccurrences(of: "-", with: " ").capitalized)
+                Text(ActivityFilter.label(for: id))
                     .tag(ActivityFilter.only(id))
             }
         } label: {
@@ -401,6 +411,10 @@ struct AwakeSegment {
     }
 
     /// Splits into per-hour-of-calendar-day [(date-truncated-to-hour, minutes)] (heatmap helper).
+    /// DST caveat: a fall-back night double-counts the repeated 1AM hour and a
+    /// spring-forward night shows a zero-minute gap at 2AM. Both are chart
+    /// cosmetics — total awake-minutes are still correct. Owner-facing impact
+    /// is one misleading hour bucket twice a year.
     func splitByHourWithDate() -> [(Date, Double)] {
         var out: [(Date, Double)] = []
         let cal = Calendar.current

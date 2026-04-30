@@ -23,4 +23,15 @@ public enum ActivityFilter: Hashable, Sendable {
     public static func triggerIdsObserved(in entries: [ActivityLogEntry]) -> [String] {
         Array(Set(entries.map(\.triggerId))).sorted()
     }
+
+    /// Maps a kebab-case trigger ID to a Title-Cased UI label. Trigger IDs
+    /// are an invariant lowercase-ASCII taxonomy (see `Trigger.id` callers),
+    /// so a manual per-word upper-case avoids `.capitalized`'s locale
+    /// surprises while staying obvious to a future reader.
+    public static func label(for triggerId: String) -> String {
+        triggerId
+            .split(separator: "-")
+            .map { $0.prefix(1).uppercased() + $0.dropFirst() }
+            .joined(separator: " ")
+    }
 }

@@ -12,7 +12,12 @@ import os
 /// See `docs/design/09-c3-activity-history.md` §3 for the persistence contract.
 public actor ActivityLogStore {
 
-    public static let defaultRetention: TimeInterval = 14 * 24 * 60 * 60   // 14 days
+    /// Single source of truth for the day → seconds conversion used by
+    /// AppEnvironment + ActivityTab (cutoff math) + the store's own
+    /// `defaultRetention` derivation. Keeps the four magic literals from
+    /// drifting apart.
+    public static let secondsPerDay: TimeInterval = 86_400
+    public static let defaultRetention: TimeInterval = 14 * secondsPerDay
     public static let fileName = "activity-log.json"
     /// Owner-facing lower/upper bounds on the retention window setting.
     /// 1 day = "show me what fired today only"; 90 days = three months
