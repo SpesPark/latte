@@ -101,7 +101,6 @@ private struct RecorderRepresentable: NSViewRepresentable {
         if isRecording != nsView.isRecording {
             if isRecording { nsView.beginRecording() } else { nsView.endRecording() }
         }
-        nsView.needsDisplay = true
     }
 }
 
@@ -150,10 +149,14 @@ private final class RecorderNSView: NSView {
             onCancel?()
             return
         }
+        // Validation lives in `commit(chord:)` on the SwiftUI side. On success it
+        // flips `isRecording = false` and updateNSView reconciles by calling
+        // endRecording(); on validation failure it leaves `isRecording = true` so
+        // the field stays armed for another attempt. Calling endRecording here
+        // would desync the layers and re-enter recording on the next pass.
         let mods = carbonModifiers(from: event.modifierFlags)
         let chord = KeyChord(modifiers: mods, keyCode: UInt32(event.keyCode))
         onChord?(chord)
-        endRecording()
     }
 
     func beginRecording() {

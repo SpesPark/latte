@@ -243,7 +243,7 @@ final class KeyboardShortcutCoordinatorTests: XCTestCase {
 
     func testResetChordReturnsToDefaultAndReRegisters() {
         let custom = KeyChord(
-            modifiers: UInt32(KeyChord.cmdMask | KeyChord.controlMaskAlias),
+            modifiers: UInt32(KeyChord.cmdMask | KeyChord.ctrlMask),
             keyCode: 0x06  // Z
         )
         let (coord, registrar, store) = makeFixtureForChordTests(
@@ -290,8 +290,3 @@ final class KeyboardShortcutCoordinatorTests: XCTestCase {
     }
 }
 
-private extension KeyChord {
-    /// Convenience alias used in tests so the literal Carbon control-mask
-    /// constant doesn't need to be re-stated each time. Mirrors `cmdMask`.
-    static var controlMaskAlias: Int { ctrlMask }
-}
