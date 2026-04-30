@@ -35,13 +35,21 @@ public struct ShortcutRecorderField: View {
                     currentGlyph: coordinator.chord.glyph
                 )
                 .frame(minWidth: 96, maxWidth: 140, minHeight: 24)
+                // J refinement (B1.2 follow-up): dim the recorder when the
+                // shortcut is disabled — the displayed glyph is otherwise
+                // misleading (looks live, isn't). The recorder still
+                // captures keys when clicked so the user can pre-pick
+                // their chord before flipping the toggle on.
+                .opacity(coordinator.isEnabled ? 1.0 : 0.5)
+                .disabled(!coordinator.isEnabled)
 
                 Button("Reset") {
                     coordinator.resetChord()
                     validationMessage = nil
                 }
                 .controlSize(.small)
-                .disabled(coordinator.chord == .default)
+                .disabled(coordinator.chord == .default || !coordinator.isEnabled)
+                .help("Reset to the default \(KeyChord.default.glyph) shortcut.")
             }
             if let validationMessage {
                 Text(validationMessage)
@@ -53,6 +61,13 @@ public struct ShortcutRecorderField: View {
                     .foregroundStyle(.red)
             } else if isRecording {
                 Text("Press the new shortcut. Esc cancels.")
+                    .font(Theme.Fonts.caption)
+                    .foregroundStyle(.secondary)
+            } else if !coordinator.isEnabled {
+                // J refinement: explain why the recorder is greyed out.
+                // Cleared automatically when the toggle flips back on
+                // (this branch only fires when isEnabled == false).
+                Text("Enable the shortcut above to record a different chord.")
                     .font(Theme.Fonts.caption)
                     .foregroundStyle(.secondary)
             }
