@@ -41,9 +41,20 @@
 - ✅ **8th simplify-pass** APPROVE-WITH-NITS (0 CRIT/HIGH, 2 MED, 5 LOW), all addressed: reload on retention change, isLoading reset, `secondsPerDay` constant, `ActivityFilter.label(for:)` extraction (kebab → Title-Case without locale issues), DST cosmetic note documented. 442 → **468 tests** (+26 across 4 feat commits and 1 simplify-pass commit). Smoke unchanged at 22.
 
 **C-3 still-deferred** (NOT shipped in v1.3.1 — see 09-c3-activity-history.md §10):
-- Multi-day comparison view ("this week vs last") — Charts can do it but UI scope creep
+- ~~Multi-day comparison view~~ → shipped in v1.5 (S16, deferred E) as `DailyTotalsChart`
 - Live polling (refresh charts while tab is open) — `.task`-on-appear is simpler; revisit if owner asks
 - iCloud sync of history — not v1.x scope
+
+**Shipped in v1.5** (S16, 2026-05-01 — same-day continuation of S15, V2-06 polish + C-3 deferred E):
+- ✅ **V2-06 deferred I** NSScreenSource debounce — `DebouncingDisplaySource` decorator collapses `didChangeScreenParametersNotification` bursts (resolution adjust, mirror negotiation, sleep/wake) into one yield per 300ms window. Seq-counter pattern avoids the cancel-race that the initial cancel-and-create approach had. NSScreenSource is wrapped by default in production; tests inject MockDisplaySource raw.
+- ✅ **V2-06 deferred G** Clamshell-aware reason — DisplaySource.isInClamshellMode derived from NSScreen.screens (external present, built-in absent = lid closed). Vote reason now `Display: <name> (clamshell)` for owner debugging. Vote semantics unchanged.
+- ✅ **V2-06 deferred H** Per-display whitelist (UUID-based) — DisplaySource.attachedExternalDisplays returns `[DisplayInfo]` with stable UUIDs from `CGDisplayCreateUUIDFromDisplayID`. New `SettingsKey.externalDisplayWhitelist` JSON-encodes the UUID list. Empty = match any (v1.2 preserved); non-empty = narrow to listed. Settings UI gains "Match only these displays" toggle list. setWhitelistedUUIDs persists + re-evaluates on the spot.
+- ✅ **C-3 deferred E** Multi-day comparison — `DailyTotalsChart` bar chart of total awake minutes per day across retention. Today highlighted via accent. Per-trigger pair → merge → sum-by-day so parallel triggers don't double-count.
+- ✅ **9th simplify-pass** APPROVE-WITH-NITS (0 CRIT, 1 HIGH, 2 MED, 3 LOW), all addressed: attached-name-priority regression test; encodeStringArray([], for:) now removes the key (preserves "absent==default" invariant); DailyTotal.compute switched to Calendar.date(byAdding:) for DST-correctness. 468 → **485 tests** (+17 across 4 feat commits and 1 simplify-pass commit). Smoke unchanged at 22.
+
+**V2-06 still-deferred** (no further v1.x scope):
+- Lid-closed-only mode (vote awake ONLY in clamshell, ignore lid-open) — owner request gate
+- Per-display position requirement ("primary on the left, secondary on the right") — esoteric
 
 **Shipped in v1.1** (S10, 2026-04-30 — S9-family follow-through):
 - ✅ **Settings window resizable** — `.resizable` styleMask + `setContentSize` + `minWidth/minHeight`. Opens at default 460×360 but user can drag corners to grow; Form auto-scrolls so all four trigger sections fit. `setFrameAutosaveName` already in place remembers user's preferred size. Closes the S9d-tracked observation.

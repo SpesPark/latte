@@ -319,5 +319,24 @@ ergonomic value were shipped in 4 feat commits + 1 simplify-pass:
   sites. Considered `@available(*, deprecated)` but skipped — there's no
   pending callsite migration; leaving the dual API minimises noise.
 
-**Still-deferred (per §10)** — multi-day comparison view, live polling, iCloud
-sync, user-customisable Charts colours.
+**Still-deferred (per §10)** — ~~multi-day comparison view~~ (shipped v1.5),
+live polling, iCloud sync, user-customisable Charts colours.
+
+## §13. As shipped — v1.5 (S16, 2026-05-01) — §10 deferred E
+
+`DailyTotalsChart` (commit `4e3c548`) — bar chart of total awake minutes
+per day across the retention window. Today's bar darkened so the eye
+reads day-over-day pattern without a separate overlay.
+
+`DailyTotal.compute` reuses the existing per-trigger pair → merge → split
+pipeline so parallel triggers don't double-count. Layout: dayOffset = 0
+is the rightmost (most recent) bar so the eye reads left-to-right as
+"older → today". Bar count auto-sizes to retention (1d → 1 bar; 90d →
+90 bars with auto-stride x-axis).
+
+9th simplify-pass MED-3 fix on this method: switched the window-start
+anchor from raw `-86400` arithmetic to `Calendar.date(byAdding: .day)`
+so DST-transition days don't shift the window by ±1h.
+
+477 → 482 tests (+5): empty/zero-day, 60-min hour segment, parallel-merge
+union, day-count == retention, dayOffset zero is most-recent.

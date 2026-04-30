@@ -268,3 +268,43 @@ of an `AsyncStream`) was solved with the `isRunning` gate pattern: the
 observe task lives once, gated by a flag, instead of being cancelled
 and recreated on each stop/start cycle. Documented inline in
 `ExternalDisplayTrigger.swift`.
+
+## As shipped — v1.5 (S16, 2026-05-01) — deferred refinements
+
+The two §"Out of scope (deferred)" items + the §2 debounce note all
+landed same-day in 4 feat commits + 1 simplify-pass:
+
+| # | Commit | Scope |
+|---|---|---|
+| 1 | `dc13407` | **I — Debounce**. New `DebouncingDisplaySource` decorator collapses bursts into one yield per 300ms window using a seq-counter (each `scheduleFlush` bumps `pendingSeq` + captures it; in-flight Task yields only when its seq still equals `pendingSeq` at flush time). NSScreenSource wrapped by default in production; tests inject MockDisplaySource raw. 468 → 471 tests (+3). |
+| 2 | `6495697` | **G — Clamshell**. DisplaySource gains `isInClamshellMode: Bool`, derived from NSScreen.screens (external present, built-in absent = lid closed). Vote reason becomes `"Display: <name> (clamshell)"` when in clamshell mode. Vote semantics unchanged — both lid states still vote awake; the tag refines what owner sees in About → Status / Activity → Currently active. 471 → 473 tests (+2). |
+| 3 | `0dfdf73` | **H — Per-display whitelist**. `DisplayInfo` value-type (uuid + name) + `attachedExternalDisplays: [DisplayInfo]` on the protocol. NSScreenSource derives stable UUIDs via `CGDisplayCreateUUIDFromDisplayID` + `CFUUIDCreateString`. `SettingsKey.externalDisplayWhitelist` stores JSON-encoded UUIDs. Trigger filter (`resolveVoteState`): empty whitelist → match any (v1.2 preserved), non-empty → narrow to listed UUIDs. Settings UI gains "Match only these displays" toggle list. `setWhitelistedUUIDs` persists + re-evaluates on the spot. 473 → 477 tests (+4). |
+| 4 | `b7a7c72` | **9th simplify-pass on 1-3 (+ S16 commit 4 = E)**. APPROVE-WITH-NITS, 0 CRIT / 1 HIGH / 2 MED / 3 LOW. HIGH-1 attached-list-name-priority regression test. MED-2 `encodeStringArray([], for:)` now `remove(key)` instead of writing `[]` blob (preserves "absent == default" migration invariant). MED-3 `DailyTotal.compute` switched to `Calendar.date(byAdding:)` for DST correctness. LOW-6 debouncer proxy test extended. 482 → 485 tests (+3). |
+
+**Decisions resolved during ship**:
+- **G — clamshell detection without IOPMrootDomain**: NSScreen.screens
+  excludes the built-in display when the lid is closed. `hasExternal &&
+  !hasBuiltIn` is exactly the clamshell condition without needing the
+  Power Management entitlement / private API. Cleaner and more
+  testable.
+- **H — UUID source**: CGDisplay UUID survives reboots and reorders.
+  Considered the screen serial number (vendor + model + serial) but the
+  UUID is the canonical Apple-blessed identity for `CGDisplay`. The
+  whitelist UI surfaces the *name* but persists the UUID so a renamed
+  monitor doesn't break the filter.
+- **H — empty whitelist semantics**: empty = "no filter, match any
+  external" preserves v1.2 behavior for users who never touch the
+  setting. Toggling on every display in the picker also produces the
+  "match any" effect (semantically equivalent), but the persisted
+  representation is empty (after the simplify-pass MED-2 fix removes
+  the empty-array blob).
+- **G + H interaction**: clamshell tag still appended even when the
+  whitelist filters out the otherwise-attached external. The reason
+  uses the matched display's name; if zero displays match, vote is
+  off and clamshell is irrelevant.
+
+**Still-deferred** (no further v1.x scope):
+- **Lid-closed-only mode** — vote awake ONLY in clamshell, ignore
+  lid-open externals. Owner-request gate; not enough demand yet.
+- **Per-display position requirement** — "primary on the left,
+  secondary on the right" — esoteric.
