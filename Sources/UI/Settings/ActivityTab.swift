@@ -63,6 +63,10 @@ public struct ActivityTab: View {
                     DailyHeatmapChart(entries: filtered, days: environment.activityRetentionDays)
                         .frame(height: 200)
                 }
+                Section("Daily totals") {
+                    DailyTotalsChart(entries: filtered, days: environment.activityRetentionDays)
+                        .frame(height: 160)
+                }
             }
             Section("Currently active") {
                 CurrentlyActiveList(
@@ -245,6 +249,41 @@ private struct RetentionStepper: View {
     }
 }
 
+// MARK: - Daily totals (E)
+
+/// Bar chart of total awake minutes per day across the retention window.
+/// Today is highlighted via a darker accent so the eye picks "today vs N
+/// days ago" without a separate overlay. Parallel triggers don't double-
+/// count (see `DailyTotal.compute` → `AwakeSegment.merge`).
+private struct DailyTotalsChart: View {
+    let entries: [ActivityLogEntry]
+    let days: Int
+
+    private static let dayLabel: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "M/d"
+        return f
+    }()
+
+    var body: some View {
+        let totals = DailyTotal.compute(from: entries, days: days, now: .now)
+        Chart(totals) { total in
+            BarMark(
+                x: .value("Day", Self.dayLabel.string(from: total.date)),
+                y: .value("Minutes", total.awakeMinutes)
+            )
+            .foregroundStyle(total.dayOffset == 0 ? Color.accentColor : Color.accentColor.opacity(0.4))
+        }
+        .chartXAxis {
+            // Cap visible labels — for a 90-day window, every 7 days
+            // keeps the axis readable; for ≤14 days the natural stride
+            // shows them all.
+            AxisMarks(values: .automatic(desiredCount: min(days, 14)))
+        }
+    }
+}
+
 // MARK: - Currently active
 
 private struct CurrentlyActiveList: View {
@@ -309,6 +348,50 @@ struct HourlyBucket: Identifiable {
                     }
                 }
             }
+        }
+        return out
+    }
+}
+
+/// One day's total awake minutes — used by the multi-day comparison chart
+/// (C-3 deferred E). `dayOffset = 0` is the most recent day in the retention
+/// window; older days have higher offsets.
+struct DailyTotal: Identifiable {
+    let id = UUID()
+    let dayOffset: Int
+    let date: Date
+    let awakeMinutes: Double
+
+    /// Sums per-day awake minutes across the retention window. Per-trigger
+    /// pair → merge → split by day. Parallel triggers don't double-count
+    /// (the merge unions overlapping segments — see `AwakeSegment.merge`).
+    static func compute(from entries: [ActivityLogEntry], days: Int, now: Date) -> [DailyTotal] {
+        let cal = Calendar.current
+        let windowStart = cal.startOfDay(for: now.addingTimeInterval(-Double(days - 1) * 86400))
+        let scoped = entries.filter { $0.timestamp >= windowStart }
+        let byTrigger = Dictionary(grouping: scoped, by: \.triggerId)
+        var allSegments: [AwakeSegment] = []
+        for (_, rows) in byTrigger {
+            allSegments += AwakeSegment.pair(
+                rows.sorted { $0.timestamp < $1.timestamp },
+                windowStart: windowStart,
+                windowEnd: now
+            )
+        }
+        let merged = AwakeSegment.merge(allSegments.sorted { $0.start < $1.start })
+
+        var totals: [Int: Double] = [:]
+        for segment in merged {
+            for (date, minutes) in segment.splitByHourWithDate() {
+                let dayStart = cal.startOfDay(for: date)
+                let offset = cal.dateComponents([.day], from: windowStart, to: dayStart).day ?? 0
+                totals[offset, default: 0] += minutes
+            }
+        }
+        var out: [DailyTotal] = []
+        for d in 0..<days {
+            let date = cal.date(byAdding: .day, value: d, to: windowStart) ?? windowStart
+            out.append(DailyTotal(dayOffset: days - 1 - d, date: date, awakeMinutes: totals[d] ?? 0))
         }
         return out
     }
