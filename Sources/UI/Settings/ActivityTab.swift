@@ -19,6 +19,11 @@ public struct ActivityTab: View {
     @State private var entries: [ActivityLogEntry] = []
     @State private var isLoading = true
     @State private var filter: ActivityFilter = .all
+    /// Coalesces bursty `.activityLogDidAppend` notifications. Multiple
+    /// trigger fires inside a 300 ms window collapse into a single reload —
+    /// avoids re-fetching the snapshot N times when several triggers emit
+    /// in quick succession (boot path, "all triggers fired at once").
+    @State private var liveReloadTask: Task<Void, Never>? = nil
 
     public init(
         coordinator: TriggerCoordinator,
@@ -92,6 +97,22 @@ public struct ActivityTab: View {
             // UI's `entries` snapshot was scoped to the old cutoff. Re-fetch
             // so the recovered older history shows up without a tab bounce.
             Task { await reload() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .activityLogDidAppend)) { _ in
+            scheduleLiveReload()
+        }
+        .onDisappear { liveReloadTask?.cancel() }
+    }
+
+    /// Cancels any pending reload and schedules a new one 300 ms in the
+    /// future — bursty trigger fires (e.g. all triggers boot together)
+    /// collapse to a single snapshot fetch.
+    private func scheduleLiveReload() {
+        liveReloadTask?.cancel()
+        liveReloadTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            guard !Task.isCancelled else { return }
+            await reload()
         }
     }
 

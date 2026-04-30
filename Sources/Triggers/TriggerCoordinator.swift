@@ -118,5 +118,25 @@ public final class TriggerCoordinator: ObservableObject {
             reasonCode: reasonCode
         )
         Task { await activityStore.append(entry) }
+        // Live-refresh signal for an open Activity tab. Posting from
+        // @MainActor synchronously (the actor task above is queued; by the
+        // time a subscriber's reload `await`s a snapshot, FIFO actor
+        // ordering guarantees the append has committed). userInfo carries
+        // the triggerId so subscribers can debounce per-trigger if they
+        // care; the canonical consumer (ActivityTab) just refetches.
+        NotificationCenter.default.post(
+            name: .activityLogDidAppend,
+            object: self,
+            userInfo: ["triggerId": triggerId, "kind": kind.rawValue]
+        )
     }
+}
+
+extension Notification.Name {
+    /// Posted by `TriggerCoordinator` after every activity-log mutation
+    /// (vote ON / vote OFF / user-explicit stop). An open Activity tab
+    /// listens to this and re-fetches the snapshot so the charts update
+    /// while the tab is visible — replaces the prior `.task`-on-appear-only
+    /// behaviour. See `docs/design/09-c3-activity-history.md` §10/§14.
+    public static let activityLogDidAppend = Notification.Name("LatteActivityLogDidAppend")
 }
