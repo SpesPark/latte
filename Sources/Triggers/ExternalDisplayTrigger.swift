@@ -70,6 +70,70 @@ public final class NSScreenSource: DisplaySource {
 }
 #endif
 
+// MARK: - Debouncing decorator (V2-06 deferred I)
+
+/// Wraps any `DisplaySource` and coalesces bursts of `changeStream` events
+/// into one yield per `debounceInterval`. `didChangeScreenParametersNotification`
+/// fires multiple times during a single attach (resolution adjust, mirror
+/// negotiation, sleep/wake) — without coalescing, `ExternalDisplayTrigger.evaluate()`
+/// runs N times per attach. The `lastVote` guard already squashes duplicate
+/// emissions; debouncing additionally squashes the *evaluate calls* themselves.
+@MainActor
+public final class DebouncingDisplaySource: DisplaySource {
+
+    public static let defaultDebounceInterval: TimeInterval = 0.3
+
+    public let changeStream: AsyncStream<Void>
+    private let continuation: AsyncStream<Void>.Continuation
+    private let upstream: DisplaySource
+    private let debounceInterval: TimeInterval
+    /// Monotonic counter bumped on every upstream event; the in-flight
+    /// flush task captures its value at scheduling and yields only when
+    /// no newer event has arrived during the debounce window. Replaces
+    /// a cancel-and-create pattern that was racy under bursts (cancelled
+    /// tasks could finish their sleep before the cancellation propagated).
+    private var pendingSeq: Int = 0
+    private var observeTask: Task<Void, Never>?
+
+    public init(wrapping upstream: DisplaySource,
+                debounceInterval: TimeInterval = DebouncingDisplaySource.defaultDebounceInterval) {
+        self.upstream = upstream
+        self.debounceInterval = debounceInterval
+        let (stream, cont) = AsyncStream<Void>.makeStream()
+        self.changeStream = stream
+        self.continuation = cont
+        self.observeTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            for await _ in upstream.changeStream {
+                self.scheduleFlush()
+            }
+        }
+    }
+
+    deinit {
+        observeTask?.cancel()
+        continuation.finish()
+    }
+
+    public var externalDisplayCount: Int { upstream.externalDisplayCount }
+    public var firstExternalDisplayName: String? { upstream.firstExternalDisplayName }
+
+    private func scheduleFlush() {
+        pendingSeq += 1
+        let mySeq = pendingSeq
+        let interval = debounceInterval
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
+            guard let self else { return }
+            // Only the latest scheduled flush wins — earlier ones see
+            // their seq superseded and bow out silently.
+            if mySeq == self.pendingSeq {
+                self.continuation.yield(())
+            }
+        }
+    }
+}
+
 // MARK: - ExternalDisplayTrigger
 
 @MainActor
@@ -112,7 +176,12 @@ public final class ExternalDisplayTrigger: Trigger {
             self.source = source
         } else {
             #if canImport(AppKit)
-            self.source = NSScreenSource()
+            // Production default: wrap NSScreenSource in a 300ms debouncer
+            // so a single attach (which fires the screen-change notification
+            // multiple times during resolution / mirror negotiation) drives
+            // exactly one evaluate. Tests inject MockDisplaySource directly
+            // and stay raw — debounce is upstream-only.
+            self.source = DebouncingDisplaySource(wrapping: NSScreenSource())
             #else
             self.source = NoopDisplaySource()
             #endif
