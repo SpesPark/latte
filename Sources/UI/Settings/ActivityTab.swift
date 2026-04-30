@@ -71,7 +71,7 @@ public struct ActivityTab: View {
 private struct HourlyAwakeChart: View {
     let entries: [ActivityLogEntry]
 
-    private static let triggerDomain: [String] = ["wifi", "calendar", "focus", "app", "schedule", "externalDisplay"]
+    private static let triggerDomain: [String] = ["wifi", "calendar", "focus", "app", "schedule", "external-display"]
     private static let triggerRange: [Color] = [.blue, .red, .purple, .green, .orange, .teal]
 
     var body: some View {
@@ -175,11 +175,20 @@ struct HeatmapCell: Identifiable {
         let cal = Calendar.current
         let windowStart = cal.startOfDay(for: now.addingTimeInterval(-Double(days - 1) * 86400))
         let windowEnd = now
-        let scoped = entries.filter { $0.timestamp >= windowStart }.sorted { $0.timestamp < $1.timestamp }
-        let segments = AwakeSegment.pair(scoped, windowStart: windowStart, windowEnd: windowEnd)
+        let scoped = entries.filter { $0.timestamp >= windowStart }
+        // Per-trigger pair → merge across triggers — single-stream pairing
+        // would interleave a second trigger's ON between another's ON/OFF
+        // and miscount when triggers fire in parallel.
+        let byTrigger = Dictionary(grouping: scoped, by: \.triggerId)
+        var allSegments: [AwakeSegment] = []
+        for (_, rows) in byTrigger {
+            let sorted = rows.sorted { $0.timestamp < $1.timestamp }
+            allSegments += AwakeSegment.pair(sorted, windowStart: windowStart, windowEnd: windowEnd)
+        }
+        let merged = AwakeSegment.merge(allSegments.sorted { $0.start < $1.start })
 
         var grid: [Int: [Int: Double]] = [:]   // [dayOffset: [hour: minutes]]
-        for segment in segments {
+        for segment in merged {
             for (date, minutes) in segment.splitByHourWithDate() {
                 let day = cal.startOfDay(for: date)
                 let dayOffset = cal.dateComponents([.day], from: windowStart, to: day).day ?? 0
@@ -227,6 +236,23 @@ struct AwakeSegment {
             segments.append(AwakeSegment(start: s, end: windowEnd))
         }
         return segments
+    }
+
+    /// Unions overlapping or touching segments. Caller must pass them sorted
+    /// by `start`. Used by the heatmap to fold parallel-trigger awake periods
+    /// into a single "Latte was awake" timeline so total minutes don't double-count.
+    static func merge(_ sorted: [AwakeSegment]) -> [AwakeSegment] {
+        guard let first = sorted.first else { return [] }
+        var out: [AwakeSegment] = [first]
+        for s in sorted.dropFirst() {
+            let last = out[out.count - 1]
+            if s.start <= last.end {
+                out[out.count - 1] = AwakeSegment(start: last.start, end: max(last.end, s.end))
+            } else {
+                out.append(s)
+            }
+        }
+        return out
     }
 
     /// Splits into per-hour [hour: minutes] (24h chart helper).

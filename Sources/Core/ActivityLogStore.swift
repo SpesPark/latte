@@ -48,6 +48,7 @@ public actor ActivityLogStore {
             try fm.createDirectory(at: dir, withIntermediateDirectories: true)
             return dir
         } catch {
+            LatteLog.activity.fault("activity-log: failed to create support directory — \(error.localizedDescription, privacy: .public)")
             return nil
         }
     }

@@ -152,6 +152,62 @@ final class ActivityLogStoreTests: XCTestCase {
     }
 }
 
+// MARK: - AwakeSegment merge (heatmap union — 7th simplify-pass MED-2 regression gate)
+
+final class AwakeSegmentMergeTests: XCTestCase {
+
+    /// Two triggers fire in parallel — heatmap must count their union, not
+    /// double-count the overlap. Single-stream pairing would mis-attribute
+    /// the second trigger's OFF to the first trigger's ON.
+    func testParallelTriggerSegmentsMergeIntoUnion() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let entries: [ActivityLogEntry] = [
+            // Wifi: ON 0:00 → OFF 1:00
+            .init(timestamp: now, triggerId: "wifi", kind: .on, reasonCode: .voteOn),
+            .init(timestamp: now.addingTimeInterval(3600), triggerId: "wifi", kind: .off, reasonCode: .voteOff),
+            // Calendar: ON 0:30 → OFF 1:30 (overlaps wifi)
+            .init(timestamp: now.addingTimeInterval(1800), triggerId: "calendar", kind: .on, reasonCode: .voteOn),
+            .init(timestamp: now.addingTimeInterval(5400), triggerId: "calendar", kind: .off, reasonCode: .voteOff)
+        ]
+
+        // Per-trigger pair → merge.
+        let byTrigger = Dictionary(grouping: entries, by: \.triggerId)
+        var segs: [AwakeSegment] = []
+        for (_, rows) in byTrigger {
+            segs += AwakeSegment.pair(
+                rows.sorted { $0.timestamp < $1.timestamp },
+                windowStart: now,
+                windowEnd: now.addingTimeInterval(7200)
+            )
+        }
+        let merged = AwakeSegment.merge(segs.sorted { $0.start < $1.start })
+
+        XCTAssertEqual(merged.count, 1, "overlapping segments must collapse")
+        let total = merged.reduce(0.0) { $0 + $1.end.timeIntervalSince($1.start) }
+        XCTAssertEqual(total, 5400, "union of [0,3600]+[1800,5400] = [0,5400] (90 min)")
+    }
+
+    func testNonOverlappingSegmentsAreNotMerged() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let segs = [
+            AwakeSegment(start: now, end: now.addingTimeInterval(600)),
+            AwakeSegment(start: now.addingTimeInterval(1200), end: now.addingTimeInterval(1800))
+        ]
+        let merged = AwakeSegment.merge(segs)
+        XCTAssertEqual(merged.count, 2, "disjoint segments must remain distinct")
+    }
+
+    func testTouchingSegmentsAreMerged() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let segs = [
+            AwakeSegment(start: now, end: now.addingTimeInterval(600)),
+            AwakeSegment(start: now.addingTimeInterval(600), end: now.addingTimeInterval(1200))
+        ]
+        let merged = AwakeSegment.merge(segs)
+        XCTAssertEqual(merged.count, 1, "back-to-back segments must merge")
+    }
+}
+
 // MARK: - ActivityLogEntry schema privacy contract
 
 final class ActivityLogEntrySchemaTests: XCTestCase {

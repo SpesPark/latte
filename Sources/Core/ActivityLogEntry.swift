@@ -47,7 +47,8 @@ public struct ActivityLogEntry: Codable, Equatable, Sendable, Identifiable {
         /// User-explicit OFF: Toggle in Settings, last watched app removed, etc.
         /// Bypasses any per-trigger grace period (graceSecondsAfterOff = 0).
         case userToggleOff
-        /// Trigger.stop() invoked by coordinator (e.g. trigger disabled in Settings).
+        /// Coordinator-initiated stop distinct from user action (reserved for a
+        /// future autonomous-stop path; no producer in v1.3).
         case stoppedByCoordinator
     }
 }
