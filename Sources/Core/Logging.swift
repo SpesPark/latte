@@ -20,4 +20,5 @@ public enum LatteLog {
     public static let shortcut = logger("shortcut")
     public static let intents = logger("intents")
     public static let ui = logger("ui")
+    public static let activity = logger("activity")
 }

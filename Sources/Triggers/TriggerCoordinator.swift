@@ -9,12 +9,18 @@ public final class TriggerCoordinator: ObservableObject {
 
     private let awakeManager: AwakeManager
     private let settings: SettingsStore
+    private let activityStore: ActivityLogStore?
     private let logger = LatteLog.triggers
     private var consumerTasks: [String: Task<Void, Never>] = [:]
 
-    public init(awakeManager: AwakeManager, settings: SettingsStore) {
+    public init(
+        awakeManager: AwakeManager,
+        settings: SettingsStore,
+        activityStore: ActivityLogStore? = nil
+    ) {
         self.awakeManager = awakeManager
         self.settings = settings
+        self.activityStore = activityStore
     }
 
     public func register(_ trigger: any Trigger) {
@@ -72,6 +78,7 @@ public final class TriggerCoordinator: ObservableObject {
                 ),
                 from: triggerId
             )
+            recordActivity(triggerId: triggerId, kind: .off, reasonCode: .userToggleOff)
         }
     }
 
@@ -88,5 +95,28 @@ public final class TriggerCoordinator: ObservableObject {
             activeVotes.removeValue(forKey: triggerId)
         }
         awakeManager.receiveTriggerVote(vote, from: triggerId)
+        recordActivity(
+            triggerId: triggerId,
+            kind: vote.wantsAwake ? .on : .off,
+            reasonCode: vote.wantsAwake ? .voteOn : .voteOff
+        )
+    }
+
+    /// Fire-and-forget log to the activity store. No-op if no store is wired
+    /// (the unit-test rig path). Privacy: only the structured fields cross the
+    /// boundary — the raw `TriggerVote.reason` string is intentionally dropped.
+    private func recordActivity(
+        triggerId: String,
+        kind: ActivityLogEntry.Kind,
+        reasonCode: ActivityLogEntry.ReasonCode
+    ) {
+        guard let activityStore else { return }
+        let entry = ActivityLogEntry(
+            timestamp: .now,
+            triggerId: triggerId,
+            kind: kind,
+            reasonCode: reasonCode
+        )
+        Task { await activityStore.append(entry) }
     }
 }
