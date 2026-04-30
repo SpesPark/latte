@@ -96,6 +96,11 @@ public extension SettingsStore {
     }
 
     func encodeStringArray(_ value: [String], for key: SettingsKey) {
+        // Empty array → remove key. `decodeStringArray` already returns []
+        // for a missing key, so this is semantically equivalent and
+        // preserves the "absent = default / never touched" invariant a
+        // future migration may rely on.
+        guard !value.isEmpty else { remove(key); return }
         let encoded = try? JSONEncoder().encode(value)
         setData(encoded, for: key)
     }

@@ -207,6 +207,40 @@ final class ExternalDisplayTriggerTests: XCTestCase {
         XCTAssertEqual(trigger.whitelistedUUIDs, ["A", "B", "C"])
     }
 
+    /// 9th simplify-pass HIGH-1 regression — when `attachedExternalDisplays`
+    /// is populated with a name and `firstExternalDisplayName` is nil, the
+    /// attached-list name wins over the "External Display" fallback.
+    /// Documents the priority order so a future change can't silently flip it.
+    func testAttachedListNameWinsOverFallbackWhenLegacyNameNil() async throws {
+        let settings = InMemorySettingsStore()
+        settings.setBool(true, for: .externalDisplayEnabled)
+        let source = MockDisplaySource(
+            externalDisplayCount: 1,
+            firstExternalDisplayName: nil,
+            attachedExternalDisplays: [DisplayInfo(uuid: "X", name: "Studio Display")]
+        )
+        let trigger = ExternalDisplayTrigger(settings: settings, source: source)
+        trigger.evaluate()
+
+        var it = trigger.voteStream.makeAsyncIterator()
+        let vote = await it.next()
+        XCTAssertEqual(vote?.reason, "Display: Studio Display",
+                       "attached.first.name must drive the reason when firstExternalDisplayName is nil")
+    }
+
+    func testEmptyWhitelistEncodeRemovesKeyForFutureMigrations() {
+        // 9th simplify-pass MED — encodeStringArray([], for:) must clear
+        // the key, not leave a "[]" blob behind. `decodeStringArray`
+        // already returns [] for absent keys, so the round-trip is preserved.
+        let (trigger, _, settings) = makeFixture(count: 0)
+        trigger.setWhitelistedUUIDs(["A"])
+        XCTAssertNotNil(settings.data(.externalDisplayWhitelist))
+        trigger.setWhitelistedUUIDs([])
+        XCTAssertNil(settings.data(.externalDisplayWhitelist),
+                     "empty whitelist must remove the key (absent == default)")
+        XCTAssertEqual(trigger.whitelistedUUIDs, [])
+    }
+
     // MARK: - V2-06 deferred G — clamshell-aware reason
 
     func testClamshellModeReasonAppendsTag() async throws {

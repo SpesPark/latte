@@ -65,4 +65,19 @@ final class DebouncingDisplaySourceTests: XCTestCase {
         XCTAssertEqual(debouncer.externalDisplayCount, 2)
         XCTAssertEqual(debouncer.firstExternalDisplayName, "DELL U2723QE")
     }
+
+    func testProxiesUpstreamClamshellAndAttachedList() {
+        // 9th simplify-pass LOW — verify the two new pass-through fields
+        // (V2-06 deferred G + H) forward correctly through the decorator.
+        let info = DisplayInfo(uuid: "UUID-X", name: "Studio Display")
+        let upstream = MockDisplaySource(
+            externalDisplayCount: 1,
+            firstExternalDisplayName: "Studio Display",
+            isInClamshellMode: true,
+            attachedExternalDisplays: [info]
+        )
+        let debouncer = DebouncingDisplaySource(wrapping: upstream, debounceInterval: 0.3)
+        XCTAssertTrue(debouncer.isInClamshellMode)
+        XCTAssertEqual(debouncer.attachedExternalDisplays, [info])
+    }
 }

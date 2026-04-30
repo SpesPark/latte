@@ -367,7 +367,11 @@ struct DailyTotal: Identifiable {
     /// (the merge unions overlapping segments — see `AwakeSegment.merge`).
     static func compute(from entries: [ActivityLogEntry], days: Int, now: Date) -> [DailyTotal] {
         let cal = Calendar.current
-        let windowStart = cal.startOfDay(for: now.addingTimeInterval(-Double(days - 1) * 86400))
+        // `Calendar.date(byAdding: .day, ...)` respects DST — raw `-86400`
+        // arithmetic shifts the window by ±1h on a DST-transition day.
+        let windowStart = cal.startOfDay(
+            for: cal.date(byAdding: .day, value: -(days - 1), to: now) ?? now
+        )
         let scoped = entries.filter { $0.timestamp >= windowStart }
         let byTrigger = Dictionary(grouping: scoped, by: \.triggerId)
         var allSegments: [AwakeSegment] = []
