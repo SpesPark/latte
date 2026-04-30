@@ -340,3 +340,89 @@ so DST-transition days don't shift the window by ±1h.
 
 477 → 482 tests (+5): empty/zero-day, 60-min hour segment, parallel-merge
 union, day-count == retention, dayOffset zero is most-recent.
+
+## §14. As shipped — v1.7 (S18, 2026-05-01) — §10 deferred (live polling + chart colours)
+
+Same-day continuation of S17. Two of the three remaining §10 deferred
+items shipped (live polling + chart colours); iCloud sync remains
+deferred for joint design with B1.2 iCloud-chord-sync (schema risk if
+shipped in isolation).
+
+### Live polling refresh (commit `54f7d7a`)
+
+`TriggerCoordinator.recordActivity` posts
+`Notification.Name.activityLogDidAppend` on every recordActivity site
+(vote ON / vote OFF / user-explicit `stop(_:)` with an active vote).
+The notification carries no userInfo — the canonical consumer
+(`ActivityTab`) just refetches the snapshot, so emitting `triggerId` /
+`kind` to every in-process observer would be needless payload (11th
+simplify-pass LOW-3).
+
+`ActivityTab.scheduleLiveReload()` debounces with a 300 ms
+`liveReloadTask`: each new notification cancels the pending Task and
+schedules a fresh one. Bursty boot-time trigger fires (all triggers
+fire within ~50 ms) collapse to a single snapshot fetch. Cancellation
+uses `do/catch` — letting `Task.sleep` throw `CancellationError` is the
+single mechanism that aborts reload (11th simplify-pass LOW-2).
+
+Suppression cases preserve correctness:
+- `stop(_:)` with no active vote does NOT post (no append happened, no
+  spurious refresh).
+- nil `activityStore` does NOT post (no append happened, no phantom
+  reload in any consumer that subscribes regardless of store presence).
+
+**Actor ordering guarantee**: the post happens synchronously on
+@MainActor *after* `Task { await activityStore.append(entry) }` is
+queued. By the time a subscriber's reload `await`s a snapshot, FIFO
+actor ordering guarantees the append has committed — no race between
+notification and committed state.
+
+494 → 499 tests (+5).
+
+### User-customisable Charts colours (commit `67b18b3`)
+
+New pure `ActivityChartPalette` (`Sources/Core/ActivityChartPalette.swift`):
+- `triggerOrder: [String]` — canonical 6-trigger render order. Drift
+  with `HourlyAwakeChart` is impossible because the chart reads this
+  list directly (no parallel `triggerDomain` static).
+- `defaultHex: [String: String]` — frozen v1.3 palette (`.blue`/`.red`/
+  `.purple`/`.green`/`.orange`/`.teal`) so a user who never touches the
+  picker sees no visual change across upgrades.
+- `color(for:overrides:) -> Color` — override hex wins if it parses;
+  falls through to default; falls through again to system accent for
+  unknown triggers (never returns clear, which would silently hide
+  bars).
+- `encode(overrides:) -> Data?` — empty map returns nil so the caller
+  can clear the key, preserving the "absent = never customised"
+  invariant the v1.5 `encodeStringArray` empty-clear pattern relied on.
+- `decode(overrides:) -> [String: String]` — tolerant: nil / corrupt
+  payload returns `[:]` and the chart falls back to defaults.
+
+New `Color(hex:)` and `Color.hexString` SwiftUI Color extensions:
+- `Color(hex:)` parses `#RRGGBB` (or `RRGGBB`); rejects 3-digit
+  shorthand and 8-digit RGBA (the picker UI never produces them);
+  tolerates leading whitespace (11th simplify-pass LOW-4 — the prior
+  implementation operated on the original string after trimming, which
+  produced an 8-char "stripped" input and parse-failure for
+  `"  #FF0000"`).
+- `Color.hexString` reads from sRGB component space + 8-bit-per-channel
+  rounding so the picker round-trip stays stable at the LSB.
+
+New `SettingsKey.activityChartColors` mirrors via
+`AppEnvironment.activityChartColors` ([String: String]). Reset button
+in the ActivityTab "Chart colours" Section assigns `[:]`, removes the
+key.
+
+499 → 514 tests (+15).
+
+**Deferred design decision resolved during ship**:
+- **Section placement**: chart colours live in the Activity tab itself
+  (not General). It's contextually about activity; owner adjusting
+  colours is already looking at the chart they want to recolour.
+  Mirrors the precedent from §12 retention stepper.
+
+### Still-deferred (no further v1.x scope)
+
+- **iCloud sync**: postponed for joint design with B1.2 iCloud-chord-
+  sync — both touch the same Settings schema and a solo ship would
+  risk migration churn.

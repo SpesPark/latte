@@ -247,5 +247,98 @@ UX nit per §5.
 - Path C (`@Published activeQuickPreset` aside) — rationale was
   "future-proofs C-3"; C-3 has now shipped, so the marginal benefit
   is gone.
-- Per-day-of-week recurring presets ("until 5 PM every weekday") —
-  larger feature.
+
+## §10. As shipped — v1.7 (S18, 2026-05-01) — Per-day-of-week recurring presets
+
+The "larger feature" deferred at §9 above shipped same-day after S17 in
+commit `0693f3a`.
+
+### Model
+
+New `RecurringQuickPreset` (`Sources/Core/RecurringQuickPreset.swift`),
+Codable / Equatable / Identifiable / Sendable:
+
+```swift
+public struct RecurringQuickPreset: Codable, Equatable, Identifiable, Sendable {
+    public let id: UUID
+    public let label: String
+    public let targetHour: Int       // 0…23
+    public let targetMinute: Int     // 0…59
+    public let weekdays: Set<Int>    // subset of 1…7 (Sun=1 … Sat=7)
+}
+```
+
+Pure helpers:
+- `isActiveOn(date:calendar:) -> Bool` — true if `date`'s weekday is in
+  `weekdays`. Used by the popover to filter — only "active today"
+  presets render.
+- `nextOccurrence(after:calendar:) -> Date` — looks today + 7 days
+  ahead (8 candidates, since worst case is "today is the right weekday
+  but target time just passed → 7 days forward"). Empty `weekdays`
+  returns `now` so the caller's clamp produces 1 minute rather than
+  crashing — but the popover never invokes this for empty weekdays
+  because `isActiveOn` filters them out first.
+- `minutes(from:calendar:) -> Int` — `max(1, …)` clamp mirrors the
+  built-in `QuickPreset.minutes(from:)` semantics. Click at the
+  boundary never activates for 0 minutes.
+
+### Persistence
+
+Static `write(_:to:)` / `read(from:)` round-trip via
+`SettingsKey.recurringQuickPresets`. Empty list removes the key
+(preserves "absent = never customised" invariant). Corrupt JSON
+returns `[]` and never crashes.
+
+### UI
+
+**Popover** (`MenuBarRoot.swift`): user presets render as a separate
+section after the built-in QuickPresets, filtered by today's weekday.
+Click → `preset.minutes(from: .now)` → `manager.activate(for: .minutes(N))`.
+Same conversion path as built-in presets — FSM unchanged. New
+`RecurringQuickPresetRow` view matches `QuickPresetRow` visually so
+users perceive built-in and custom presets as one cohesive section.
+No checkmark logic — preset rows never highlight (consistent with
+Path A trade-off from v1.6).
+
+**Editor** (`RecurringQuickPresetEditor.swift`): new "Custom presets"
+Section in the General Settings tab.
+- List: each preset shows label + "HH:MM · day-summary" subtitle (e.g.
+  "18:00 · Weekdays").
+- Tap row → edit sheet (item-binding so a different preset replaces
+  the previous).
+- Context menu → Edit / Delete.
+- "Add preset…" button → new sheet.
+- Sheet has TextField label + hour picker (0..23) + minute picker
+  (0..55 in 5-min stride) + 7 weekday chips. Save disabled while label
+  is empty or no weekdays selected.
+
+Pure `RecurringPresetWeekday` helper (`orderedCases` / `shortLabel(for:)`
+/ `summary(for:)`). Summary special-cases:
+- empty → "Never"
+- {1,2,3,4,5,6,7} → "Every day"
+- {2,3,4,5,6} → "Weekdays"
+- {1,7} → "Weekends"
+- otherwise comma-separated short labels in Sun-first order
+  (e.g. "Tue, Thu, Sat").
+
+### Path B / C status
+
+**Retired**. Path B was justified by clean abstraction; Path C by C-3
+future-proofing. Both rationales are obsolete:
+- Path C: C-3 shipped (v1.3 + v1.5 + v1.7) — the future-proofing
+  motivation is gone.
+- Path B: the "every `switch self` over `AwakeDuration` would need a
+  new branch" cost outweighs the benefit now that custom presets ship
+  as a parallel surface (no new `AwakeDuration` case needed).
+
+### Test coverage
+
+514 → 537 tests (+23) for the model + persistence + weekday helper:
+- `isActiveOn` (in/out/empty)
+- `nextOccurrence` (today/tomorrow/skip-inactive/weekend-only/empty/
+  minute-offset)
+- `minutes` (clamp/360min)
+- Codable round-trip + array round-trip
+- SettingsStore round-trip + empty clears + nil → [] + corrupt → []
+- Weekday helper (every-day / weekdays / weekends / arbitrary /
+  short-label / empty)
