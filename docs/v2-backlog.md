@@ -56,6 +56,11 @@
 - Lid-closed-only mode (vote awake ONLY in clamshell, ignore lid-open) — owner request gate
 - Per-display position requirement ("primary on the left, secondary on the right") — esoteric
 
+**Shipped in v1.6** (S17, 2026-05-01 — same-day continuation of S16):
+- ✅ **C-7** Quick presets — Path A from 08-c7-quick-presets-paths.md (smallest LOC, accepts checkmark-on-Custom UX nit). New `QuickPreset` enum (.until5PM / .until11PM / .untilMidnight) computes minutes-to-next-occurrence at click time + routes through `manager.activate(for: .minutes(N))`. Popover gains 4th Section with 3 wall-clock target rows. Spec: [docs/design/08-c7-quick-presets-paths.md](design/08-c7-quick-presets-paths.md).
+- ✅ **B1.2 polish (J)** — ShortcutRecorderField disabled-state UX cue: `.opacity(0.5) + .disabled(true)` when shortcut toggle is off, Reset button gates on isEnabled + `.help()` tooltip with default glyph, inline "Enable above to record" hint. The intentionally-deferred items in 07-spec §1 (per-action chords, iCloud sync, false-negative chord-reserved indicator) remain out of v1.x scope per spec.
+- ✅ **10th simplify-pass** APPROVE-WITH-NITS (0 CRIT/HIGH/MED, 3 LOW), 2 actionable addressed: misleading test comment tightened; ShortcutRecorderField cancels mid-recording when toggle flips off. 485 → **494 tests** (+9 from C-7 Path A; J ships 0 new tests as it's pure UX cue on existing-covered surface). Smoke unchanged at 22.
+
 **Shipped in v1.1** (S10, 2026-04-30 — S9-family follow-through):
 - ✅ **Settings window resizable** — `.resizable` styleMask + `setContentSize` + `minWidth/minHeight`. Opens at default 460×360 but user can drag corners to grow; Form auto-scrolls so all four trigger sections fit. `setFrameAutosaveName` already in place remembers user's preferred size. Closes the S9d-tracked observation.
 - ✅ **AppTrigger friendly Reason** — `emitOn` resolves bundle ids via `WorkspaceSource.displayInfo` so About → Status card reads "App: Zoom" / "App: Microsoft Teams" instead of raw bundle ids. Curated table (`us.zoom.xos` → "Zoom"), explicit `displayInfoLookup` overrides, and unmapped-id fallback to raw id. 3 new regression tests + 4 existing tests updated. Closes S9d-tracked debt.

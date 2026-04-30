@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Document version** | 0.1 |
-| **Status** | Decision-pending — owner picks path A / B / C / D before any code lands |
+| **Status** | **Path A shipped** in v1.6 (S17, 2026-05-01) — see §9 below |
 | **Audience** | Owner (decision) + implementing engineer (after pick) |
 | **Backlog ref** | `v2-backlog.md` C-7 (carryover from S10) |
 | **Last updated** | 2026-04-30 |
@@ -213,3 +213,39 @@ Pick the row that matches your priorities for the next 1-2 sprints:
 - `docs/SESSION_HANDOFF.md` — "C-7 scope" reference (line 156 at S10 tail).
 - `docs/v2-backlog.md` — C-7 backlog entry (one-line surface).
 - `docs/design/03-state-machine.md` §7 — FSM (unchanged across all four paths).
+
+---
+
+## 9. As shipped — v1.6 (S17, 2026-05-01) — Path A
+
+Path D was retired before pick: C-3 has been shipped (v1.3 + v1.5
+deferred items), so "skip C-7 → ship C-3" no longer applies. Of the
+remaining three paths the owner prioritised lowest-risk, fastest-to-ship
+(fix-first cadence), accepting the documented checkmark-on-Custom-row
+UX nit per §5.
+
+| # | Commit | Scope |
+|---|---|---|
+| 1 | `7252a0b` | New pure `QuickPreset` enum (case `until5PM` / `until11PM` / `untilMidnight`) with `nextOccurrence(after:)` + `minutes(from:)`. Conversion to `.minutes(N)` happens at click time; FSM unchanged. Already-passed targets roll to tomorrow. Midnight encoded as `targetHour=24` → next day's `startOfDay`. `min(1)` clamp guarantees no 0-min activation at boundary. New `QuickPresetRow` component (distinct from `DurationPickerRow`, no checkmark logic — preset rows never highlight). MenuBarRoot popover gains a 4th Section after the existing 7 duration presets + Custom row. 485 → 494 tests (+9). |
+
+**Decisions resolved during ship**:
+- **Custom row checkmark stays as-is** (not redirected to the matching
+  preset row) — per spec §3 Path A trade-off. Active "Until 5 PM"
+  session shows checkmark on Custom row, not the preset row. Owner
+  tolerated for v1.6; revisit if user feedback flags it.
+- **Minute rounding** — `(secondsAhead / 60).rounded()` plus `max(1, …)`
+  clamp. A 4:59:59 PM tap on "Until 5 PM" yields 1 minute (rounds 0,
+  clamps to 1). A 4:59:30 PM tap also yields 1 minute. Slightly biased
+  but never below the activation floor.
+- **Tests use UTC-anchored `DateComponents`** instead of raw epoch
+  arithmetic so CI hosts in any timezone produce the same results.
+  Pattern reaffirmed from prior sessions.
+
+**Still-deferred** (no further v1.x scope unless owner requests):
+- Path B (`.until(Date)` enum case) — clean abstraction, 3.5h cost,
+  every `switch self` over `AwakeDuration` would need a new branch.
+- Path C (`@Published activeQuickPreset` aside) — rationale was
+  "future-proofs C-3"; C-3 has now shipped, so the marginal benefit
+  is gone.
+- Per-day-of-week recurring presets ("until 5 PM every weekday") —
+  larger feature.
