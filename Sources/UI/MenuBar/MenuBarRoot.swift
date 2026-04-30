@@ -44,6 +44,26 @@ public struct MenuBarRoot: View {
 
             Divider().opacity(0.5)
 
+            // C-7 Path A — wall-clock target presets ("Until 5 PM" etc).
+            // Conversion to .minutes(N) at click time (08-spec §3 Path A).
+            // Acceptable trade-off: while a session is active, the
+            // checkmark falls on the Custom row (not on the preset row)
+            // because the FSM holds .minutes(N).
+            VStack(spacing: 0) {
+                ForEach(QuickPreset.allCases, id: \.self) { preset in
+                    QuickPresetRow(
+                        preset: preset,
+                        action: {
+                            let mins = preset.minutes(from: .now)
+                            manager.activate(for: .minutes(mins))
+                        }
+                    )
+                }
+            }
+            .padding(.vertical, 2)
+
+            Divider().opacity(0.5)
+
             Button(role: .destructive, action: { manager.deactivate() }) {
                 HStack(spacing: Theme.Spacing.sm) {
                     Image(systemName: "stop.circle")
