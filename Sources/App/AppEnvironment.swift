@@ -67,6 +67,19 @@ public final class AppEnvironment: ObservableObject {
         }
     }
 
+    /// Per-trigger Activity chart colour overrides. `[:]` = all defaults
+    /// from `ActivityChartPalette.defaultHex`. Missing keys per-trigger
+    /// fall through to the default. Mirrors `SettingsKey.activityChartColors`.
+    @Published public var activityChartColors: [String: String] {
+        didSet {
+            guard activityChartColors != oldValue else { return }
+            settings.setData(
+                ActivityChartPalette.encode(overrides: activityChartColors),
+                for: .activityChartColors
+            )
+        }
+    }
+
     public init(
         settings: SettingsStore = UserDefaultsSettingsStore(),
         launchAtLoginService: LaunchAtLoginService? = nil,
@@ -95,6 +108,9 @@ public final class AppEnvironment: ObservableObject {
         self.coffeeAccent = CoffeeAccent.decode(settings.string(.coffeeAccent))
         self.activateOnLaunch = settings.bool(.activateOnLaunch, default: false)
         self.activityRetentionDays = retentionDays
+        self.activityChartColors = ActivityChartPalette.decode(
+            overrides: settings.data(.activityChartColors)
+        )
         let resolvedLaunchService: LaunchAtLoginService
         if let launchAtLoginService {
             resolvedLaunchService = launchAtLoginService

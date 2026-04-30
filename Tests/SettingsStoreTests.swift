@@ -185,6 +185,7 @@ final class SettingsKeyEnumTests: XCTestCase {
             "latte.keyboardShortcut.enabled",
             "latte.keyboardShortcut.chord",
             "latte.activityHistory.retentionDays",
+            "latte.activityHistory.chartColors",
             "latte.externalDisplayTrigger.whitelist"
         ]
         let actual = Set(SettingsKey.allCases.map { $0.rawValue })

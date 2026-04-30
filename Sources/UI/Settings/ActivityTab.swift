@@ -61,8 +61,11 @@ public struct ActivityTab: View {
                 }
                 let filtered = filter.apply(to: entries)
                 Section("Last 24 hours") {
-                    HourlyAwakeChart(entries: filtered)
-                        .frame(height: 160)
+                    HourlyAwakeChart(
+                        entries: filtered,
+                        overrides: environment.activityChartColors
+                    )
+                    .frame(height: 160)
                 }
                 Section("Last \(environment.activityRetentionDays) days") {
                     DailyHeatmapChart(entries: filtered, days: environment.activityRetentionDays)
@@ -81,6 +84,9 @@ public struct ActivityTab: View {
             }
             Section("Retention") {
                 RetentionStepper(days: $environment.activityRetentionDays)
+            }
+            Section("Chart colours") {
+                ChartColorPickers(overrides: $environment.activityChartColors)
             }
             if !entries.isEmpty {
                 Section("Export") {
@@ -159,12 +165,15 @@ public struct ActivityTab: View {
 
 private struct HourlyAwakeChart: View {
     let entries: [ActivityLogEntry]
-
-    private static let triggerDomain: [String] = ["wifi", "calendar", "focus", "app", "schedule", "external-display"]
-    private static let triggerRange: [Color] = [.blue, .red, .purple, .green, .orange, .teal]
+    /// User-supplied per-trigger colour overrides. `[:]` = palette defaults
+    /// for every trigger. Drives the legend swatches via
+    /// `chartForegroundStyleScale(domain:range:)`.
+    let overrides: [String: String]
 
     var body: some View {
         let buckets = HourlyBucket.compute(from: entries, window: 24 * 60 * 60, now: .now)
+        let domain = ActivityChartPalette.triggerOrder
+        let range = domain.map { ActivityChartPalette.color(for: $0, overrides: overrides) }
         Chart(buckets) { bucket in
             BarMark(
                 x: .value("Hour", bucket.hour),
@@ -172,7 +181,7 @@ private struct HourlyAwakeChart: View {
             )
             .foregroundStyle(by: .value("Trigger", bucket.triggerId))
         }
-        .chartForegroundStyleScale(domain: Self.triggerDomain, range: Self.triggerRange)
+        .chartForegroundStyleScale(domain: domain, range: range)
         .chartXAxis { AxisMarks(values: .stride(by: 3)) }
     }
 }
@@ -267,6 +276,48 @@ private struct RetentionStepper: View {
             }
         }
         .accessibilityIdentifier("activity.retention.stepper")
+    }
+}
+
+// MARK: - Chart colours (C-3 — user-customisable Charts colours)
+
+/// One ColorPicker per trigger plus a "Reset to defaults" button. Writes
+/// flow through `AppEnvironment.activityChartColors` whose `didSet` mirrors
+/// to `SettingsStore.activityChartColors`. Dropping an override (resetting
+/// to default) removes the key from the map so the palette default takes
+/// over again — preserves the "absent = never customised" invariant.
+private struct ChartColorPickers: View {
+
+    @Binding var overrides: [String: String]
+
+    var body: some View {
+        ForEach(ActivityChartPalette.triggerOrder, id: \.self) { triggerId in
+            HStack {
+                Text(ActivityFilter.label(for: triggerId))
+                Spacer()
+                ColorPicker(
+                    "",
+                    selection: Binding(
+                        get: { ActivityChartPalette.color(for: triggerId, overrides: overrides) },
+                        set: { newValue in
+                            if let hex = newValue.hexString {
+                                overrides[triggerId] = hex
+                            }
+                        }
+                    ),
+                    supportsOpacity: false
+                )
+                .labelsHidden()
+            }
+            .accessibilityIdentifier("activity.chartColor.\(triggerId)")
+        }
+        if !overrides.isEmpty {
+            HStack {
+                Spacer()
+                Button("Reset to defaults") { overrides = [:] }
+                    .accessibilityIdentifier("activity.chartColor.reset")
+            }
+        }
     }
 }
 

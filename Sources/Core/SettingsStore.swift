@@ -69,6 +69,13 @@ public enum SettingsKey: String, CaseIterable, Sendable {
     /// Days of activity history to retain. Default 14, valid range 1…90 —
     /// values outside the range fall back to 14 via `clampedInteger`.
     case activityRetentionDays = "latte.activityHistory.retentionDays"
+
+    // Activity chart colour overrides (C-3 — user-customisable Charts colours) — v1.7
+    /// JSON-encoded `[String: String]` (triggerId → "#RRGGBB"). Missing keys
+    /// fall back to `ActivityChartPalette.defaultHex`. Stored only after
+    /// the user touches the colour picker so a fresh install never
+    /// shows up as "customised" in any future telemetry view.
+    case activityChartColors = "latte.activityHistory.chartColors"
 }
 
 public protocol SettingsStore: AnyObject {
