@@ -76,6 +76,11 @@ public enum SettingsKey: String, CaseIterable, Sendable {
     /// the user touches the colour picker so a fresh install never
     /// shows up as "customised" in any future telemetry view.
     case activityChartColors = "latte.activityHistory.chartColors"
+
+    // Recurring quick presets (C-7 — per-day-of-week recurring presets) — v1.7
+    /// JSON-encoded `[RecurringQuickPreset]`. Missing or empty → no user
+    /// presets render in the popover (built-in QuickPreset rows still ship).
+    case recurringQuickPresets = "latte.quickPresets.recurring"
 }
 
 public protocol SettingsStore: AnyObject {

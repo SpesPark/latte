@@ -162,6 +162,16 @@ public struct GeneralTab: View {
             } header: {
                 Text("Status").font(Theme.Fonts.subheadline)
             }
+
+            Section {
+                RecurringQuickPresetEditor(presets: $environment.recurringQuickPresets)
+            } header: {
+                Text("Custom presets").font(Theme.Fonts.subheadline)
+            } footer: {
+                Text("Define wall-clock targets that appear in the menu-bar popover only on selected weekdays.")
+                    .font(Theme.Fonts.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
         .formStyle(.grouped)
         .padding()

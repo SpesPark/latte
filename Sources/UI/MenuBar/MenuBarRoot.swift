@@ -59,6 +59,21 @@ public struct MenuBarRoot: View {
                         }
                     )
                 }
+                // C-7 v1.7 — user-defined recurring presets, filtered to
+                // today's weekday so a Mon-Fri preset never shows on a
+                // Saturday. Click → minutes-from-now → activate, same as
+                // the built-in QuickPreset rows above.
+                let activePresets = environment.recurringQuickPresets
+                    .filter { $0.isActiveOn(date: .now) }
+                ForEach(activePresets) { preset in
+                    RecurringQuickPresetRow(
+                        preset: preset,
+                        action: {
+                            let mins = preset.minutes(from: .now)
+                            manager.activate(for: .minutes(mins))
+                        }
+                    )
+                }
             }
             .padding(.vertical, 2)
 

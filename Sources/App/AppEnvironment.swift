@@ -80,6 +80,17 @@ public final class AppEnvironment: ObservableObject {
         }
     }
 
+    /// User-defined recurring quick presets (C-7 v1.7). Mirrors
+    /// `SettingsKey.recurringQuickPresets`. Empty list = no user presets
+    /// render in the popover. Editing here writes the full list back
+    /// (no partial CRUD; the list is small).
+    @Published public var recurringQuickPresets: [RecurringQuickPreset] {
+        didSet {
+            guard recurringQuickPresets != oldValue else { return }
+            RecurringQuickPreset.write(recurringQuickPresets, to: settings)
+        }
+    }
+
     public init(
         settings: SettingsStore = UserDefaultsSettingsStore(),
         launchAtLoginService: LaunchAtLoginService? = nil,
@@ -111,6 +122,7 @@ public final class AppEnvironment: ObservableObject {
         self.activityChartColors = ActivityChartPalette.decode(
             overrides: settings.data(.activityChartColors)
         )
+        self.recurringQuickPresets = RecurringQuickPreset.read(from: settings)
         let resolvedLaunchService: LaunchAtLoginService
         if let launchAtLoginService {
             resolvedLaunchService = launchAtLoginService
