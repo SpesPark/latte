@@ -2,8 +2,8 @@
 
 | Field | Value |
 |---|---|
-| **Document version** | 0.1 |
-| **Status** | Plan-only — implementation deferred to v1.2 |
+| **Document version** | 1.0 |
+| **Status** | ✅ Shipped in S12 (2026-04-30). See ROADMAP row 11b. |
 | **Audience** | Implementing engineer for v1.2 |
 | **Depends on** | B1 (`KeyboardShortcutCoordinator` + `CarbonHotKeyRegistrar`, shipped S9) |
 | **Backlog ref** | `v2-backlog.md` B1.2 |
@@ -241,13 +241,39 @@ Larger than V2-06 (~4h) because of the `NSViewRepresentable` recorder.
 
 ---
 
-## 10. Implementation order (when owner gives go-ahead)
+## 10. Implementation order — **as shipped in S12**
 
-1. RED: write 6 `KeyChordTests` first (Codable round-trip, glyph rendering, validation rejection).
-2. GREEN: `KeyChord` value type.
-3. RED: extend `KeyboardShortcutCoordinatorTests` with 5 chord-management tests.
-4. GREEN: extend `HotKeyRegistrar` protocol + `MockHotKeyRegistrar` + `CarbonHotKeyRegistrar` chord parameter.
-5. GREEN: `Coordinator.setChord` / `resetChord` / `@Published chord`.
-6. UI: `ShortcutRecorderField` NSViewRepresentable; reserved-chord validation; Settings integration.
-7. SMOKE: scenario 21 (window capture + persistence check).
-8. DOCS: 02-architecture.md §3.1 (recorder file mention), ROADMAP row, v2-backlog "Shipped".
+Three-commit sequence landed 2026-04-30 (continuation of the same-day
+S11 / V2-06 ship):
+
+1. `f3d1b24` — **Core RED+GREEN**: `KeyChord` value type + `ReservedChord`
+   blocklist + `SettingsStore` keyChord round-trip helpers + extended
+   `HotKeyRegistrar` protocol (`register(chord:handler:)`,
+   `currentChord`) + `KeyboardShortcutCoordinator.@Published chord`
+   / `setChord` / `resetChord`. 14 new tests (7 `KeyChordTests` + 7
+   coordinator chord-management). Spec test #4 reframed via the
+   `SettingsStore` extension because the lenient form lives there
+   rather than directly on `KeyChord`.
+2. `d7e4a97` — **UI**: `ShortcutRecorderField` SwiftUI wrapper around
+   an `NSResponder`-based `NSView` (Spotlight-picker pattern). Inline
+   FSM (idle / recording) tracked through `@State isRecording` + an
+   observer callback into the NSView. Reserved-chord and
+   missing-modifier validation surfaces inline red copy and keeps the
+   field in `recording` until valid. `GeneralTab` gains a "Shortcut"
+   `LabeledContent` row directly under the existing toggle; the
+   toggle's label switched from `KeyboardShortcutCoordinator.chordGlyph`
+   (compile-time default) to `environment.keyboardShortcut.chord.glyph`
+   (live).
+3. *(this commit)* — **Smoke + docs**: scenario 21 covers the
+   silent-default migration + Settings capture for owner review;
+   ROADMAP row 11b; v2-backlog B1.2 marked Shipped; this spec marked
+   1.0 / Shipped.
+
+The `CarbonHotKeyRegistrar` log line was switched from the hardcoded
+"⌘⇧L" string to `chord.glyph` so the structured log telemetry stays
+honest after the user customises.
+
+The optional integration test from §5 ("coordinator publishes
+isRegistered=false when register fails") landed as
+`testRegistrarFailureLeavesIsRegisteredFalse` — exercises the new
+`failNextRegister` toggle on `MockHotKeyRegistrar`.
