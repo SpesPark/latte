@@ -95,6 +95,15 @@ public final class KeyboardShortcutCoordinator: ObservableObject {
                 settings.setKeyChord(previousChord, for: .shortcutChord)
                 registrationError = .alreadyInUse(newChord)
                 applyEnabledState()
+                if !registrar.isRegistered {
+                    // Narrow race: the previous chord was also grabbed by
+                    // another process between unregister and re-register.
+                    // The user's shortcut is now dead until they pick a new
+                    // working chord — log so the failure is observable.
+                    LatteLog.shortcut.error(
+                        "rollback re-register failed — shortcut inactive until next setChord"
+                    )
+                }
                 return
             }
         }
@@ -104,6 +113,13 @@ public final class KeyboardShortcutCoordinator: ObservableObject {
     /// Reset to the default chord (⌘⇧L). Idempotent if already default.
     public func resetChord() {
         setChord(.default)
+    }
+
+    /// Drop any surfaced register-failure error. The recorder UI calls this
+    /// when the user cancels (Esc / click-outside) so the inline red copy
+    /// from a previous failed attempt doesn't linger across attempts.
+    public func clearRegistrationError() {
+        registrationError = nil
     }
 
     // No deinit-time unregister: deinit is nonisolated and the registrar is

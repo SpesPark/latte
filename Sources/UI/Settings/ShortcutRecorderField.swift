@@ -88,6 +88,7 @@ public struct ShortcutRecorderField: View {
 
     private func cancel() {
         validationMessage = nil
+        coordinator.clearRegistrationError()
         isRecording = false
     }
 }

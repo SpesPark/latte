@@ -1,7 +1,10 @@
 import SwiftUI
 
 // Per-trigger config sub-views extracted from TriggersTab.swift in V2-13.
-// TriggerSection dispatches here on `trigger.id`.
+// TriggerSection dispatches here on `trigger.id`. The 6 *ConfigForm types
+// below are default-internal (intentional) so TriggersTab can reach them
+// across files; the row helpers (AppRow, CalendarPickerRow, ScheduleEntryRow,
+// WeekdayChip) stay file-private.
 
 // MARK: - App config form
 
