@@ -12,6 +12,7 @@ public struct ActivityTab: View {
 
     @State private var entries: [ActivityLogEntry] = []
     @State private var isLoading = true
+    @State private var filter: ActivityFilter = .all
 
     public init(coordinator: TriggerCoordinator, store: ActivityLogStore?) {
         self.coordinator = coordinator
@@ -39,12 +40,16 @@ public struct ActivityTab: View {
                     .padding(.vertical, 24)
                 }
             } else {
+                Section {
+                    TriggerFilterPicker(filter: $filter, observed: ActivityFilter.triggerIdsObserved(in: entries))
+                }
+                let filtered = filter.apply(to: entries)
                 Section("Last 24 hours") {
-                    HourlyAwakeChart(entries: entries)
+                    HourlyAwakeChart(entries: filtered)
                         .frame(height: 160)
                 }
-                Section("Last 14 days") {
-                    DailyHeatmapChart(entries: entries)
+                Section("Last \(environment.activityRetentionDays) days") {
+                    DailyHeatmapChart(entries: filtered, days: environment.activityRetentionDays)
                         .frame(height: 200)
                 }
             }
@@ -65,7 +70,7 @@ public struct ActivityTab: View {
             entries = []
             return
         }
-        let cutoff = Date().addingTimeInterval(-14 * 24 * 60 * 60)
+        let cutoff = Date().addingTimeInterval(-Double(environment.activityRetentionDays) * 86_400)
         entries = await store.snapshot(since: cutoff)
     }
 }
@@ -96,9 +101,10 @@ private struct HourlyAwakeChart: View {
 
 private struct DailyHeatmapChart: View {
     let entries: [ActivityLogEntry]
+    let days: Int
 
     var body: some View {
-        let cells = HeatmapCell.compute(from: entries, days: 14, now: .now)
+        let cells = HeatmapCell.compute(from: entries, days: days, now: .now)
         Chart(cells) { cell in
             RectangleMark(
                 xStart: .value("DayStart", Double(cell.dayOffset) - 0.5),
@@ -110,6 +116,32 @@ private struct DailyHeatmapChart: View {
         }
         .chartForegroundStyleScale(range: Gradient(colors: [Color.clear, Color.accentColor]))
         .chartYAxis { AxisMarks(values: [0, 6, 12, 18]) }
+    }
+}
+
+// MARK: - Per-trigger filter picker (B)
+
+/// Picker selection for narrowing the Activity charts to a single trigger.
+/// Domain is dynamic — only triggers actually present in the entry set
+/// appear as choices, so a fresh user without a Schedule trigger doesn't
+/// see "Schedule" in the picker.
+private struct TriggerFilterPicker: View {
+
+    @Binding var filter: ActivityFilter
+    let observed: [String]
+
+    var body: some View {
+        Picker(selection: $filter) {
+            Text("All triggers").tag(ActivityFilter.all)
+            ForEach(observed, id: \.self) { id in
+                Text(id.replacingOccurrences(of: "-", with: " ").capitalized)
+                    .tag(ActivityFilter.only(id))
+            }
+        } label: {
+            Text("Show")
+        }
+        .pickerStyle(.menu)
+        .accessibilityIdentifier("activity.filter.picker")
     }
 }
 
