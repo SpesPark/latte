@@ -14,6 +14,13 @@ public protocol DisplaySource: AnyObject {
     /// Used for the vote reason string. `nil` falls back to "External Display".
     var firstExternalDisplayName: String? { get }
 
+    /// True when the built-in display is absent from `NSScreen.screens`
+    /// while at least one external is connected — the canonical clamshell
+    /// case (MacBook lid closed, used as a desktop). When `false`, either
+    /// the built-in is present (lid open) OR no external is attached.
+    /// V2-06 deferred G — surfaces in the vote reason for owner debugging.
+    var isInClamshellMode: Bool { get }
+
     /// Emits whenever the screen configuration changes (attach, detach,
     /// resolution change, sleep/wake). The trigger consumes this to decide
     /// when to re-evaluate. The production adapter forwards every
@@ -58,6 +65,13 @@ public final class NSScreenSource: DisplaySource {
 
     public var firstExternalDisplayName: String? {
         NSScreen.screens.first { !Self.isBuiltIn($0) }?.localizedName
+    }
+
+    public var isInClamshellMode: Bool {
+        let screens = NSScreen.screens
+        let hasExternal = screens.contains { !Self.isBuiltIn($0) }
+        let hasBuiltIn = screens.contains { Self.isBuiltIn($0) }
+        return hasExternal && !hasBuiltIn
     }
 
     private static func isBuiltIn(_ screen: NSScreen) -> Bool {
@@ -117,6 +131,7 @@ public final class DebouncingDisplaySource: DisplaySource {
 
     public var externalDisplayCount: Int { upstream.externalDisplayCount }
     public var firstExternalDisplayName: String? { upstream.firstExternalDisplayName }
+    public var isInClamshellMode: Bool { upstream.isInClamshellMode }
 
     private func scheduleFlush() {
         pendingSeq += 1
@@ -259,7 +274,12 @@ public final class ExternalDisplayTrigger: Trigger {
         let reason: String
         if wantsAwake {
             let name = source.firstExternalDisplayName ?? "External Display"
-            reason = "Display: \(name)"
+            // V2-06 deferred G — surface clamshell so the owner reading
+            // About → Status (or the Activity tab "Currently active" row)
+            // can tell "is the lid closed" at a glance.
+            reason = source.isInClamshellMode
+                ? "Display: \(name) (clamshell)"
+                : "Display: \(name)"
         } else {
             reason = "Display: disconnected"
         }
@@ -274,17 +294,27 @@ public final class MockDisplaySource: DisplaySource {
 
     public var externalDisplayCount: Int
     public var firstExternalDisplayName: String?
+    public var isInClamshellMode: Bool
 
     public let changeStream: AsyncStream<Void>
     private let continuation: AsyncStream<Void>.Continuation
 
     public init(externalDisplayCount: Int = 0,
-                firstExternalDisplayName: String? = nil) {
+                firstExternalDisplayName: String? = nil,
+                isInClamshellMode: Bool = false) {
         self.externalDisplayCount = externalDisplayCount
         self.firstExternalDisplayName = firstExternalDisplayName
+        self.isInClamshellMode = isInClamshellMode
         let (stream, cont) = AsyncStream<Void>.makeStream()
         self.changeStream = stream
         self.continuation = cont
+    }
+
+    /// Update clamshell flag + emit a change event so the trigger
+    /// re-evaluates with the new lid-state context.
+    public func setClamshellMode(_ value: Bool) {
+        isInClamshellMode = value
+        continuation.yield(())
     }
 
     /// Update count + emit a change event so the trigger re-evaluates.
@@ -313,6 +343,7 @@ public final class MockDisplaySource: DisplaySource {
 final class NoopDisplaySource: DisplaySource {
     var externalDisplayCount: Int { 0 }
     var firstExternalDisplayName: String? { nil }
+    var isInClamshellMode: Bool { false }
     let changeStream: AsyncStream<Void>
     init() {
         let (stream, cont) = AsyncStream<Void>.makeStream()

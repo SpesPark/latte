@@ -141,6 +141,30 @@ final class ExternalDisplayTriggerTests: XCTestCase {
         XCTAssertNil(vote, "disabled trigger must not vote even with display attached")
     }
 
+    // MARK: - V2-06 deferred G — clamshell-aware reason
+
+    func testClamshellModeReasonAppendsTag() async throws {
+        let (trigger, source, _) = makeFixture(count: 1, name: "Studio Display")
+        source.isInClamshellMode = true
+        trigger.evaluate()
+
+        var it = trigger.voteStream.makeAsyncIterator()
+        let vote = await it.next()
+        XCTAssertEqual(vote?.wantsAwake, true)
+        XCTAssertEqual(vote?.reason, "Display: Studio Display (clamshell)")
+    }
+
+    func testNonClamshellModeReasonOmitsTag() async throws {
+        let (trigger, source, _) = makeFixture(count: 1, name: "Studio Display")
+        source.isInClamshellMode = false
+        trigger.evaluate()
+
+        var it = trigger.voteStream.makeAsyncIterator()
+        let vote = await it.next()
+        XCTAssertEqual(vote?.reason, "Display: Studio Display",
+                       "lid-open path must keep the existing reason format unchanged")
+    }
+
     func testIsEnabledSetterPersists() {
         let settings = InMemorySettingsStore()
         let trigger = ExternalDisplayTrigger(
