@@ -21,7 +21,14 @@ public struct ActivityLogEntry: Codable, Equatable, Sendable, Identifiable {
         reasonCode: ReasonCode
     ) {
         self.id = id
-        self.timestamp = timestamp
+        // Quantise to microseconds. Date.now carries nanosecond precision but
+        // our on-disk format is `secondsSince1970` Double — Double cannot
+        // represent the full ns range at modern epoch values, so a naive
+        // round-trip loses ~1 ns and breaks Equatable. Microseconds fit in
+        // Double comfortably and quantising at construction guarantees
+        // entry == decode(encode(entry)).
+        let micros = (timestamp.timeIntervalSince1970 * 1_000_000).rounded()
+        self.timestamp = Date(timeIntervalSince1970: micros / 1_000_000)
         self.triggerId = triggerId
         self.kind = kind
         self.reasonCode = reasonCode

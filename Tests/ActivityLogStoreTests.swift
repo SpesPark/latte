@@ -38,7 +38,7 @@ final class ActivityLogStoreTests: XCTestCase {
         let dir = try makeTempDirectory()
         defer { cleanup(dir) }
 
-        let store = await ActivityLogStore(directory: dir)
+        let store = ActivityLogStore(directory: dir)
         let entry = makeEntry(triggerId: "wifi", kind: .on, reasonCode: .voteOn)
         await store.append(entry)
 
@@ -47,7 +47,7 @@ final class ActivityLogStoreTests: XCTestCase {
         XCTAssertEqual(snap1.first, entry)
 
         // Reload from disk via a new instance — entry must survive.
-        let reloaded = await ActivityLogStore(directory: dir)
+        let reloaded = ActivityLogStore(directory: dir)
         let snap2 = await reloaded.snapshot()
         XCTAssertEqual(snap2.count, 1)
         XCTAssertEqual(snap2.first, entry)
@@ -58,7 +58,7 @@ final class ActivityLogStoreTests: XCTestCase {
         defer { cleanup(dir) }
 
         // Tight 1-second retention so the test runs fast.
-        let store = await ActivityLogStore(directory: dir, retention: 1.0)
+        let store = ActivityLogStore(directory: dir, retention: 1.0)
         let stale = makeEntry(timestamp: Date(timeIntervalSinceNow: -3600))   // 1h ago
         let fresh = makeEntry(timestamp: .now)
         await store.append(stale)
@@ -73,7 +73,7 @@ final class ActivityLogStoreTests: XCTestCase {
         let dir = try makeTempDirectory()
         defer { cleanup(dir) }
 
-        let store = await ActivityLogStore(directory: dir)
+        let store = ActivityLogStore(directory: dir)
 
         // Fire 20 concurrent appends — actor isolation must serialise without loss.
         await withTaskGroup(of: Void.self) { group in
@@ -98,7 +98,7 @@ final class ActivityLogStoreTests: XCTestCase {
         let dir = try makeTempDirectory()
         defer { cleanup(dir) }
 
-        let store = await ActivityLogStore(directory: dir)
+        let store = ActivityLogStore(directory: dir)
         let old = makeEntry(timestamp: Date(timeIntervalSinceNow: -1000))
         let recent = makeEntry(timestamp: Date(timeIntervalSinceNow: -10))
         await store.append(old)
@@ -114,7 +114,7 @@ final class ActivityLogStoreTests: XCTestCase {
         let dir = try makeTempDirectory()
         defer { cleanup(dir) }
 
-        let store = await ActivityLogStore(directory: dir)
+        let store = ActivityLogStore(directory: dir)
         await store.append(makeEntry())
         await store.append(makeEntry(triggerId: "calendar"))
 
@@ -123,7 +123,7 @@ final class ActivityLogStoreTests: XCTestCase {
         XCTAssertTrue(snap.isEmpty)
 
         // File should be gone (or empty) — verify reload is also empty.
-        let reloaded = await ActivityLogStore(directory: dir)
+        let reloaded = ActivityLogStore(directory: dir)
         let snap2 = await reloaded.snapshot()
         XCTAssertTrue(snap2.isEmpty)
     }
@@ -133,7 +133,7 @@ final class ActivityLogStoreTests: XCTestCase {
         defer { cleanup(dir) }
 
         // No write happens before init — file does not exist.
-        let store = await ActivityLogStore(directory: dir)
+        let store = ActivityLogStore(directory: dir)
         let snap = await store.snapshot()
         XCTAssertTrue(snap.isEmpty)
     }
@@ -146,7 +146,7 @@ final class ActivityLogStoreTests: XCTestCase {
         let url = dir.appendingPathComponent(ActivityLogStore.fileName)
         try Data("not valid json {{{".utf8).write(to: url)
 
-        let store = await ActivityLogStore(directory: dir)
+        let store = ActivityLogStore(directory: dir)
         let snap = await store.snapshot()
         XCTAssertTrue(snap.isEmpty, "corrupt file must be treated as empty, not crash")
     }

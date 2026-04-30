@@ -1,10 +1,11 @@
 import Foundation
 
-/// One of the three Settings tabs. The `rawValue` is the path component
+/// One of the four Settings tabs. The `rawValue` is the path component
 /// used in `latte://settings/<tab>` URLs (see `SettingsURLHandler`).
 public enum SettingsTab: String, CaseIterable, Sendable {
     case general
     case triggers
+    case activity
     case about
 }
 
@@ -14,6 +15,7 @@ public enum SettingsTab: String, CaseIterable, Sendable {
 ///   - `latte://settings`            → `.general` (default)
 ///   - `latte://settings/general`    → `.general`
 ///   - `latte://settings/triggers`   → `.triggers`
+///   - `latte://settings/activity`   → `.activity`
 ///   - `latte://settings/about`      → `.about`
 ///
 /// Anything outside the `latte` scheme or the `settings` host returns nil.

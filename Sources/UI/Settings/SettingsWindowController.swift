@@ -36,7 +36,12 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
             return
         }
 
-        let root = SettingsRoot(manager: manager, coordinator: coordinator, initialTab: initialTab)
+        let root = SettingsRoot(
+            manager: manager,
+            coordinator: coordinator,
+            activityStore: environment.activityStore,
+            initialTab: initialTab
+        )
             .environmentObject(environment)
         let host = NSHostingController(rootView: root)
 

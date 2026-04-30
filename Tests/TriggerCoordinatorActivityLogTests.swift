@@ -35,7 +35,7 @@ final class TriggerCoordinatorActivityLogTests: XCTestCase {
         let dir = try makeTempDirectory()
         defer { cleanup(dir) }
 
-        let store = await ActivityLogStore(directory: dir)
+        let store = ActivityLogStore(directory: dir)
         let (coordinator, _) = makeRig(activityStore: store)
         let trigger = MockTrigger(id: "wifi")
         coordinator.register(trigger)
@@ -55,7 +55,7 @@ final class TriggerCoordinatorActivityLogTests: XCTestCase {
         let dir = try makeTempDirectory()
         defer { cleanup(dir) }
 
-        let store = await ActivityLogStore(directory: dir)
+        let store = ActivityLogStore(directory: dir)
         let (coordinator, _) = makeRig(activityStore: store)
         let trigger = MockTrigger(id: "calendar")
         coordinator.register(trigger)
@@ -76,7 +76,7 @@ final class TriggerCoordinatorActivityLogTests: XCTestCase {
         let dir = try makeTempDirectory()
         defer { cleanup(dir) }
 
-        let store = await ActivityLogStore(directory: dir)
+        let store = ActivityLogStore(directory: dir)
         let (coordinator, _) = makeRig(activityStore: store)
         let trigger = MockTrigger(id: "focus")
         coordinator.register(trigger)

@@ -15,6 +15,10 @@ public final class AppEnvironment: ObservableObject {
     public let launchAtLogin: LaunchAtLoginCoordinator
     public let onboarding: OnboardingState
     public let keyboardShortcut: KeyboardShortcutCoordinator
+    /// Activity history store (C-3). Nil when the application support
+    /// directory cannot be created (sandbox denial / disk full at boot) —
+    /// the app keeps running, the Activity tab shows an empty state.
+    public let activityStore: ActivityLogStore?
 
     /// User-selected menu bar icon variant. Mirrors `SettingsKey.menuBarIconStyle`
     /// — writing here persists to the underlying `SettingsStore`.
@@ -56,7 +60,15 @@ public final class AppEnvironment: ObservableObject {
         // Use AwakeManager.shared so AppIntents (out-of-process) and the in-process app
         // operate on the same FSM. Re-creating would split state.
         self.manager = AwakeManager.shared
-        self.coordinator = TriggerCoordinator(awakeManager: AwakeManager.shared, settings: settings)
+        let store: ActivityLogStore? = ActivityLogStore.defaultDirectory().map { dir in
+            ActivityLogStore(directory: dir)
+        }
+        self.activityStore = store
+        self.coordinator = TriggerCoordinator(
+            awakeManager: AwakeManager.shared,
+            settings: settings,
+            activityStore: store
+        )
         self.menuBarIconStyle = MenuBarIconStyle.decode(settings.string(.menuBarIconStyle))
         self.coffeeAccent = CoffeeAccent.decode(settings.string(.coffeeAccent))
         self.activateOnLaunch = settings.bool(.activateOnLaunch, default: false)

@@ -28,6 +28,11 @@ final class SettingsURLHandlerTests: XCTestCase {
         XCTAssertEqual(SettingsURLHandler.parse(url), .about)
     }
 
+    func testActivityPathReturnsActivity() {
+        let url = URL(string: "latte://settings/activity")!
+        XCTAssertEqual(SettingsURLHandler.parse(url), .activity)
+    }
+
     func testUnknownTabPathFallsBackToGeneral() {
         let url = URL(string: "latte://settings/unknown")!
         XCTAssertEqual(SettingsURLHandler.parse(url), .general)

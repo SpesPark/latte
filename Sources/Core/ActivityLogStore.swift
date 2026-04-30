@@ -19,19 +19,43 @@ public actor ActivityLogStore {
     private let retention: TimeInterval
     private let logger = LatteLog.activity
     private var entries: [ActivityLogEntry] = []
+    private var loaded = false
 
-    /// Initialises the store, creating the parent directory if needed and
-    /// loading any existing entries from disk. A corrupt or missing file is
-    /// treated as an empty store (logged as a fault) — never throws.
-    public init(directory: URL, retention: TimeInterval = ActivityLogStore.defaultRetention) async {
+    /// Initialises the store. The disk read is deferred to the first
+    /// `append` / `snapshot` call so this initialiser is synchronous and
+    /// can be invoked from `AppEnvironment.init` without an async hop.
+    /// Directory existence is the caller's responsibility — see
+    /// `defaultDirectory()` for the production path.
+    public init(directory: URL, retention: TimeInterval = ActivityLogStore.defaultRetention) {
         self.url = directory.appendingPathComponent(ActivityLogStore.fileName)
         self.retention = retention
-        await load()
+    }
+
+    /// Production path: `~/Library/Application Support/Latte/`. Creates the
+    /// directory if missing. Returns nil on filesystem failure (sandbox
+    /// denial, disk full at directory create) — caller falls back to no
+    /// activity logging for the session.
+    public static func defaultDirectory() -> URL? {
+        let fm = FileManager.default
+        do {
+            let support = try fm.url(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask,
+                appropriateFor: nil,
+                create: true
+            )
+            let dir = support.appendingPathComponent("Latte", isDirectory: true)
+            try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+            return dir
+        } catch {
+            return nil
+        }
     }
 
     /// Appends an entry, GCs older-than-retention rows, and atomically rewrites the file.
     /// Failures are logged and swallowed — never crashes the caller.
     public func append(_ entry: ActivityLogEntry) async {
+        loadIfNeeded()
         entries.append(entry)
         gc()
         flush()
@@ -39,16 +63,19 @@ public actor ActivityLogStore {
 
     /// Returns a defensive copy of all in-memory entries.
     public func snapshot() async -> [ActivityLogEntry] {
-        entries
+        loadIfNeeded()
+        return entries
     }
 
     /// Returns entries with `timestamp >= since`.
     public func snapshot(since: Date) async -> [ActivityLogEntry] {
-        entries.filter { $0.timestamp >= since }
+        loadIfNeeded()
+        return entries.filter { $0.timestamp >= since }
     }
 
     /// Empties the store and removes the file.
     public func clear() async {
+        loadIfNeeded()
         entries.removeAll()
         do {
             if FileManager.default.fileExists(atPath: url.path) {
@@ -61,7 +88,9 @@ public actor ActivityLogStore {
 
     // MARK: - Internal
 
-    private func load() async {
+    private func loadIfNeeded() {
+        guard !loaded else { return }
+        loaded = true
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         do {
             let data = try Data(contentsOf: url)
