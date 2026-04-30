@@ -3,24 +3,43 @@ import SwiftUI
 public struct TriggersTab: View {
 
     @ObservedObject public var coordinator: TriggerCoordinator
+    /// External signal — when set, scrolls to the matching trigger row on
+    /// the next layout pass and clears itself. Used by ActivityTab's
+    /// "Currently active" rows (C-3 deferred D) and by deep links of the
+    /// form `latte://settings/triggers?focus=<triggerId>`.
+    @Binding public var focusedTriggerId: String?
     @EnvironmentObject private var environment: AppEnvironment
 
-    public init(coordinator: TriggerCoordinator) {
+    public init(coordinator: TriggerCoordinator, focusedTriggerId: Binding<String?> = .constant(nil)) {
         self.coordinator = coordinator
+        self._focusedTriggerId = focusedTriggerId
     }
 
     public var body: some View {
-        Form {
-            ForEach(coordinator.triggers, id: \.id) { trigger in
-                TriggerSection(
-                    trigger: trigger,
-                    coordinator: coordinator,
-                    activeVote: coordinator.activeVotes[trigger.id]
-                )
+        ScrollViewReader { proxy in
+            Form {
+                ForEach(coordinator.triggers, id: \.id) { trigger in
+                    TriggerSection(
+                        trigger: trigger,
+                        coordinator: coordinator,
+                        activeVote: coordinator.activeVotes[trigger.id]
+                    )
+                    .id(trigger.id)
+                }
+            }
+            .formStyle(.grouped)
+            .padding()
+            .onChange(of: focusedTriggerId) { newValue in
+                guard let id = newValue else { return }
+                withAnimation { proxy.scrollTo(id, anchor: .top) }
+                // One-shot: clear so a subsequent click on the same trigger
+                // still re-scrolls (onChange only fires on a value flip).
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 50_000_000)
+                    focusedTriggerId = nil
+                }
             }
         }
-        .formStyle(.grouped)
-        .padding()
     }
 }
 

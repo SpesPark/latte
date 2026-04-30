@@ -10,15 +10,24 @@ public struct ActivityTab: View {
 
     @ObservedObject public var coordinator: TriggerCoordinator
     public let store: ActivityLogStore?
+    /// Invoked when the user clicks a row in "Currently active" — flips the
+    /// SettingsRoot selection to `.triggers` and scrolls to that trigger
+    /// (C-3 deferred D). Default no-op so previews / unit-test hosts work.
+    public let onJumpToTrigger: (String) -> Void
     @EnvironmentObject private var environment: AppEnvironment
 
     @State private var entries: [ActivityLogEntry] = []
     @State private var isLoading = true
     @State private var filter: ActivityFilter = .all
 
-    public init(coordinator: TriggerCoordinator, store: ActivityLogStore?) {
+    public init(
+        coordinator: TriggerCoordinator,
+        store: ActivityLogStore?,
+        onJumpToTrigger: @escaping (String) -> Void = { _ in }
+    ) {
         self.coordinator = coordinator
         self.store = store
+        self.onJumpToTrigger = onJumpToTrigger
     }
 
     public var body: some View {
@@ -56,7 +65,10 @@ public struct ActivityTab: View {
                 }
             }
             Section("Currently active") {
-                CurrentlyActiveList(activeVotes: coordinator.activeVotes)
+                CurrentlyActiveList(
+                    activeVotes: coordinator.activeVotes,
+                    onJump: onJumpToTrigger
+                )
             }
             Section("Retention") {
                 RetentionStepper(days: $environment.activityRetentionDays)
@@ -227,6 +239,7 @@ private struct RetentionStepper: View {
 
 private struct CurrentlyActiveList: View {
     let activeVotes: [String: TriggerVote]
+    let onJump: (String) -> Void
 
     var body: some View {
         if activeVotes.isEmpty {
@@ -234,9 +247,22 @@ private struct CurrentlyActiveList: View {
         } else {
             ForEach(activeVotes.keys.sorted(), id: \.self) { triggerId in
                 if let vote = activeVotes[triggerId] {
-                    LabeledContent(triggerId.capitalized) {
-                        Text(vote.reason).foregroundStyle(.secondary)
+                    Button {
+                        onJump(triggerId)
+                    } label: {
+                        LabeledContent(triggerId.capitalized) {
+                            HStack(spacing: 4) {
+                                Text(vote.reason).foregroundStyle(.secondary)
+                                Image(systemName: "chevron.right")
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("activity.active.row.\(triggerId)")
+                    .accessibilityHint("Opens this trigger's configuration")
                 }
             }
         }

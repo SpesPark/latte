@@ -27,12 +27,26 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
     /// non-status-bar windows. We temporarily promote to `.regular` so the
     /// Settings window comes to the front, and restore `.accessory` when the
     /// window closes (via `NSWindowDelegate`).
-    public func show(manager: AwakeManager, coordinator: TriggerCoordinator, environment: AppEnvironment, initialTab: SettingsTab = .general) {
+    public func show(
+        manager: AwakeManager,
+        coordinator: TriggerCoordinator,
+        environment: AppEnvironment,
+        initialTab: SettingsTab = .general,
+        focusedTriggerId: String? = nil
+    ) {
         NSApp.setActivationPolicy(.regular)
 
         if let window {
             NSApp.activate(ignoringOtherApps: true)
             window.makeKeyAndOrderFront(nil)
+            // Existing-window path: re-emit the focus signal so a second
+            // `latte://settings/triggers?focus=wifi` still scrolls.
+            if let focusedTriggerId {
+                NotificationCenter.default.post(
+                    name: .settingsRequestFocusTrigger,
+                    object: focusedTriggerId
+                )
+            }
             return
         }
 
@@ -40,7 +54,8 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
             manager: manager,
             coordinator: coordinator,
             activityStore: environment.activityStore,
-            initialTab: initialTab
+            initialTab: initialTab,
+            initialFocusedTriggerId: focusedTriggerId
         )
             .environmentObject(environment)
         let host = NSHostingController(rootView: root)
