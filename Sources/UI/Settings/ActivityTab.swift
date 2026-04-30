@@ -1,5 +1,7 @@
 import SwiftUI
 import Charts
+import AppKit
+import UniformTypeIdentifiers
 
 /// Activity history tab (C-3). Renders the trigger fire log as a 24h
 /// stacked bar + 14d heatmap + the in-memory "currently active" list.
@@ -59,9 +61,40 @@ public struct ActivityTab: View {
             Section("Retention") {
                 RetentionStepper(days: $environment.activityRetentionDays)
             }
+            if !entries.isEmpty {
+                Section("Export") {
+                    ExportButtons { format in
+                        export(filter.apply(to: entries), as: format)
+                    }
+                }
+            }
         }
         .formStyle(.grouped)
         .task { await reload() }
+    }
+
+    /// Routes the filtered snapshot through `ActivityLogExporter` and a
+    /// `NSSavePanel`. Failures are logged + swallowed (panel handles the
+    /// "user cancelled" path; write errors are owner-side, not crashable).
+    private func export(_ entries: [ActivityLogEntry], as format: ActivityLogExporter.Format) {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = ActivityLogExporter.suggestedFilename(for: format)
+        switch format {
+        case .csv:  panel.allowedContentTypes = [.commaSeparatedText]
+        case .json: panel.allowedContentTypes = [.json]
+        }
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            switch format {
+            case .csv:
+                try Data(ActivityLogExporter.csv(from: entries).utf8).write(to: url, options: .atomic)
+            case .json:
+                let data = try ActivityLogExporter.jsonData(from: entries)
+                try data.write(to: url, options: .atomic)
+            }
+        } catch {
+            LatteLog.activity.error("activity-log export failed — \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     private func reload() async {
@@ -116,6 +149,25 @@ private struct DailyHeatmapChart: View {
         }
         .chartForegroundStyleScale(range: Gradient(colors: [Color.clear, Color.accentColor]))
         .chartYAxis { AxisMarks(values: [0, 6, 12, 18]) }
+    }
+}
+
+// MARK: - Export buttons (C)
+
+/// Two-button row that calls back into the host with the chosen format.
+/// The host owns the NSSavePanel call so the buttons stay testable as a
+/// pure View (no AppKit side effect baked in).
+private struct ExportButtons: View {
+
+    let onExport: (ActivityLogExporter.Format) -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Button("Export CSV…") { onExport(.csv) }
+                .accessibilityIdentifier("activity.export.csv")
+            Button("Export JSON…") { onExport(.json) }
+                .accessibilityIdentifier("activity.export.json")
+        }
     }
 }
 
