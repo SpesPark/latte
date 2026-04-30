@@ -277,3 +277,43 @@ The optional integration test from §5 ("coordinator publishes
 isRegistered=false when register fails") landed as
 `testRegistrarFailureLeavesIsRegisteredFalse` — exercises the new
 `failNextRegister` toggle on `MockHotKeyRegistrar`.
+
+---
+
+## 11. Follow-up — register-failure rollback (S13, 2026-04-30)
+
+§10 shipped silent-failure semantics: a chord rejected by
+`RegisterEventHotKey` (`kEventHotKeyExistsErr` — already held by
+another app or a macOS system shortcut) still persisted via
+`setChord`, but no Carbon registration was active. The user's
+existing shortcut effectively died with no UI feedback.
+
+S13 closes that gap:
+
+- New `ChordRegistrationError` public enum (`.alreadyInUse(KeyChord)`).
+- `KeyboardShortcutCoordinator.@Published var registrationError`
+  surfaces it. Cleared on the next successful `setChord`.
+- `setChord` now snapshots the previous chord, attempts the
+  registration, and on failure rolls back the live + persisted
+  chord and re-installs the previous registration so the user's
+  existing shortcut keeps working.
+- `ShortcutRecorderField` reads `coordinator.registrationError`
+  and shows inline red copy "⌘1 is already used by another app
+  or macOS — pick a different combination." The field stays in
+  recording state so the user can immediately try another chord.
+
+Three new tests in `KeyboardShortcutCoordinatorTests`:
+`testSetChordRollsBackOnRegistrationFailure` (rollback +
+re-registration of prior chord + error surface),
+`testSuccessfulSetChordClearsPriorRegistrationError`,
+`testSetChordWhenDisabledNeverProbesRegistration` (no probe
+when isEnabled=false; chord still updates).
+
+Disabled-coord behaviour deliberately unchanged: the user can
+configure a chord while the global hotkey is off, then enable
+later. If the chord turns out to conflict at enable time, the
+existing isEnabled didSet path runs into the same silent-failure
+gap — left as a separate follow-up because the recorder UI is
+the primary surface and the enable-time path is rare.
+
+Tests: 423 → 426 PASS.

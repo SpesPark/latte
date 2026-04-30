@@ -288,5 +288,95 @@ final class KeyboardShortcutCoordinatorTests: XCTestCase {
                        "Register failure must not flip the registrar's flag")
         XCTAssertNil(registrar.currentChord)
     }
+
+    // MARK: - B1.2 follow-up — register-failure rollback (S13)
+
+    /// When the OS rejects the new chord (typically `kEventHotKeyExistsErr` —
+    /// another app or system shortcut already holds it), `setChord` must
+    /// roll back so the user's existing working binding is preserved and
+    /// the failure is observable via `registrationError`.
+    func testSetChordRollsBackOnRegistrationFailure() {
+        let store = InMemorySettingsStore()
+        let registrar = MockHotKeyRegistrar()
+        let coord = KeyboardShortcutCoordinator(
+            settings: store,
+            registrar: registrar,
+            onToggleAwake: {}
+        )
+        coord.isEnabled = true
+        XCTAssertEqual(coord.chord, .default)
+        XCTAssertTrue(registrar.isRegistered, "Default chord must be live")
+
+        let conflicting = KeyChord(
+            modifiers: UInt32(KeyChord.cmdMask),
+            keyCode: 0x12  // ⌘1 — pretend Spotlight or another app holds this
+        )
+        registrar.failNextRegister = true
+        coord.setChord(conflicting)
+
+        XCTAssertEqual(coord.chord, .default,
+                       "Failed registration must revert the live chord")
+        XCTAssertEqual(store.keyChord(.shortcutChord), .default,
+                       "Failed registration must revert the persisted chord")
+        XCTAssertTrue(registrar.isRegistered,
+                      "Prior registration must be restored after rollback")
+        XCTAssertEqual(registrar.currentChord, .default,
+                       "Restored registration must hold the previous chord")
+        XCTAssertEqual(coord.registrationError,
+                       .alreadyInUse(conflicting),
+                       "registrationError must surface the rejected chord")
+    }
+
+    func testSuccessfulSetChordClearsPriorRegistrationError() {
+        let store = InMemorySettingsStore()
+        let registrar = MockHotKeyRegistrar()
+        let coord = KeyboardShortcutCoordinator(
+            settings: store,
+            registrar: registrar,
+            onToggleAwake: {}
+        )
+        coord.isEnabled = true
+
+        registrar.failNextRegister = true
+        let bad = KeyChord(modifiers: UInt32(KeyChord.cmdMask), keyCode: 0x12)
+        coord.setChord(bad)
+        XCTAssertNotNil(coord.registrationError,
+                        "Precondition: failure path populated the error")
+
+        let good = KeyChord(
+            modifiers: UInt32(KeyChord.cmdMask | KeyChord.shiftMask),
+            keyCode: 0x09  // ⌘⇧V
+        )
+        coord.setChord(good)
+        XCTAssertEqual(coord.chord, good)
+        XCTAssertNil(coord.registrationError,
+                     "A successful setChord must clear any prior error")
+    }
+
+    func testSetChordWhenDisabledNeverProbesRegistration() {
+        let store = InMemorySettingsStore()
+        let registrar = MockHotKeyRegistrar()
+        let coord = KeyboardShortcutCoordinator(
+            settings: store,
+            registrar: registrar,
+            onToggleAwake: {}
+        )
+        // isEnabled stays false (default)
+        registrar.failNextRegister = true  // would fail IF probed
+
+        let next = KeyChord(
+            modifiers: UInt32(KeyChord.cmdMask | KeyChord.shiftMask),
+            keyCode: 0x09
+        )
+        coord.setChord(next)
+
+        XCTAssertEqual(coord.chord, next,
+                       "Disabled coord still updates the chord (the user is "
+                       + "configuring while the shortcut is off).")
+        XCTAssertNil(coord.registrationError,
+                     "No probe attempted means no error surfaced.")
+        XCTAssertFalse(registrar.isRegistered,
+                       "Disabled coord must not register at the OS layer.")
+    }
 }
 

@@ -47,12 +47,25 @@ public struct ShortcutRecorderField: View {
                 Text(validationMessage)
                     .font(Theme.Fonts.caption)
                     .foregroundStyle(.red)
+            } else if let conflictMessage {
+                Text(conflictMessage)
+                    .font(Theme.Fonts.caption)
+                    .foregroundStyle(.red)
             } else if isRecording {
                 Text("Press the new shortcut. Esc cancels.")
                     .font(Theme.Fonts.caption)
                     .foregroundStyle(.secondary)
             }
         }
+    }
+
+    /// Surfaces `coordinator.registrationError` as inline copy. Drops back to
+    /// nil whenever the coordinator clears the error (next successful set).
+    private var conflictMessage: String? {
+        guard case let .alreadyInUse(chord) = coordinator.registrationError else {
+            return nil
+        }
+        return "\(chord.glyph) is already used by another app or macOS — pick a different combination."
     }
 
     private func commit(chord: KeyChord) {
@@ -66,7 +79,11 @@ public struct ShortcutRecorderField: View {
         }
         validationMessage = nil
         coordinator.setChord(chord)
-        isRecording = false
+        // setChord rolls back on register failure and surfaces the rejected
+        // chord on `coordinator.registrationError`. When that surfaces, leave
+        // the field in recording state so the user can pick another chord
+        // immediately; on success, drop back to idle.
+        isRecording = coordinator.registrationError != nil
     }
 
     private func cancel() {

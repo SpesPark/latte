@@ -48,6 +48,12 @@ public final class KeyboardShortcutCoordinator: ObservableObject {
     /// corrupt — see spec §8 Q4 silent-default migration.
     @Published public private(set) var chord: KeyChord
 
+    /// Surface for register-time failures from `setChord`. Populated when the
+    /// OS rejects the new chord (typically `kEventHotKeyExistsErr` — held by
+    /// another app or system shortcut); cleared on the next successful
+    /// setChord. The Settings recorder UI consumes this to show inline copy.
+    @Published public private(set) var registrationError: ChordRegistrationError?
+
     public init(
         settings: SettingsStore,
         registrar: HotKeyRegistrar = CarbonHotKeyRegistrar(),
@@ -67,15 +73,32 @@ public final class KeyboardShortcutCoordinator: ObservableObject {
     /// Persist + re-register a new chord. Idempotent if `newChord == chord`.
     /// User-explicit action — assumes the recorder UI already validated
     /// (modifier present, not in `ReservedChord.blocklist`).
+    ///
+    /// When `isEnabled` is true, the new chord is probed at the OS layer
+    /// (`RegisterEventHotKey`). If the OS rejects it (e.g. another app
+    /// holds the binding), the live + persisted chord roll back to the
+    /// previous value, the prior registration is restored so the user's
+    /// existing shortcut keeps working, and `registrationError` is
+    /// populated for the recorder UI to surface inline.
     public func setChord(_ newChord: KeyChord) {
         guard newChord != chord else { return }
+        let previousChord = chord
         chord = newChord
         settings.setKeyChord(newChord, for: .shortcutChord)
         if isEnabled {
-            // Replace the active OS-level registration with the new chord.
             registrar.unregister()
             applyEnabledState()
+            if !registrar.isRegistered {
+                // OS rejected the chord. Roll back to the previous binding
+                // and re-register it so the user keeps a working shortcut.
+                chord = previousChord
+                settings.setKeyChord(previousChord, for: .shortcutChord)
+                registrationError = .alreadyInUse(newChord)
+                applyEnabledState()
+                return
+            }
         }
+        registrationError = nil
     }
 
     /// Reset to the default chord (⌘⇧L). Idempotent if already default.
@@ -101,6 +124,17 @@ public final class KeyboardShortcutCoordinator: ObservableObject {
             registrar.unregister()
         }
     }
+}
+
+// MARK: - ChordRegistrationError
+
+/// Surfaced from `KeyboardShortcutCoordinator.registrationError` after a
+/// failed `setChord`. The `KeyChord` payload is the chord that was rejected.
+public enum ChordRegistrationError: Equatable, Sendable {
+    /// `RegisterEventHotKey` returned a non-`noErr` status — typically
+    /// `kEventHotKeyExistsErr` (-9878), meaning another app or a macOS
+    /// system shortcut already owns this chord globally.
+    case alreadyInUse(KeyChord)
 }
 
 // MARK: - HotKeyRegistrar protocol (DI for tests)
