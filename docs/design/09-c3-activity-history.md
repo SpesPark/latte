@@ -289,3 +289,35 @@ Schedule needs running through a real time window). The smoke verifies the
 deep-link path**, plus a **schema privacy assertion** (jq) if any entry happens
 to be written during the run. The "real trigger fires → entry recorded → tab
 shows it" flow is owner manual smoke (handoff step 8).
+
+## §12. As shipped — v1.3.1 (S15, 2026-05-01) — §10 deferred items B/C/D/F
+
+Same-day continuation of S14. The 4 deferred items in §10 ranked by owner
+ergonomic value were shipped in 4 feat commits + 1 simplify-pass:
+
+| # | Commit | Scope |
+|---|---|---|
+| 1 | `0b59e67` | **F — customisable retention window**. `ActivityLogStore.retention` mutable via `setRetention(_:)`; immediate GC + flush on shrink. Range 1…90 days, default 14. New `SettingsKey.activityRetentionDays` + `AppEnvironment.activityRetentionDays` published mirror; ActivityTab Stepper. 442 → 450 tests. |
+| 2 | `6a55c02` | **B — per-trigger filter UI**. `ActivityFilter` enum (.all / .only) gates both charts; picker domain dynamic (only triggers in current snapshot). Heatmap frame now follows user's retention setting. 450 → 455 tests. |
+| 3 | `86bc5b1` | **C — CSV/JSON export**. Pure `ActivityLogExporter`; CSV ISO8601 / JSON secondsSince1970 round-trippable. NSSavePanel kept at call site; `ExportButtons` stays a pure SwiftUI primitive. 455 → 462 tests. |
+| 4 | `0dfb9d2` | **D — click-row → trigger config jump**. Activity rows are buttons with chevron; click flips tab + `ScrollViewReader` scrolls. Deep-link form `latte://settings/triggers?focus=<id>`. `parseRoute(_:)` returns `SettingsRoute`; legacy `parse(_:)` kept. Already-open window re-emits via `Notification.Name.settingsRequestFocusTrigger`. 462 → 467 tests. |
+| 5 | `4343d2a` | **8th simplify-pass follow-through**. APPROVE-WITH-NITS, 0 CRIT/HIGH, 2 MED + 5 LOW all addressed: reload on retention `.onChange`, `isLoading=true` at reload entry, `ActivityLogStore.secondsPerDay` constant collapses 4 magic-86_400 sites, `ActivityFilter.label(for:)` extraction (kebab → Title-Case, no `.capitalized` locale dep), DST cosmetic note documented on `splitByHourWithDate`. 467 → **468 tests**. |
+
+**Deferred design decisions resolved during ship**:
+- **F: which Settings tab does the Stepper live in?** — Activity tab itself
+  (not General). It's contextually about activity; owner adjusting retention
+  is already looking at the chart they want more/less of. Section "Retention".
+- **B: dynamic picker domain or fixed taxonomy?** — Dynamic. A fresh install
+  with only the WiFi trigger configured shouldn't see all 6 trigger labels in
+  the menu when 5 of them have produced zero entries.
+- **C: where does the side effect live?** — `ExportButtons` is a pure SwiftUI
+  primitive; the host (`ActivityTab.export(_:as:)`) owns the NSSavePanel call.
+  Mirrors the test-friendliness pattern from `RetentionStepper` (binding-only).
+- **D: how does the legacy `parse(_:)` survive?** — Thin wrapper around the
+  new `parseRoute(_:)`. `LatteApp.application(_:open:)` was migrated to
+  `parseRoute` directly so `parse(_:)` only carries the test-coverage call
+  sites. Considered `@available(*, deprecated)` but skipped — there's no
+  pending callsite migration; leaving the dual API minimises noise.
+
+**Still-deferred (per §10)** — multi-day comparison view, live polling, iCloud
+sync, user-customisable Charts colours.
