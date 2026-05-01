@@ -227,4 +227,113 @@ final class RecurringQuickPresetTests: XCTestCase {
         XCTAssertEqual(RecurringPresetWeekday.shortLabel(for: 1), "Sun")
         XCTAssertEqual(RecurringPresetWeekday.shortLabel(for: 7), "Sat")
     }
+
+    // MARK: - builtinSeeds (S19 #2 — seed-then-mutable model)
+
+    /// `builtinSeeds()` returns the three legacy `QuickPreset` cases as
+    /// `RecurringQuickPreset` values so they migrate into the regular
+    /// CRUD list and can be edited or deleted by the owner.
+    func testBuiltinSeedsReturnsThreePresets() {
+        let seeds = RecurringQuickPreset.builtinSeeds()
+        XCTAssertEqual(seeds.count, 3)
+    }
+
+    /// Labels match the prior `QuickPreset` enum exactly so a v1.7 user
+    /// who upgrades sees the same three rows in the popover (now backed
+    /// by data instead of hard-coded enum cases).
+    func testBuiltinSeedsLabelsMatchLegacyQuickPreset() {
+        let labels = RecurringQuickPreset.builtinSeeds().map(\.label)
+        XCTAssertEqual(labels, ["Until 5 PM", "Until 11 PM", "Until midnight"])
+    }
+
+    /// Seeds run every day so the migrated presets are indistinguishable
+    /// from the previous always-shown enum cases. Owner-confirmed (S19
+    /// #2 design point b).
+    func testBuiltinSeedsRunEveryDay() {
+        for seed in RecurringQuickPreset.builtinSeeds() {
+            XCTAssertEqual(seed.weekdays, Set(1...7), "seed \(seed.label) must be every-day")
+        }
+    }
+
+    /// Target hour/minute matches `QuickPreset.targetHour`. Midnight
+    /// (legacy `targetHour == 24`) is encoded as hour 0 — the
+    /// `nextOccurrence` lookahead naturally jumps to tomorrow when the
+    /// candidate has already passed (which it always has if hour == 0).
+    func testBuiltinSeedsTargetTimes() {
+        let seeds = RecurringQuickPreset.builtinSeeds()
+        XCTAssertEqual(seeds[0].targetHour, 17)   // Until 5 PM
+        XCTAssertEqual(seeds[0].targetMinute, 0)
+        XCTAssertEqual(seeds[1].targetHour, 23)   // Until 11 PM
+        XCTAssertEqual(seeds[1].targetMinute, 0)
+        XCTAssertEqual(seeds[2].targetHour, 0)    // Until midnight (next day's 00:00)
+        XCTAssertEqual(seeds[2].targetMinute, 0)
+    }
+
+    /// Each seed gets a stable UUID so two calls produce equal lists. A
+    /// fresh UUID per call would make the migration write a different
+    /// list on every launch and double-seed across edge cases.
+    func testBuiltinSeedsAreStableAcrossCalls() {
+        let first = RecurringQuickPreset.builtinSeeds()
+        let second = RecurringQuickPreset.builtinSeeds()
+        XCTAssertEqual(first, second, "seed UUIDs must be stable so writes are idempotent")
+    }
+
+    /// `nextOccurrence` for the midnight seed jumps to tomorrow's
+    /// 00:00 when called after the day has started — same behaviour as
+    /// the legacy `QuickPreset.untilMidnight` (which used the
+    /// `targetHour == 24` sentinel).
+    func testBuiltinSeedsMidnightRollsToTomorrow() {
+        let utc = Self.utcCalendar
+        let seeds = RecurringQuickPreset.builtinSeeds()
+        let midnightSeed = seeds[2]   // Until midnight
+        // 9 AM today → next 00:00 = tomorrow's start, 15 hours away.
+        let nineAM = date(year: 2027, month: 1, day: 15, hour: 9)
+        let mins = midnightSeed.minutes(from: nineAM, calendar: utc)
+        XCTAssertEqual(mins, 15 * 60)
+    }
+
+    // MARK: - Migration (seedBuiltinPresetsIfNeeded)
+
+    /// Case A — fresh install: sentinel false + no presets stored. Migration
+    /// writes the 3 seeds and sets the sentinel to true.
+    func testMigrationSeedsOnFreshInstall() {
+        let store = InMemorySettingsStore()
+        XCTAssertFalse(store.bool(.didSeedBuiltinPresets, default: false))
+        XCTAssertTrue(RecurringQuickPreset.read(from: store).isEmpty)
+
+        RecurringQuickPreset.seedBuiltinPresetsIfNeeded(in: store)
+
+        XCTAssertTrue(store.bool(.didSeedBuiltinPresets, default: false))
+        XCTAssertEqual(RecurringQuickPreset.read(from: store), RecurringQuickPreset.builtinSeeds())
+    }
+
+    /// Case B — v1.7 user upgrading with existing user-defined presets.
+    /// The existing presets must NOT be overwritten; sentinel still moves
+    /// to true so the migration never runs again.
+    func testMigrationDoesNotOverwriteExistingPresets() {
+        let store = InMemorySettingsStore()
+        let existing = [makePreset(label: "Existing", hour: 19, weekdays: [2, 3])]
+        RecurringQuickPreset.write(existing, to: store)
+
+        RecurringQuickPreset.seedBuiltinPresetsIfNeeded(in: store)
+
+        XCTAssertTrue(store.bool(.didSeedBuiltinPresets, default: false))
+        XCTAssertEqual(RecurringQuickPreset.read(from: store), existing)
+    }
+
+    /// Case C — sentinel already true. Migration is a no-op even if the
+    /// list is empty (owner deleted all seeds intentionally).
+    func testMigrationDoesNotResEEDAfterUserDeletedAllPresets() {
+        let store = InMemorySettingsStore()
+        store.setBool(true, for: .didSeedBuiltinPresets)
+        // List intentionally empty — owner cleared all presets.
+
+        RecurringQuickPreset.seedBuiltinPresetsIfNeeded(in: store)
+
+        XCTAssertTrue(store.bool(.didSeedBuiltinPresets, default: false))
+        XCTAssertTrue(
+            RecurringQuickPreset.read(from: store).isEmpty,
+            "sentinel-true means user has full control; never re-seed"
+        )
+    }
 }

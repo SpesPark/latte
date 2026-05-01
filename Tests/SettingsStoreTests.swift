@@ -187,6 +187,7 @@ final class SettingsKeyEnumTests: XCTestCase {
             "latte.activityHistory.retentionDays",
             "latte.activityHistory.chartColors",
             "latte.quickPresets.recurring",
+            "latte.quickPresets.didSeedBuiltins",
             "latte.externalDisplayTrigger.whitelist"
         ]
         let actual = Set(SettingsKey.allCases.map { $0.rawValue })

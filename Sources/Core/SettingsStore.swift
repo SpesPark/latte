@@ -79,8 +79,15 @@ public enum SettingsKey: String, CaseIterable, Sendable {
 
     // Recurring quick presets (C-7 — per-day-of-week recurring presets) — v1.7
     /// JSON-encoded `[RecurringQuickPreset]`. Missing or empty → no user
-    /// presets render in the popover (built-in QuickPreset rows still ship).
+    /// presets render in the popover (also no built-ins after S19 #2).
     case recurringQuickPresets = "latte.quickPresets.recurring"
+
+    // Built-in seed sentinel (S19 #2 — seed-then-mutable C-7 redesign)
+    /// True once `RecurringQuickPreset.seedBuiltinPresetsIfNeeded` has run.
+    /// Distinguishes "fresh install" (false → seed the 3 legacy QuickPreset
+    /// rows into the recurring list) from "user has cleared all presets"
+    /// (true + empty list → respect the empty state, never re-seed).
+    case didSeedBuiltinPresets = "latte.quickPresets.didSeedBuiltins"
 }
 
 public protocol SettingsStore: AnyObject {

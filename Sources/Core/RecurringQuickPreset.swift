@@ -98,4 +98,65 @@ public struct RecurringQuickPreset: Codable, Equatable, Identifiable, Sendable {
         guard let data = store.data(.recurringQuickPresets) else { return [] }
         return (try? JSONDecoder().decode([RecurringQuickPreset].self, from: data)) ?? []
     }
+
+    // MARK: - Built-in seeds (S19 #2 — seed-then-mutable C-7 redesign)
+
+    /// Stable UUIDs for the three built-in seeds. Hard-coded so `builtinSeeds()`
+    /// returns the same `[RecurringQuickPreset]` across calls (writes stay
+    /// idempotent and the migration is replay-safe).
+    private static let builtinSeedUntil5PMID    = UUID(uuidString: "C7000001-5EED-4001-8001-000000000017")!
+    private static let builtinSeedUntil11PMID   = UUID(uuidString: "C7000001-5EED-4001-8001-000000000023")!
+    private static let builtinSeedUntilMidnightID = UUID(uuidString: "C7000001-5EED-4001-8001-000000000000")!
+
+    /// Returns the three legacy `QuickPreset` rows (until 5 PM / 11 PM /
+    /// midnight) as recurring presets. Used once at first-launch
+    /// migration (`seedBuiltinPresetsIfNeeded`) — after which they live
+    /// in the regular CRUD list and the owner can edit or delete them.
+    /// All seeds run every day (per S19 #2 owner decision b).
+    public static func builtinSeeds() -> [RecurringQuickPreset] {
+        let everyDay: Set<Int> = [1, 2, 3, 4, 5, 6, 7]
+        return [
+            RecurringQuickPreset(
+                id: builtinSeedUntil5PMID,
+                label: "Until 5 PM",
+                targetHour: 17, targetMinute: 0,
+                weekdays: everyDay
+            ),
+            RecurringQuickPreset(
+                id: builtinSeedUntil11PMID,
+                label: "Until 11 PM",
+                targetHour: 23, targetMinute: 0,
+                weekdays: everyDay
+            ),
+            RecurringQuickPreset(
+                // hour 0 — `nextOccurrence` rolls forward when the
+                // candidate has already passed (which it always has if
+                // `now` is past midnight today), matching the legacy
+                // `QuickPreset.untilMidnight` (`targetHour == 24` sentinel).
+                id: builtinSeedUntilMidnightID,
+                label: "Until midnight",
+                targetHour: 0, targetMinute: 0,
+                weekdays: everyDay
+            ),
+        ]
+    }
+
+    /// First-launch migration: writes `builtinSeeds()` into
+    /// `SettingsKey.recurringQuickPresets` and flips the
+    /// `didSeedBuiltinPresets` sentinel to true. Idempotent — once the
+    /// sentinel is true the call is a no-op so a user who deletes all
+    /// seeds never sees them re-spawn.
+    ///
+    /// Two pre-sentinel cases:
+    /// - **Fresh install** (no existing presets) → write seeds.
+    /// - **v1.7 upgrader** (existing user-defined presets) → preserve
+    ///   them, just flip the sentinel. The seeds never appear because
+    ///   the user already has a populated list.
+    public static func seedBuiltinPresetsIfNeeded(in store: SettingsStore) {
+        guard !store.bool(.didSeedBuiltinPresets, default: false) else { return }
+        if read(from: store).isEmpty {
+            write(builtinSeeds(), to: store)
+        }
+        store.setBool(true, for: .didSeedBuiltinPresets)
+    }
 }
