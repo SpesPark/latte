@@ -8,57 +8,59 @@
 
 | Field | Value |
 |---|---|
-| **Session #** | **S18** — same-day continuation of S17 (2026-05-01, **4th autonomous-cycle session of the day**: S15 → S16 → S17 → S18). C-3 live polling + chart-colour prefs + C-7 recurring presets + 11th simplify-pass. |
-| **Theme** | "Close out v1.x deferred backlog. Three deferred items shipped (C-3 live polling + C-3 chart colours + C-7 recurring presets) + standing simplify-pass ritual. Same TDD-RED → GREEN → simplify-pass cadence as the prior 10 passes." |
-| **Status** | ✅ **3 feat commits + 1 simplify-pass commit + 1 doc commit this session.** **494 → 538 tests** (+44). **Smoke unchanged at 22** (new flows are owner manual smoke step 6/7 territory). Working tree clean. Test run ~8.5 s. |
-| **Tail commit** | (post doc-sync commit forthcoming after this file lands) |
+| **Session #** | **S19** — first owner-driven manual smoke session after the v1.x autonomous backlog drain (2026-05-02). Three P-issues surfaced and shipped: Wi-Fi caption non-breaking-hyphen fix; C-7 built-in seed-then-mutable redesign; Delete button in preset edit sheet. Two simplify-passes (12th + 13th). |
+| **Theme** | "Owner-driven manual smoke turns into a UX polish ship cycle. Fix-first per P1 with same TDD-RED → GREEN → simplify-pass cadence as the prior 11 passes." |
+| **Status** | ✅ **3 feat commits + 2 simplify-pass commits + 1 fix commit this session.** **538 → 548 tests** (+10). **Smoke unchanged at 22** (UX redesigns covered by owner manual smoke step 6). Working tree clean. Test run ~8.4s. |
+| **Tail commit** | `992a161` (chore: 13th simplify-pass follow-through) — doc-sync commit forthcoming after this file lands. |
 
-### Commit chain (S18 only — top is HEAD)
+### Commit chain (S19 only — top is HEAD)
 
 ```
-(this commit)  docs: SESSION_HANDOFF wrap for S18              (S18 #5)
-f56e10e        chore: 11th simplify-pass follow-through (S18)  (S18 #4)
-0693f3a        feat: C-7 per-day-of-week recurring presets     (S18 #3)
-67b18b3        feat: C-3 user-customisable chart colours       (S18 #2)
-54f7d7a        feat: C-3 live polling refresh                  (S18 #1)
+(this commit)  docs: SESSION_HANDOFF wrap for S19              (S19 #7)
+992a161        chore: 13th simplify-pass follow-through        (S19 #6)
+c7d734c        feat: Delete button in preset edit sheet         (S19 #5)
+c4c9894        chore: 12th simplify-pass follow-through         (S19 #4)
+efb134e        feat: drop hard-coded built-in popover ForEach   (S19 #3)
+7c97c60        feat: builtinSeeds + migration (TDD RED→GREEN)   (S19 #2)
+11789c3        fix: non-breaking hyphen in Pause caption (P1)   (S19 #1)
 ```
 
 ### What landed
 
 | # | Commit | Scope | Tests Δ |
 |---|---|---|---|
-| 1 | `54f7d7a` | **C-3 live polling refresh**. `TriggerCoordinator.recordActivity` posts `Notification.Name.activityLogDidAppend` on every recordActivity site (vote ON / vote OFF / user-explicit `stop(_:)` with active vote). `ActivityTab` listens via `.onReceive` and reloads the snapshot, debounced 300 ms via `liveReloadTask`. Stop with no active vote suppresses (no spurious refresh); nil store suppresses (no phantom data). FIFO actor ordering guarantees the append commits before any subscriber's snapshot returns. Resolves the "Live polling (refresh while tab open)" deferred item in 09-c3 §10. | +5 |
-| 2 | `67b18b3` | **C-3 user-customisable Activity chart colours**. New pure `ActivityChartPalette` (triggerOrder + defaultHex + `color(for:overrides:)` + encode/decode for SettingsStore round-trip). Defaults match v1.3 palette so a user who never touches the picker sees no visual change. New `Color(hex:)` and `Color.hexString` SwiftUI extensions for sRGB hex round-trip. New `SettingsKey.activityChartColors` stores `[String: String]` (triggerId → "#RRGGBB"); empty map removes the key. `AppEnvironment.activityChartColors` @Published mirror. ActivityTab gains "Chart colours" Section: 6 ColorPickers + Reset button (only shown when at least one override is set). HourlyAwakeChart now derives chart domain/range from the palette. | +15 |
-| 3 | `0693f3a` | **C-7 per-day-of-week recurring presets**. New `RecurringQuickPreset` (Codable, Equatable, Identifiable, Sendable): id / label / targetHour / targetMinute / weekdays:Set<Int>. Pure helpers: `isActiveOn(date:)`, `nextOccurrence(after:)` (today + 7 days ahead, skipping inactive weekdays), `minutes(from:)` (clamped ≥1, mirrors built-in QuickPreset). New `SettingsKey.recurringQuickPresets` + `AppEnvironment.recurringQuickPresets` @Published mirror. MenuBarRoot popover renders user presets after the built-in QuickPresets, filtered by today's weekday. New "Custom presets" Section in General Settings tab: list with tap-to-edit + context-menu delete + "Add preset…" button → sheet (TextField + hour/minute pickers + 7 weekday chips). Pure `RecurringPresetWeekday` helper (Weekdays / Weekends / Every day / Never special-cases). | +23 |
-| 4 | `f56e10e` | **11th simplify-pass** on commits 1-3. APPROVE-WITH-NITS (0 CRIT/HIGH, 1 MED, 4 LOW). All 5 actionable findings addressed: LOW-1 stale `HourlyAwakeChart.triggerDomain` doc/test name fixed; LOW-2 ActivityTab live-reload Task switched from `try?+guard` to `do/catch`; LOW-3 dropped dead `userInfo` payload on `.activityLogDidAppend`; LOW-4 `Color(hex:)` whitespace-tolerance latent defect fixed; MED-1 `nextOccurrence` doc tightened. | +1 |
-| 5 | this commit | **Doc sync**: ROADMAP row 17 (S18) prepended; v2-backlog "Shipped in v1.7 (S18)" entry added with C-3 still-deferred (iCloud sync) + C-7 still-deferred (Path B/C retired); 09-c3 spec §14 written; 08-c7 spec §10 written; SESSION_HANDOFF rewritten. Memory: NEW `project_latte_v1_7.md`; `MEMORY.md` index 10 → 11 lines. | 0 |
+| 1 | `11789c3` | **Wi-Fi caption non-breaking hyphen fix**. `Pause triggers` caption "Ignore Calendar / App / Wi-Fi / Schedule votes." was wrapping mid-word at the hyphen on the popover width ("wi-/fi"). SwiftUI treats `-` as a soft break point. Replaced with `\u{2011}` (U+2011 NON-BREAKING HYPHEN); wrap now falls only on whitespace boundaries. | 0 |
+| 2 | `7c97c60` | **C-7 built-in seed-then-mutable migration (RED→GREEN)**. New `RecurringQuickPreset.builtinSeeds()` returns the three legacy `QuickPreset` rows (until 5 PM / 11 PM / midnight) as `RecurringQuickPreset` values with stable hard-coded UUIDs (replay-safe writes), every-day weekdays (`{1...7}`), matching target hours 17/23/0. Midnight uses hour 0 — `nextOccurrence` lookahead naturally rolls forward. New `seedBuiltinPresetsIfNeeded(in:)` migration handles three launch-time cases via the new `SettingsKey.didSeedBuiltinPresets` sentinel: fresh install / v1.7 upgrader / returning user. | +9 |
+| 3 | `efb134e` | **Popover wiring — drop hard-coded ForEach**. `MenuBarRoot.swift` drops `ForEach(QuickPreset.allCases)` and the separate built-in `VStack`. The recurring section now wraps in `if !activePresets.isEmpty` — owner-cleared state shows a clean popover (no empty divider, no zero-row VStack). `AppEnvironment.init` runs `seedBuiltinPresetsIfNeeded` BEFORE the recurring list read. `QuickPreset` + `QuickPresetRow` deprecated via doc-comment, retained for API stability + existing nextOccurrence/minutes regression tests. | 0 |
+| 4 | `c4c9894` | **12th simplify-pass follow-through**. APPROVE — 0 CRIT/HIGH/1 MED/2 LOW. MED-1 doc reworded "Two pre-sentinel cases" → "Three launch-time cases" matching §11 table; LOW-1 alignment whitespace on builtinSeed*ID constants normalised; LOW-2 `…ResEED…` test method casing typo renamed. Bonus regression test pinned the third launch-time case (sentinel-true + non-empty → no-op). | +1 |
+| 5 | `c7d734c` | **Delete button in preset edit sheet**. Owner-reported: right-click Delete on the General list is too easy to miss. Added bottom-leading destructive Delete button to `RecurringQuickPresetSheet`; only renders in edit mode (`onDelete != nil`). Confirmation dialog ("Delete <label>? This preset will be removed from the popover.") protects against accidental click on the already-`.destructive` button. Right-click Delete preserved unchanged. | 0 |
+| 6 | `992a161` | **13th simplify-pass follow-through**. APPROVE-WITH-NITS — 0 CRIT/HIGH/1 MED/2 LOW. MED-1 raw user label interpolated into confirm dialog title — added `confirmTitleLabelCap = 40` + `displayLabelForConfirm` computed var (trims whitespace, falls back to "this preset" for empty, ellipsis-truncates >40 chars). LOW-1 explicit init kept (memberwise-redundant nit deferred); LOW-2 `if onDelete != nil` style accepted. | 0 |
+| 7 | this commit | **Doc sync**: ROADMAP row 18 (S19) prepended; v2-backlog "Shipped in v1.8 (S19)" entry added with patterns block; 08-c7 spec §11 (built-in seed-then-mutable redesign) written; SESSION_HANDOFF rewritten. Memory: NEW `project_latte_v1_8.md`; `MEMORY.md` index 11 → 12 lines. | 0 |
 
-### Patterns reaffirmed this session
+### Patterns established this session
 
-- **Simplify-pass cadence is now 11 passes deep** (S10/S10.1/S11/S11/S12/S13/S14/S15/S16/S17/S18). All APPROVE or APPROVE-WITH-NITS. **Standing ritual after each batch of feature commits**: code-reviewer agent ~3 min + follow-through commit ~10 min.
-- **Notification + actor FIFO ordering for live UI updates**: when an actor mutation needs to drive a UI refetch, post a `Notification.Name` synchronously from the @MainActor caller *after* dispatching the actor task. By the time a subscriber's reload `await`s a snapshot, FIFO actor ordering guarantees the mutation has committed. No race, no userInfo payload needed for the canonical "just refetch" consumer pattern.
-- **`do/catch` over `try?+guard` for cancellation propagation**: `Task.sleep` throwing `CancellationError` is a single mechanism — converting cancellation to a silent return is cleaner than a `try?` that swallows the error followed by a redundant `Task.isCancelled` check.
-- **Empty-map-removes-key invariant for SettingsStore**: when storing a `[K: V]` dictionary, return nil from `encode` for an empty dictionary so the caller can clear the key. Preserves "absent = never customised" — a future migration that needs to distinguish "user explicitly cleared" from "never touched" can't be retro-fitted if we wrote `{}` data.
-- **Pure helpers anchor chart consistency**: `ActivityChartPalette.triggerOrder` is the single source of truth for the 6-trigger render order — `HourlyAwakeChart` reads it directly, so legend/swatch drift between palette and chart is impossible. Better than parallel statics that need cross-reference comments.
-- **8-candidate weekday lookahead**: for a "next occurrence on a configured weekday" helper, iterate `0...7` (today + 7 days). The worst case is "today is the right weekday but target time just passed" — needs offset 7 (a full week forward). Off-by-one trap: doc comment says "up to 7 days" but the loop checks 8 candidates.
-- **UTC-anchored DateComponents in tests** (reaffirmed from S17): all `RecurringQuickPreset` fixtures build dates via `Calendar(identifier: .gregorian)` with `TimeZone(secondsFromGMT: 0)` so weekday assertions are deterministic across CI hosts.
-- **Special-case the common patterns**: `RecurringPresetWeekday.summary(for:)` collapses {2,3,4,5,6} → "Weekdays" and {1,7} → "Weekends" before falling through to the comma-separated path. Owner-visible string stays readable for the 80% case at zero ergonomic cost.
+- **U+2011 non-breaking hyphen for SwiftUI wrap-control**. When a tight caption contains a word-internal hyphen ("Wi-Fi") that SwiftUI's autowrap might break, replace `-` with `\u{2011}` (NON-BREAKING HYPHEN). Wrap then falls only on whitespace boundaries. Cheap, no test (UI-only).
+- **Stable hard-coded UUIDs for replay-safe seed migrations**. When a migration writes a fixed list, hard-code each item's UUID so two `builtinSeeds()` calls return equal arrays. Avoids the trap where `UUID()` per call would make the migration write a different list on every (theoretical) re-run. Idempotent migration is the goal; stable UUIDs guarantee it.
+- **Sentinel-gated migration with three launch-time cases**. A single Bool sentinel (`didSeedBuiltinPresets`) is the **only** state that distinguishes "never migrated" from "user emptied list". Without it, `if list.isEmpty: seed` would resurrect deletions. Migration logic must enumerate three cases: fresh install (sentinel false + empty → seed), upgrader (sentinel false + non-empty → preserve, set sentinel only), returning user (sentinel true → guard returns).
+- **Bottom-leading destructive sheet button + confirmationDialog**. macOS pattern for unrecoverable user-data actions in sheets: destructive button on the bottom-leading edge, visually separated from the right-side Cancel/Save axis. `confirmationDialog` adds an extra safety beat — even though `Button(role: .destructive)` already declares intent, owner-data deletion warrants the extra click.
+- **Cap user-supplied strings before owner-facing dialog interpolation**. A confirm dialog title that interpolates `\(initial?.label ?? "...")` will crash visually (off-screen, clip, wrap awkwardly) if the user typed a 200-char label. 40-char cap + ellipsis + whitespace-trim + fallback-for-empty handles all corruption modes.
+- **Standing simplify-pass ritual is now 13 passes deep** (S10 / S10.1 / S11×2 / S12 / S13 / S14 / S15 / S16 / S17 / S18 / S19×2). All APPROVE or APPROVE-WITH-NITS. Code-reviewer agent ~3 min + follow-through commit ~10 min. The `displayLabelForConfirm` computed var in S19 #6 is a textbook example: a one-line `MED` finding from the agent prevented a real owner-facing UX defect under unusual input.
 
 ---
 
 ## Next-session entry points (priority order)
 
-1. **Owner UI smoke 8-step** — steps 6 + 7 + 8 still pending. **Step 6 expanded for v1.7**: also verify Custom presets section in General Settings (add a "Until 6 PM, Mon-Fri" preset + verify it appears in the popover only on weekdays). **Step 7 expanded for v1.7**: Activity tab — verify Chart colours section ColorPickers; change wifi colour, observe HourlyAwakeChart redraw; click Reset and verify defaults restore. **Step 7 live-polling**: with Activity tab open, toggle a trigger off/on and verify the snapshot updates within ~1 s.
-2. **Owner-blocked S8d** (~5 min Pages deploy: pick 5-9 PNGs / `deploy_pages.sh <url>` / Settings → Pages 1-click / curl validate). PNG candidate set is now the **richest yet** — popover has up to 4 sections (presets / custom / quick presets / recurring presets), Activity tab has 3 charts + chart-colour pickers, General tab has custom-presets editor, Triggers tab has whitelist UI, About tab shows clamshell-tagged reasons.
+1. **Continue owner UI smoke 8-step** — Step 7 (Activity tab Chart colours + live polling) and Step 8 (any remaining surface) still pending. v1.7's three Chart-colour pickers + Reset button + 300ms-debounced live polling are unverified by manual smoke; v1.8's seed-then-mutable migration adds the full editable list to Step 6 verification.
+2. **Owner-blocked S8d** (~5 min Pages deploy: pick 5-9 PNGs / `deploy_pages.sh <url>` / Settings → Pages 1-click / curl validate). PNG candidate set is even richer post-S19 — popover can show 0..N recurring rows depending on owner customisation, sheet has Delete button, Pause caption now wraps cleanly.
 3. **Owner-blocked S8.5** ($99/yr Apple Dev Program enrollment, 1-2 days approval).
 4. **Owner-blocked S9** (App Store Connect metadata; depends on 8.5).
 5. **C-3 still-deferred** (joint design with B1.2): iCloud sync of activity history + iCloud chord sync — schema integration risk if shipped solo.
 6. **V2-06 still-deferred** (no further v1.x scope): lid-closed-only mode, per-display position requirement.
 7. **B1.2 still-deferred** (per 07-spec §1): per-action chords, iCloud sync of chord (joint with C-3 iCloud), false-negative chord-reserved indicator.
-8. **C-7 still-deferred**: Path B (`.until(Date)` enum) + Path C (`@Published activeQuickPreset` aside) — both **retired** per 08-spec §10. No further v1.x C-7 scope.
+8. **C-7 still-deferred**: Path B (`.until(Date)` enum) + Path C (`@Published activeQuickPreset` aside) — both **retired** per 08-spec §10. The seed-then-mutable redesign in §11 is now the canonical C-7 model.
 9. **V2-22 GitHub remote** — repo push, CI execution, gh-pages branch enable. Owner action.
 
-The v1.x feature backlog is **functionally exhausted** — all autonomous-cycle deferred items have shipped. The only remaining v1.x deferrals are joint-design (iCloud sync for both C-3 + B1.2) or owner-decision (B1.2 per-action chords). Next code work needs owner direction (new feature ask, joint iCloud design pass, or owner-blocked S8d/S8.5 unblocking).
+The v1.x feature backlog stays **functionally exhausted** post-S19. What changed: this session's work was owner-reported during manual smoke rather than autonomous-cycle deferred. Future owner-driven sessions will continue this pattern — surface UX issues during use, fix-first, ship.
 
 ---
 
@@ -68,21 +70,21 @@ The v1.x feature backlog is **functionally exhausted** — all autonomous-cycle 
 cd ~/Documents/Claude/Projects/Latte
 pkill -9 -f "Latte.app" 2>/dev/null   # zombie 제거 — LSMultipleInstancesProhibited
 git log --oneline -16
-xcodebuild test -scheme Latte -destination 'platform=macOS,arch=arm64' 2>&1 | grep "Executed 538 tests"
+xcodebuild test -scheme Latte -destination 'platform=macOS,arch=arm64' 2>&1 | grep "Executed 548 tests"
 ~/dev/smoke-harness/run.sh --project .   # SERIAL — xcodebuild test ↔ harness 병렬 금지 (S10.1 lesson)
 ```
 
-**Expect**: 538/538 tests PASS in ~8.5 s. Smoke 22/22 PASS in ~5 min.
+**Expect**: 548/548 tests PASS in ~8.4s. Smoke 22/22 PASS in ~5 min.
 
-**Note**: S16-S18 occasionally hit `LaunchServices Could not launch LatteTests` once — cleared by `pkill -9 -f "Latte.app"`. Cold-start ritual is mandatory.
+**Note**: S16-S19 occasionally hit `LaunchServices Could not launch LatteTests` once — cleared by `pkill -9 -f "Latte.app"`. Cold-start ritual is mandatory.
 
 ---
 
 ## How to resume
 
 1. Read this file first (always overwritten last session).
-2. Skim `ROADMAP.md` row 17 (S18) for full context if needed.
-3. Memory: `~/.claude/projects/.../memory/MEMORY.md` (11-line index) → drill into `project_latte_v1_7.md` for S18 detail; v1.6 (S17) lives in `project_latte_v1_6.md`; older entries in `project_latte_v1_5.md` / `project_latte_v1_3_1.md` / `project_latte_v1_3.md`.
+2. Skim `ROADMAP.md` row 18 (S19) for full context if needed.
+3. Memory: `~/.claude/projects/.../memory/MEMORY.md` (12-line index) → drill into `project_latte_v1_8.md` for S19 detail; v1.7 (S18) lives in `project_latte_v1_7.md`; older entries in `project_latte_v1_6.md` / `project_latte_v1_5.md` / `project_latte_v1_3_1.md` / `project_latte_v1_3.md`.
 4. **Don't** re-read S1-S11 memory entries — consolidated into `project_latte_v1_0.md` + `project_latte_v1_1.md` + `project_latte_v1_2.md` during S13.
 
 ---
@@ -91,73 +93,88 @@ xcodebuild test -scheme Latte -destination 'platform=macOS,arch=arm64' 2>&1 | gr
 
 | # | What | Why blocked | Effort |
 |---|---|---|---|
-| S8d | 5-9 marketing PNGs + `deploy_pages.sh` + Pages 1-click + curl validate. **Popover** can show 4 sections (7 duration presets + Custom + 3 quick presets + N recurring presets, weekday-filtered). **Activity tab** has 3 charts + chart-colour pickers. **General tab** has Custom-presets editor. **Triggers tab** has whitelist UI. **About → Status** shows `(clamshell)` tag. | Owner clicks only | ~5 min |
+| S8d | 5-9 marketing PNGs + `deploy_pages.sh` + Pages 1-click + curl validate. **Popover** can show duration presets + 0..N recurring rows (3 seeded by default, all editable / deletable post-S19). **Activity tab** has 3 charts + chart-colour pickers. **General tab** has Custom-presets editor with Delete button in the edit sheet (S19). **Triggers tab** has whitelist UI. **About → Status** shows `(clamshell)` tag. **Pause caption** wraps cleanly post-S19 fix. | Owner clicks only | ~5 min |
 | S8.5 | Apple Developer Program 가입 | Account/payment owner-only | $99/yr + 1-2 days approval |
 | S9 | App Store Connect 메타 입력 | S8.5 의존 | varies |
 | V2-22 | GitHub repo push + Pages enable | repo URL + auth owner-only | ~10 min |
 
 ---
 
-## v1.7 owner-visible behavior reference (for step 6/7 smoke)
+## v1.8 owner-visible behavior reference (for step 6 smoke)
 
-### Popover render with recurring presets
+### Popover render after S19 redesign
 
 ```
 Click menu bar icon → Popover appears
   ├─ [header: state / mode / power]
   ├─ ── divider ──
   ├─ Pause triggers toggle
+  │   └─ caption: "Ignore Calendar / App / Wi‑Fi / Schedule votes."   ← non-breaking hyphen
   ├─ ── divider ──
-  ├─ Section 1 — Duration presets (7 + Custom)
-  ├─ ── divider ──
-  ├─ Section 2 — Quick presets (3, C-7 Path A v1.6)
-  │  └─ Section 2a — Recurring presets (N, weekday-filtered, NEW v1.7)
-  │       ├─ "Until 6 PM"          (only visible Mon-Fri if so configured)
-  │       └─ "Until 8 PM Tue/Thu"  (only visible Tue + Thu)
+  ├─ Section 1 — Duration presets (5/15/30/1h/2h/5h/Indefinitely + Custom)
+  ├─ ── divider ──   (only if ≥1 active preset)
+  ├─ Section 2 — Recurring presets (0..N, weekday-filtered)
+  │   ├─ "Until 5 PM"                  (seeded, every day)
+  │   ├─ "Until 11 PM"                 (seeded, every day)
+  │   ├─ "Until midnight"              (seeded, every day)
+  │   └─ ...user-defined presets...    (only on configured weekdays)
   ├─ ── divider ──
   ├─ Turn off button
   └─ Settings… / Quit footer
 ```
 
-### Custom-presets editor (General Settings tab)
+### Custom-presets editor (General Settings tab) post-S19
 
 ```
 Settings → General → "Custom presets" section:
   ┌────────────────────────────────────────┐
-  │ Until 6 PM                          ›  │   ← tap to edit
-  │ 18:00 · Weekdays                       │
+  │ Until 5 PM                          ›  │   ← seeded, tap to edit
+  │ 17:00 · Every day                      │
   ├────────────────────────────────────────┤
-  │ Until 8 PM Tue/Thu                  ›  │
-  │ 20:00 · Tue, Thu                       │
+  │ Until 11 PM                         ›  │
+  │ 23:00 · Every day                      │
+  ├────────────────────────────────────────┤
+  │ Until midnight                      ›  │
+  │ 00:00 · Every day                      │
   └────────────────────────────────────────┘
   [ Add preset… ]
 
-Add/edit sheet:
-  Label  [ TextField                          ]
-  Time   [ HH ] : [ MM (5-min stride) ]
-  Days   [Sun][Mon][Tue][Wed][Thu][Fri][Sat]   ← chips, tap to toggle
-                              [Cancel] [Add]   ← disabled if label empty or 0 days
+  ↑ Right-click any row → context menu: Edit… / Delete (existing)
+
+Add/edit sheet (S19 — Delete button added):
+  ┌────────────────────────────────────────┐
+  │ Edit preset                            │
+  ├────────────────────────────────────────┤
+  │ Label  [ Until 5 PM                  ] │
+  │ Time   [ 17 ] : [ 00 ]                 │
+  │ Days   [Sun][Mon][Tue][Wed][Thu][Fri][Sat]
+  ├────────────────────────────────────────┤
+  │ [Delete]                [Cancel] [Save] │   ← Delete is bottom-leading, red
+  └────────────────────────────────────────┘
+
+Delete button → confirmation dialog:
+  "Delete Until 5 PM?"
+  "This preset will be removed from the popover."
+  [Delete (red)]    [Cancel]
 ```
 
-### Activity tab — Chart colours section
+### First-launch migration (seed-then-mutable)
 
 ```
-Settings → Activity → "Chart colours" section:
-  wifi              [color picker]
-  calendar          [color picker]
-  focus             [color picker]
-  app               [color picker]
-  schedule          [color picker]
-  external display  [color picker]
-                    [ Reset to defaults ]   ← only shown when ≥1 override is set
-```
+First app launch ever:
+  AppEnvironment.init →
+    settings.didSeedBuiltinPresets is false
+    settings.recurringQuickPresets is empty
+  ⟹ write 3 seeds + flip sentinel to true
+  ⟹ popover shows 3 seeded rows + duration presets
 
-### Live polling refresh (with Activity tab open)
+User deletes all 3 (right-click Delete or Sheet Delete button) →
+  recurringQuickPresets = []
+  sentinel stays true
+  ⟹ popover shows duration presets only, no divider
 
-```
-Trigger fires (vote ON or OFF, or user toggles trigger off in Triggers tab)
-  → TriggerCoordinator posts .activityLogDidAppend
-  → ActivityTab.scheduleLiveReload() debounces 300 ms
-  → reload() refetches snapshot from ActivityLogStore actor
-  → Charts redraw + Currently active list updates
+App quits + relaunches →
+  AppEnvironment.init reads sentinel=true → guard returns
+  recurringQuickPresets stays []
+  ⟹ owner-cleared state survives restart
 ```
