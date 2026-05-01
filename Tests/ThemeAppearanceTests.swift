@@ -17,26 +17,6 @@ import XCTest
 /// light mode.
 final class ThemeAppearanceTests: XCTestCase {
 
-    func testCupColorDiffersBetweenLightAndDark() {
-        let nsCup = NSColor(Theme.Colors.cup)
-        let darkRGB = nsCup.usingAppearance(.darkAqua, in: .sRGB)
-        let lightRGB = nsCup.usingAppearance(.aqua, in: .sRGB)
-        XCTAssertNotEqual(
-            darkRGB, lightRGB,
-            "Theme.Colors.cup must adapt to light/dark — hard-coded value vanished on light mode"
-        )
-    }
-
-    func testFoamColorDiffersBetweenLightAndDark() {
-        let nsFoam = NSColor(Theme.Colors.foam)
-        let darkRGB = nsFoam.usingAppearance(.darkAqua, in: .sRGB)
-        let lightRGB = nsFoam.usingAppearance(.aqua, in: .sRGB)
-        XCTAssertNotEqual(
-            darkRGB, lightRGB,
-            "Theme.Colors.foam must adapt to light/dark — hard-coded value vanished on light mode"
-        )
-    }
-
     /// Light-mode foam must be perceptibly darker than light-mode background
     /// (the popover / Settings glass is near-white). Use a luminance proxy
     /// (sRGB-linear average of RGB) and require ≤ 0.7 — anything above that

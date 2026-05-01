@@ -28,7 +28,8 @@ public enum Theme {
         /// — perceptibly darker than the near-white popover/Settings backgrounds
         /// so steam particles remain visible. See S20 / P2.
         public static let foam = Color(nsColor: NSColor(name: "LatteFoam") { appearance in
-            appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+            let isDark = appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+            return isDark
                 ? NSColor(srgbRed: 0.96, green: 0.93, blue: 0.85, alpha: 1.0)
                 : NSColor(srgbRed: 0.78, green: 0.68, blue: 0.50, alpha: 1.0)
         })
@@ -40,7 +41,8 @@ public enum Theme {
         /// `(0.42, 0.32, 0.20)` so the cup body reads against near-white
         /// popover/Settings backgrounds. See S20 / P2.
         public static let cup = Color(nsColor: NSColor(name: "LatteCup") { appearance in
-            appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+            let isDark = appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+            return isDark
                 ? NSColor(srgbRed: 0.95, green: 0.95, blue: 0.97, alpha: 1.0)
                 : NSColor(srgbRed: 0.42, green: 0.32, blue: 0.20, alpha: 1.0)
         })

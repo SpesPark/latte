@@ -14,15 +14,12 @@ import XCTest
 /// floor.
 final class SettingsRootLayoutTests: XCTestCase {
 
-    func testMinWindowHeightAccommodatesAboutTab() {
-        // 420 is empirically the smallest height where AboutTab's hero card +
-        // statusCard + footer fit without the greedy Spacer compressing to
-        // negative. Any further tightening would re-introduce the tab-bar-
-        // overflow regression observed in S19 owner manual smoke.
-        XCTAssertGreaterThanOrEqual(
-            SettingsRoot.minWindowHeight, 420,
-            "About tab overflows tab bar when minWindowHeight < 420"
-        )
+    func testMinWindowHeightPinnedToAboutTabFloor() {
+        // Pin to the empirically derived floor — if AboutTab layout changes
+        // and needs less (e.g. ScrollView wrap), update both this constant
+        // and this test together. Two-way contract prevents silent over-
+        // constraining as well as accidental regression.
+        XCTAssertEqual(SettingsRoot.minWindowHeight, 420)
     }
 
     func testMinWindowWidthUnchanged() {
