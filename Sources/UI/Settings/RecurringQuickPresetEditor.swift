@@ -112,15 +112,11 @@ private struct RecurringQuickPresetSheet: View {
     @State private var weekdays: Set<Int> = [2, 3, 4, 5, 6]   // Mon-Fri default
     @State private var showingDeleteConfirm: Bool = false
 
-    init(
-        initial: RecurringQuickPreset?,
-        onDelete: (() -> Void)?,
-        onDone: @escaping (RecurringQuickPreset?) -> Void
-    ) {
-        self.initial = initial
-        self.onDelete = onDelete
-        self.onDone = onDone
-    }
+    /// Cap for the destructive-confirm dialog title so a 200-char user
+    /// label can't push the title off-screen on macOS. Picked empirically
+    /// — 40 chars fits the standard sheet width (~380pt) at the system
+    /// title font without wrapping.
+    private static let confirmTitleLabelCap = 40
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
@@ -195,7 +191,7 @@ private struct RecurringQuickPresetSheet: View {
         .frame(minWidth: 380, minHeight: 280)
         .onAppear { hydrate() }
         .confirmationDialog(
-            "Delete \(initial?.label ?? "this preset")?",
+            "Delete \(displayLabelForConfirm)?",
             isPresented: $showingDeleteConfirm,
             titleVisibility: .visible
         ) {
@@ -206,6 +202,17 @@ private struct RecurringQuickPresetSheet: View {
         } message: {
             Text("This preset will be removed from the popover.")
         }
+    }
+
+    /// Trims and truncates the user-supplied label so the destructive
+    /// dialog title stays within the sheet width. Mirrors any other
+    /// owner-visible label rendering site that needs a cap.
+    private var displayLabelForConfirm: String {
+        let raw = (initial?.label ?? "this preset")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = raw.isEmpty ? "this preset" : raw
+        guard trimmed.count > Self.confirmTitleLabelCap else { return trimmed }
+        return trimmed.prefix(Self.confirmTitleLabelCap) + "…"
     }
 
     private var isValid: Bool {
