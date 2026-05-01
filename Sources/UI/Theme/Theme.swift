@@ -19,8 +19,31 @@ public enum Theme {
 
     public enum Colors {
         public static let coffee = Color(red: 0.36, green: 0.20, blue: 0.09)
-        public static let foam = Color(red: 0.96, green: 0.93, blue: 0.85)
-        public static let cup = Color(red: 0.95, green: 0.95, blue: 0.97)
+
+        /// Dynamic foam color for `CoffeeCupView` steam particles.
+        ///
+        /// In dark mode resolves to the legacy creamy white `(0.96, 0.93, 0.85)`
+        /// that contrasts well against dark popover/Settings backgrounds.
+        /// In light mode resolves to a warm cappuccino tan `(0.78, 0.68, 0.50)`
+        /// — perceptibly darker than the near-white popover/Settings backgrounds
+        /// so steam particles remain visible. See S20 / P2.
+        public static let foam = Color(nsColor: NSColor(name: "LatteFoam") { appearance in
+            appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+                ? NSColor(srgbRed: 0.96, green: 0.93, blue: 0.85, alpha: 1.0)
+                : NSColor(srgbRed: 0.78, green: 0.68, blue: 0.50, alpha: 1.0)
+        })
+
+        /// Dynamic cup body fill for `CoffeeCupView`.
+        ///
+        /// In dark mode resolves to the legacy near-white `(0.95, 0.95, 0.97)`.
+        /// In light mode resolves to a deep cappuccino brown
+        /// `(0.42, 0.32, 0.20)` so the cup body reads against near-white
+        /// popover/Settings backgrounds. See S20 / P2.
+        public static let cup = Color(nsColor: NSColor(name: "LatteCup") { appearance in
+            appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+                ? NSColor(srgbRed: 0.95, green: 0.95, blue: 0.97, alpha: 1.0)
+                : NSColor(srgbRed: 0.42, green: 0.32, blue: 0.20, alpha: 1.0)
+        })
 
         /// Dynamic stroke color for `CoffeeCupView`. Canvas does not always
         /// resolve `Color.primary` against the current appearance, so we use
