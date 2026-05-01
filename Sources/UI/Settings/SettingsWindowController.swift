@@ -64,7 +64,10 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         newWindow.title = "Latte Settings"
         newWindow.styleMask = [.titled, .closable, .miniaturizable, .resizable]
         newWindow.isReleasedWhenClosed = false
-        newWindow.setContentSize(NSSize(width: 460, height: 360))
+        newWindow.setContentSize(NSSize(
+            width: SettingsRoot.minWindowWidth,
+            height: SettingsRoot.minWindowHeight
+        ))
         newWindow.center()
         newWindow.setFrameAutosaveName("LatteSettingsWindow")
         newWindow.delegate = self

@@ -2,6 +2,17 @@ import SwiftUI
 
 public struct SettingsRoot: View {
 
+    /// Minimum width of the Settings window. Sized so the longest picker
+    /// label in GeneralTab fits on a single line.
+    public static let minWindowWidth: CGFloat = 460
+
+    /// Minimum height of the Settings window. Sized so the AboutTab content
+    /// (hero card + statusCard + footer) fits without the greedy `Spacer()`
+    /// compressing to negative and rendering over the TabView's tab bar.
+    /// See `SettingsRootLayoutTests` and S20 / P1 for the regression that
+    /// motivated 360 → 420.
+    public static let minWindowHeight: CGFloat = 420
+
     @ObservedObject public var manager: AwakeManager
     @ObservedObject public var coordinator: TriggerCoordinator
     public let activityStore: ActivityLogStore?
@@ -49,7 +60,7 @@ public struct SettingsRoot: View {
                 .tabItem { Label("About", systemImage: "info.circle") }
                 .tag(SettingsTab.about)
         }
-        .frame(minWidth: 460, minHeight: 360)
+        .frame(minWidth: Self.minWindowWidth, minHeight: Self.minWindowHeight)
         .onReceive(NotificationCenter.default.publisher(for: .settingsRequestFocusTrigger)) { note in
             guard let id = note.object as? String else { return }
             focusedTriggerId = id
