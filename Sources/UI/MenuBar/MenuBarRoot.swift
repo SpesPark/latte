@@ -132,7 +132,7 @@ public struct MenuBarRoot: View {
                         .font(Theme.Fonts.body)
                     Text(manager.triggersPaused
                          ? "Manual activation still works."
-                         : "Ignore Calendar / App / Wi-Fi / Schedule votes.")
+                         : "Ignore Calendar / App / Wi\u{2011}Fi / Schedule votes.")
                         .font(Theme.Fonts.caption)
                         .foregroundStyle(.secondary)
                 }
