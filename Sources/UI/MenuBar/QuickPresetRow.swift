@@ -1,9 +1,13 @@
 import SwiftUI
 
 /// Wall-clock target row for the popover ("Until 5 PM" etc — C-7 Path A).
-/// Distinct from `DurationPickerRow` so the checkmark logic stays simple
-/// (no preset row ever shows active — the FSM holds `.minutes(N)` after
-/// click, which `CustomDurationRow.isUnlistedCustomDuration` will catch).
+///
+/// **Deprecated by S19 #2** (2026-05-02): the popover now renders all
+/// wall-clock rows via `RecurringQuickPresetRow`. This view is retained
+/// only because the type is `public` and an external caller could in
+/// principle still reference it; remove once API stability is no longer
+/// a concern (likely v2.0). New popover rows must use
+/// `RecurringQuickPresetRow`.
 public struct QuickPresetRow: View {
 
     public let preset: QuickPreset

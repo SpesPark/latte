@@ -44,40 +44,31 @@ public struct MenuBarRoot: View {
 
             Divider().opacity(0.5)
 
-            // C-7 Path A — wall-clock target presets ("Until 5 PM" etc).
-            // Conversion to .minutes(N) at click time (08-spec §3 Path A).
-            // Acceptable trade-off: while a session is active, the
-            // checkmark falls on the Custom row (not on the preset row)
-            // because the FSM holds .minutes(N).
-            VStack(spacing: 0) {
-                ForEach(QuickPreset.allCases, id: \.self) { preset in
-                    QuickPresetRow(
-                        preset: preset,
-                        action: {
-                            let mins = preset.minutes(from: .now)
-                            manager.activate(for: .minutes(mins))
-                        }
-                    )
+            // C-7 wall-clock target presets — seed-then-mutable model
+            // (S19 #2). The three legacy rows (until 5 PM / 11 PM /
+            // midnight) seed once into `recurringQuickPresets` at first
+            // launch and become editable like any user preset. Filtered
+            // by today's weekday — Mon-Fri preset never shows Saturday.
+            // Click → minutes-from-now → activate(.minutes(N)).
+            // Owner-cleared → empty section, popover stays clean.
+            let activePresets = environment.recurringQuickPresets
+                .filter { $0.isActiveOn(date: .now) }
+            if !activePresets.isEmpty {
+                VStack(spacing: 0) {
+                    ForEach(activePresets) { preset in
+                        RecurringQuickPresetRow(
+                            preset: preset,
+                            action: {
+                                let mins = preset.minutes(from: .now)
+                                manager.activate(for: .minutes(mins))
+                            }
+                        )
+                    }
                 }
-                // C-7 v1.7 — user-defined recurring presets, filtered to
-                // today's weekday so a Mon-Fri preset never shows on a
-                // Saturday. Click → minutes-from-now → activate, same as
-                // the built-in QuickPreset rows above.
-                let activePresets = environment.recurringQuickPresets
-                    .filter { $0.isActiveOn(date: .now) }
-                ForEach(activePresets) { preset in
-                    RecurringQuickPresetRow(
-                        preset: preset,
-                        action: {
-                            let mins = preset.minutes(from: .now)
-                            manager.activate(for: .minutes(mins))
-                        }
-                    )
-                }
-            }
-            .padding(.vertical, 2)
+                .padding(.vertical, 2)
 
-            Divider().opacity(0.5)
+                Divider().opacity(0.5)
+            }
 
             Button(role: .destructive, action: { manager.deactivate() }) {
                 HStack(spacing: Theme.Spacing.sm) {

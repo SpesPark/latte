@@ -122,6 +122,11 @@ public final class AppEnvironment: ObservableObject {
         self.activityChartColors = ActivityChartPalette.decode(
             overrides: settings.data(.activityChartColors)
         )
+        // Seed-then-mutable C-7 migration (S19 #2). Idempotent — flips
+        // a sentinel after first run so a user who deletes all presets
+        // never sees them re-spawn. Must come BEFORE the read below so
+        // the @Published mirror picks up the seeded list on first launch.
+        RecurringQuickPreset.seedBuiltinPresetsIfNeeded(in: settings)
         self.recurringQuickPresets = RecurringQuickPreset.read(from: settings)
         let resolvedLaunchService: LaunchAtLoginService
         if let launchAtLoginService {

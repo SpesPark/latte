@@ -2,13 +2,18 @@ import Foundation
 
 /// Time-of-day quick presets (C-7 — Path A per `docs/design/08-c7-quick-presets-paths.md`).
 ///
+/// **Deprecated by S19 #2** (2026-05-02): superseded by the
+/// seed-then-mutable model. `RecurringQuickPreset.builtinSeeds()` now
+/// holds the three legacy rows as data, and the popover renders only
+/// from `recurringQuickPresets`. This enum is retained for the existing
+/// nextOccurrence/minutes regression tests in `QuickPresetTests` —
+/// no production code path references it. New rows must be added by
+/// editing `builtinSeeds()` (with new stable UUIDs) or via the user
+/// CRUD UI in General Settings.
+///
 /// These are NOT durations — they are wall-clock targets. The preset
 /// computes "minutes from now to the next occurrence" at activation time
 /// and routes that through `AwakeManager.activate(for: .minutes(N))`.
-/// Acceptable trade-off (per spec §3 Path A): the popover checkmark
-/// renders on the **Custom row** while an "Until X PM" session is active,
-/// not on the preset row, because the FSM holds `.minutes(N)`. Owner
-/// tolerated; documented in 08-spec §5.
 public enum QuickPreset: String, CaseIterable, Sendable {
     case until5PM
     case until11PM
