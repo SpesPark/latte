@@ -323,7 +323,7 @@ final class RecurringQuickPresetTests: XCTestCase {
 
     /// Case C — sentinel already true. Migration is a no-op even if the
     /// list is empty (owner deleted all seeds intentionally).
-    func testMigrationDoesNotResEEDAfterUserDeletedAllPresets() {
+    func testMigrationDoesNotReseedAfterUserDeletedAllPresets() {
         let store = InMemorySettingsStore()
         store.setBool(true, for: .didSeedBuiltinPresets)
         // List intentionally empty — owner cleared all presets.
@@ -335,5 +335,21 @@ final class RecurringQuickPresetTests: XCTestCase {
             RecurringQuickPreset.read(from: store).isEmpty,
             "sentinel-true means user has full control; never re-seed"
         )
+    }
+
+    /// Regression for the third launch-time case in §11: sentinel true +
+    /// non-empty list (i.e. a normal returning user) is a no-op. The
+    /// presets are not modified, the sentinel stays true, and no
+    /// `write` runs that could perturb timestamps or ordering.
+    func testMigrationIsNoOpForReturningUserWithPresets() {
+        let store = InMemorySettingsStore()
+        store.setBool(true, for: .didSeedBuiltinPresets)
+        let existing = [makePreset(label: "User preset", hour: 14, weekdays: [1, 7])]
+        RecurringQuickPreset.write(existing, to: store)
+
+        RecurringQuickPreset.seedBuiltinPresetsIfNeeded(in: store)
+
+        XCTAssertTrue(store.bool(.didSeedBuiltinPresets, default: false))
+        XCTAssertEqual(RecurringQuickPreset.read(from: store), existing)
     }
 }

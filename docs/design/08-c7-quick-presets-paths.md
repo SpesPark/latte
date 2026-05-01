@@ -342,3 +342,88 @@ future-proofing. Both rationales are obsolete:
 - SettingsStore round-trip + empty clears + nil → [] + corrupt → []
 - Weekday helper (every-day / weekdays / weekends / arbitrary /
   short-label / empty)
+
+## §11. As shipped — v1.8 (S19 #2, 2026-05-02) — Built-in seed-then-mutable redesign
+
+Owner-reported in step 6 manual smoke (S19): the three legacy
+`QuickPreset` rows (until 5 PM / 11 PM / midnight) are valuable for
+some users but waste popover space for users who never use them.
+Hard-coded enum cases are by definition not deletable.
+
+**Redesign**: built-ins become *seed data* in the regular
+`recurringQuickPresets` list. First-launch migration writes the three
+legacy rows as `RecurringQuickPreset` values; from that moment on they
+behave like any user-defined preset (editable label / time / weekdays,
+deletable via right-click in General Settings).
+
+### Migration semantics
+
+A new `SettingsKey.didSeedBuiltinPresets` (Bool, default false) is the
+**only** state that distinguishes "fresh install" from "user emptied
+the list intentionally". Without this sentinel, `seedBuiltinPresets`
+on every empty list would resurrect the seeds whenever a user deleted
+all three — a rage-quit scenario. With the sentinel:
+
+| State at launch | Sentinel | Existing list | Action |
+|---|---|---|---|
+| Fresh install | false | empty | Write 3 seeds, set sentinel true |
+| v1.7 upgrader (had user presets) | false | non-empty | Preserve list, set sentinel true |
+| Returning user | true | any | No-op |
+
+The sentinel is set in **all three** pre-true cases so the migration
+runs at most once per install regardless of subsequent edits.
+
+### Seed values (per S19 #2 owner decisions)
+
+```
+"Until 5 PM"       hour=17 minute=0  weekdays={1...7}  UUID=C7000001-…-017
+"Until 11 PM"      hour=23 minute=0  weekdays={1...7}  UUID=C7000001-…-023
+"Until midnight"   hour=0  minute=0  weekdays={1...7}  UUID=C7000001-…-000
+```
+
+Stable hard-coded UUIDs so two `builtinSeeds()` calls return equal
+arrays — writes stay idempotent and edge-case re-runs (theoretical) can't
+double-seed.
+
+Midnight uses `hour=0` instead of the legacy `targetHour=24` sentinel.
+`RecurringQuickPreset.nextOccurrence` looks ahead 8 candidates (today +
+7 days) — a candidate that has already passed (always true for hour=0
+when `now > today's startOfDay`) naturally rolls forward to tomorrow.
+Result is identical minutes-from-now to the legacy
+`QuickPreset.untilMidnight` calculation.
+
+### Owner-decision recap
+
+- (a) Empty popover (zero presets) is acceptable — popover wraps the
+  recurring section in `if !activePresets.isEmpty`, no empty divider.
+- (b) Seed weekdays = `{1...7}` (Every day) so first-launch behaviour
+  matches the legacy enum exactly. Users freely narrow to platform
+  patterns (Weekdays / Weekends) themselves.
+- (c) `QuickPreset` enum + `QuickPresetRow` view: deprecated via
+  doc-comment, retained for API stability and existing
+  `nextOccurrence` / `minutes` regression tests.
+- (d) Seed labels stay verbatim ("Until 5 PM" / "Until 11 PM" / "Until
+  midnight") — the seed visibility is via the editor list, not via
+  label suffix.
+
+### Test coverage
+
+547 → 547 tests (no change at total because the SettingsStoreTests
+allowlist update was a tracked invariant, not a new behaviour test).
+The 9 new RED→GREEN tests live in `RecurringQuickPresetTests`:
+- `builtinSeeds()` cardinality / labels / weekdays / target times /
+  UUID stability / midnight-rolls-to-tomorrow (6 tests)
+- `seedBuiltinPresetsIfNeeded(in:)` fresh-install / upgrader-preserves /
+  user-cleared-no-respawn (3 tests)
+
+### Cross-references
+
+- `Sources/Core/RecurringQuickPreset.swift` — `builtinSeeds()` +
+  `seedBuiltinPresetsIfNeeded(in:)` + stable seed UUIDs
+- `Sources/App/AppEnvironment.swift` — migration call before recurring
+  list read
+- `Sources/UI/MenuBar/MenuBarRoot.swift` — popover renders only from
+  `recurringQuickPresets`, gated on non-empty
+- `Sources/Core/QuickPreset.swift` — deprecated, kept for tests
+- `Sources/UI/MenuBar/QuickPresetRow.swift` — deprecated, kept for
+  API stability

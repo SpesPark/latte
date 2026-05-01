@@ -104,8 +104,8 @@ public struct RecurringQuickPreset: Codable, Equatable, Identifiable, Sendable {
     /// Stable UUIDs for the three built-in seeds. Hard-coded so `builtinSeeds()`
     /// returns the same `[RecurringQuickPreset]` across calls (writes stay
     /// idempotent and the migration is replay-safe).
-    private static let builtinSeedUntil5PMID    = UUID(uuidString: "C7000001-5EED-4001-8001-000000000017")!
-    private static let builtinSeedUntil11PMID   = UUID(uuidString: "C7000001-5EED-4001-8001-000000000023")!
+    private static let builtinSeedUntil5PMID = UUID(uuidString: "C7000001-5EED-4001-8001-000000000017")!
+    private static let builtinSeedUntil11PMID = UUID(uuidString: "C7000001-5EED-4001-8001-000000000023")!
     private static let builtinSeedUntilMidnightID = UUID(uuidString: "C7000001-5EED-4001-8001-000000000000")!
 
     /// Returns the three legacy `QuickPreset` rows (until 5 PM / 11 PM /
@@ -147,11 +147,14 @@ public struct RecurringQuickPreset: Codable, Equatable, Identifiable, Sendable {
     /// sentinel is true the call is a no-op so a user who deletes all
     /// seeds never sees them re-spawn.
     ///
-    /// Two pre-sentinel cases:
-    /// - **Fresh install** (no existing presets) → write seeds.
-    /// - **v1.7 upgrader** (existing user-defined presets) → preserve
-    ///   them, just flip the sentinel. The seeds never appear because
-    ///   the user already has a populated list.
+    /// Three launch-time cases:
+    /// - **Fresh install** (sentinel false, no existing presets) →
+    ///   write seeds, set sentinel.
+    /// - **v1.7 upgrader** (sentinel false, existing user-defined
+    ///   presets) → preserve list, set sentinel only. Seeds never
+    ///   appear because the user already has a populated list.
+    /// - **Returning user** (sentinel true) → guard returns immediately,
+    ///   no I/O. Owner-cleared empty list stays empty.
     public static func seedBuiltinPresetsIfNeeded(in store: SettingsStore) {
         guard !store.bool(.didSeedBuiltinPresets, default: false) else { return }
         if read(from: store).isEmpty {
