@@ -34,16 +34,25 @@ public struct RecurringQuickPresetEditor: View {
         Button("Add preset…") { showingNewSheet = true }
             .accessibilityIdentifier("settings.recurringPreset.add")
 
-        // Add sheet
+        // Add sheet — `onDelete` is nil because there's nothing to
+        // delete yet (the preset doesn't exist until Add).
         .sheet(isPresented: $showingNewSheet) {
-            RecurringQuickPresetSheet(initial: nil) { newPreset in
+            RecurringQuickPresetSheet(initial: nil, onDelete: nil) { newPreset in
                 if let newPreset { presets.append(newPreset) }
                 showingNewSheet = false
             }
         }
-        // Edit sheet (item-binding so a different preset replaces the previous)
+        // Edit sheet — `onDelete` removes the preset and closes the
+        // sheet, mirroring the right-click → Delete flow but without
+        // forcing the owner to discover the context menu (S19 #3).
         .sheet(item: $editingPreset) { editing in
-            RecurringQuickPresetSheet(initial: editing) { updated in
+            RecurringQuickPresetSheet(
+                initial: editing,
+                onDelete: {
+                    delete(editing)
+                    editingPreset = nil
+                }
+            ) { updated in
                 if let updated, let idx = presets.firstIndex(where: { $0.id == editing.id }) {
                     presets[idx] = updated
                 }
@@ -91,18 +100,25 @@ private struct RecurringQuickPresetSummaryRow: View {
 private struct RecurringQuickPresetSheet: View {
 
     let initial: RecurringQuickPreset?
+    /// Non-nil only in edit mode (S19 #3). Wired to the parent's
+    /// `delete(_:)` + sheet dismissal. nil for the Add sheet because
+    /// there's nothing to delete yet.
+    let onDelete: (() -> Void)?
     let onDone: (RecurringQuickPreset?) -> Void
 
     @State private var label: String = ""
     @State private var hour: Int = 17
     @State private var minute: Int = 0
     @State private var weekdays: Set<Int> = [2, 3, 4, 5, 6]   // Mon-Fri default
+    @State private var showingDeleteConfirm: Bool = false
 
     init(
         initial: RecurringQuickPreset?,
+        onDelete: (() -> Void)?,
         onDone: @escaping (RecurringQuickPreset?) -> Void
     ) {
         self.initial = initial
+        self.onDelete = onDelete
         self.onDone = onDone
     }
 
@@ -150,6 +166,15 @@ private struct RecurringQuickPresetSheet: View {
             .formStyle(.grouped)
 
             HStack {
+                // Bottom-leading destructive action — visually separated
+                // from Cancel/Save so a mis-click on Save can't delete.
+                // Confirmation alert for an extra safety beat.
+                if onDelete != nil {
+                    Button("Delete", role: .destructive) {
+                        showingDeleteConfirm = true
+                    }
+                    .accessibilityIdentifier("preset.sheet.delete")
+                }
                 Spacer()
                 Button("Cancel") { onDone(nil) }
                 Button(initial == nil ? "Add" : "Save") {
@@ -169,6 +194,18 @@ private struct RecurringQuickPresetSheet: View {
         .padding()
         .frame(minWidth: 380, minHeight: 280)
         .onAppear { hydrate() }
+        .confirmationDialog(
+            "Delete \(initial?.label ?? "this preset")?",
+            isPresented: $showingDeleteConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                onDelete?()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This preset will be removed from the popover.")
+        }
     }
 
     private var isValid: Bool {
