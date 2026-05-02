@@ -90,8 +90,7 @@ public enum CoffeeAccent: String, CaseIterable, Sendable, Identifiable {
     public var color: Color {
         let p = pair
         return Color(nsColor: NSColor(name: "CoffeeAccent.\(rawValue)") { appearance in
-            let isDark = appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
-            let rgb = isDark ? p.dark : p.light
+            let rgb = appearance.isDarkAqua ? p.dark : p.light
             return NSColor(srgbRed: rgb.red, green: rgb.green, blue: rgb.blue, alpha: 1.0)
         })
     }
