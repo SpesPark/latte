@@ -42,13 +42,16 @@ public enum Theme {
         /// Dynamic cup body fill for `CoffeeCupView`.
         ///
         /// In dark mode resolves to the legacy near-white `(0.95, 0.95, 0.97)`.
-        /// In light mode resolves to a deep cappuccino brown
-        /// `(0.42, 0.32, 0.20)` so the cup body reads against near-white
-        /// popover/Settings backgrounds. See S20 / P2.
+        /// In light mode resolves to a warm tan `(0.86, 0.80, 0.72)` —
+        /// brighter than every `CoffeeAccent` liquid tone (so the cup body
+        /// reads as the mug, not as more coffee) and darker than the
+        /// near-white popover/Settings background (so the labelColor stroke
+        /// + handle remain visible). See S22 / P-issue-1 — supersedes the
+        /// S20 / P2 attempt that picked too dark a value.
         public static let cup = Color(nsColor: NSColor(name: "LatteCup") { appearance in
             appearance.isDarkAqua
                 ? NSColor(srgbRed: 0.95, green: 0.95, blue: 0.97, alpha: 1.0)
-                : NSColor(srgbRed: 0.42, green: 0.32, blue: 0.20, alpha: 1.0)
+                : NSColor(srgbRed: 0.86, green: 0.80, blue: 0.72, alpha: 1.0)
         })
 
         /// Dynamic stroke color for `CoffeeCupView`. Canvas does not always
