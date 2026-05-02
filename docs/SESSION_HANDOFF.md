@@ -8,15 +8,17 @@
 
 | Field | Value |
 |---|---|
-| **Session #** | **S22** — resumed owner-driven manual smoke (2026-05-02 → 2026-05-03). **Five P-issues** total. Three light-mode visual issues from owner manual smoke (cup body too dark, handle invisible, noir as pure black). One self-discovered keybinding gap (popover ⌘, / ⌘Q in LSUIElement context — attempted, owner-confirmed non-functional, reverted). One pause-all snooze bug (`.awakeTriggered` → `.snoozed` painted misleading "Until X" caption + didn't auto-recover). Twelve-commit chain. |
-| **Theme** | "Constraint ≠ user gesture. Pause-all, AC unplug, and other system-level forces must NOT inherit the user-deactivate FSM path — the user-flavoured `.snoozed` transition paints a misleading 'Until X' caption that lies about who initiated the sleep. New `.constraintDeactivate` input is the canonical handler now. Plus: constraint-lift hooks must trigger re-evaluation, because steady-state conditions don't naturally re-fire." |
-| **Status** | ✅ **5 fix commits + 1 revert + 3 doc-sync commits.** **Tests 554 → 561** (+7 net: P1 +1, P2 +2, P3 +1, P4 +0/reverted, P5 +3). **Smoke 22/22 PASS** post-each-fix. Working tree clean. |
-| **Tail commit** | `378b614` (chore: revert popover ⌘, / ⌘Q modifiers — owner-confirmed non-functional) — doc-sync commit forthcoming after this file lands. |
+| **Session #** | **S22** — resumed owner-driven manual smoke (2026-05-02 → 2026-05-03). **Six P-issues** total. Three light-mode visual issues + one popover keybinding gap (deferred non-functional, reverted) + one pause-all snooze bug + one P-issue-5b follow-up (P5 fix shipped but called the wrong protocol method on triggers; pause-lift didn't actually re-emit; plus the same misleading "Until X" caption surfaced via Turn off → snoozed). Fourteen-commit chain. |
+| **Theme** | "P-issue-5 had two layers and I only fixed the FSM layer in the first ship — the trigger-side hook called `reevaluateWatched()`, which short-circuits on watched-set no-diff. Owner had to retest before I noticed. Plus: HeaderView's 'Until X' caption was reading `endsAt` without gating on `isAwake`, so the same lie surfaced via Turn off → snoozed even before P-issue-5 ever shipped. **Two-layer dedup for trigger re-eval hooks** + **`endsAt` ≠ awake-deadline** are the patterns." |
+| **Status** | ✅ **6 fix commits + 1 revert + 4 doc-sync commits.** **Tests 554 → 563** (+9 net: P1 +1, P2 +2, P3 +1, P4 +0/reverted, P5 +3, P5b +2). **Smoke 22/22 PASS** post-each-fix. Working tree clean. |
+| **Tail commit** | `c4703db` (fix: pause-lift auto-recovery + Turn off caption — S22 / P-issue-5b) — doc-sync commit forthcoming after this file lands. |
 
 ### Commit chain (S22 only — top is HEAD)
 
 ```
-(this commit)  docs: SESSION_HANDOFF wrap for S22 (P-issue-5 + P-issue-4 deferral)   (S22 #12)
+(this commit)  docs: SESSION_HANDOFF wrap for S22 (P-issue-5b)                       (S22 #14)
+c4703db        fix: pause-lift auto-recovery + Turn off caption                      (S22 #13) ← P-issue-5b
+d1513bb        docs: SESSION_HANDOFF wrap for S22 (P-issue-5 + P-issue-4 deferral)   (S22 #12)
 378b614        chore: revert popover ⌘, / ⌘Q — owner-confirmed non-functional       (S22 #11)
 895947a        fix: pause-all bypasses snooze + lift hook re-evaluates triggers      (S22 #10) ← P-issue-5
 cebff0a        docs: SESSION_HANDOFF wrap for S22 P-issue-4 (popover ⌘ shortcuts)    (S22 #9)
@@ -37,7 +39,8 @@ ebbd04a        fix: light-mode cup body — brighter than liquid                
 | P2 | `69d8927`. `Theme.Colors.cupStroke` becomes dynamic NSColor — light: solid `(0.36, 0.20, 0.09)` coffee brown α=1.0; dark: `labelColor.α(0.55)` legacy. Two regression-pin tests (light alpha+avg, dark alpha pin). | +2 |
 | P3 | `e4b340e`. Noir light `(0.20, 0.20, 0.20)` → `(0.32, 0.32, 0.32)` charcoal. Floor-test ≥ 0.28. | +1 |
 | P4 | `272970b` → `378b614`. **Attempted-and-reverted.** Added `.keyboardShortcut(",", modifiers: .command)` + `.keyboardShortcut("q", modifiers: .command)` on popover footer buttons. Owner confirmed via manual test that the modifiers don't fire in NSStatusItem popover context (LSUIElement / `.accessory` policy). Reverted; doc-comment in `MenuBarRoot.swift` records the deferral. | 0 |
-| P5 | `895947a`. Pause-all from `.awakeTriggered` painted misleading "Until X" caption (because `enterSnoozed` sets `endsAt + reason=.user`). Plus: `.snoozed` lockout held 5 min after pause OFF, with no auto-recovery for steady-state triggers. **Two-part fix**: (a) new `AwakeInput.constraintDeactivate` + helper that goes directly to `.asleep` clearing pendingVotes; (b) `triggersPaused` didSet posts `.latteTriggerPauseDidLift` on true→false transition; `TriggerCoordinator` subscribes and calls `reevaluateAll()` invoking new `Trigger.reevaluateWatched()` (default empty impl, 5 concrete triggers already implement it). | +3 |
+| P5 | `895947a`. Pause-all from `.awakeTriggered` painted misleading "Until X" caption (because `enterSnoozed` sets `endsAt + reason=.user`). Plus: `.snoozed` lockout held 5 min after pause OFF, with no auto-recovery for steady-state triggers. **Two-part fix**: (a) new `AwakeInput.constraintDeactivate` + helper that goes directly to `.asleep` clearing pendingVotes; (b) `triggersPaused` didSet posts `.latteTriggerPauseDidLift` on true→false transition; `TriggerCoordinator` subscribes and calls `reevaluateAll()` invoking `Trigger.reevaluateWatched()`. | +3 |
+| P5b | `c4703db`. **P5 fix was incomplete on the trigger side.** Owner re-tested: pause OFF still didn't auto-recover, and Turn off pressed while AppTrigger was voting ON painted the same "Until X" caption. Two distinct root causes: (a) `reevaluateWatched()` short-circuits on watched-set no-diff (Settings UI dedup) so pause-lift never actually re-emitted; (b) HeaderView returned "Until X" whenever endsAt!=nil regardless of isAwake, so .snoozed (entered via Turn off → .userDeactivate from .awakeTriggered) painted the snooze deadline as if it were an awake deadline. Fix: new `Trigger.reemitCurrentVote()` protocol method (bypasses dedup); `AppTrigger.reemitCurrentVote()` impl; `TriggerCoordinator.reevaluateAll()` switched from `reevaluateWatched()` to `reemitCurrentVote()`. HeaderView gates every "Until …" branch on `isAwake == true`. | +2 |
 
 ### Patterns reinforced this session
 
@@ -48,7 +51,9 @@ ebbd04a        fix: light-mode cup body — brighter than liquid                
 - **LSUIElement popover keybinding completeness ≠ keybinding functionality** (P-issue-4) — source-inspection during popover UX checklist prep can flag missing `.keyboardShortcut(...)` modifiers, but **only owner manual smoke can confirm they actually fire** in the NSStatusItem popover context. Source-inspection finds the omission; manual smoke confirms whether the proposed wiring actually works. **Both halves are required.**
 - **Constraint-driven deactivate ≠ user-driven deactivate** (P-issue-5) — system-level forces (pause-all, AC unplug) must NOT inherit the user-deactivate FSM transition table, because the `.snoozed` path that follows `.userDeactivate` from `.awakeTriggered` paints a misleading "Until X" caption. New `AwakeInput.constraintDeactivate` is the canonical handler.
 - **Constraint-lift hooks for stateless re-evaluation** (P-issue-5) — when a constraint that suppressed triggers is lifted, the coordinator must explicitly ask each trigger to re-emit. Steady-state conditions (Notion still running, calendar event still in progress) don't naturally re-fire — they're not transition-driven.
-- **Sequential cascade in resumed manual smoke** — each owner-driven fix exposes the next layer (cup body → stroke → noir → popover keybinding gap → pause-all snooze). Step 6 is now confirmed as the canonical popover regression catch.
+- **Two-layer dedup for trigger re-eval hooks** (P-issue-5b) — the same trigger needs two separate protocol methods: `reevaluateWatched()` is idempotent on watched-set no-diff (Settings UI list-edit path), `reemitCurrentVote()` bypasses the dedup and emits the current state (constraint-lift / coordinator-driven path). Conflating them breaks one of the two callers — exactly what P-issue-5 ship did before owner caught it on retest.
+- **HeaderView captions must gate `isAwake` before reading `endsAt`** (P-issue-5b) — `endsAt` is published for both awake-deadline (`.awakeUserTimed`) AND not-awake-deadline (`.snoozed`, `.coolingDown`) states. The "Until X" phrasing is only correct for the awake-deadline subset. Same defect surfaced through the Turn-off → snoozed path even before pause-all was wired.
+- **Sequential cascade in resumed manual smoke** — each owner-driven fix exposes the next layer (cup body → stroke → noir → popover keybinding gap → pause-all snooze caption → pause-all incomplete trigger-side fix + Turn off caption). Step 6 is now confirmed as the canonical popover regression catch.
 
 ### What was checked but not changed
 
@@ -83,11 +88,11 @@ The v1.x feature backlog stays **functionally exhausted**. S22 is a P-issue-driv
 cd ~/Documents/Claude/Projects/Latte
 pkill -9 -f "Latte.app" 2>/dev/null   # zombie 제거 — LSMultipleInstancesProhibited
 git log --oneline -16
-xcodebuild test -scheme Latte -destination 'platform=macOS,arch=arm64' 2>&1 | grep "Executed 561 tests"
+xcodebuild test -scheme Latte -destination 'platform=macOS,arch=arm64' 2>&1 | grep "Executed 563 tests"
 ~/dev/smoke-harness/run.sh --project .   # SERIAL — xcodebuild test ↔ harness 병렬 금지 (S10.1 lesson)
 ```
 
-**Expect**: 561/561 tests PASS in ~8.5s. Smoke 22/22 PASS in ~6:14.
+**Expect**: 563/563 tests PASS in ~8.5s. Smoke 22/22 PASS in ~6:14.
 
 **Note**: S16-S22 occasionally hit `LaunchServices Could not launch LatteTests` once — cleared by `pkill -9 -f "Latte.app"`. Cold-start ritual is mandatory.
 
