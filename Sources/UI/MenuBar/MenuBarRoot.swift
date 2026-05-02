@@ -89,20 +89,29 @@ public struct MenuBarRoot: View {
 
             Divider().opacity(0.5)
 
+            // S22 / P-issue-4: `.keyboardShortcut(",", modifiers: .command)` /
+            // `.keyboardShortcut("q", modifiers: .command)` were attempted
+            // here so ⌘, / ⌘Q would dismiss-and-act from the popover, but
+            // owner-confirmed they don't fire in the LSUIElement /
+            // .accessory NSStatusItem popover context — the popover's
+            // window doesn't appear to enter the SwiftUI responder chain
+            // for keyEquivalent dispatch even when key. Owner deferred as
+            // non-critical; mouse click still works. Revisit if Apple
+            // changes popover focus handling in a future macOS, or
+            // migrate to a NSEvent local monitor on popover-show if
+            // explicitly requested.
             HStack {
                 Button(action: openSettings) {
                     Text("Settings…")
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
-                .keyboardShortcut(",", modifiers: .command)
                 Spacer()
                 Button(action: { NSApp.terminate(nil) }) {
                     Text("Quit")
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
-                .keyboardShortcut("q", modifiers: .command)
             }
             .font(Theme.Fonts.caption)
             .padding(.horizontal, Theme.Spacing.lg)
