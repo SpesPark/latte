@@ -12,6 +12,7 @@ public final class TriggerCoordinator: ObservableObject {
     private let activityStore: ActivityLogStore?
     private let logger = LatteLog.triggers
     private var consumerTasks: [String: Task<Void, Never>] = [:]
+    private var pauseLiftObserver: NSObjectProtocol?
 
     public init(
         awakeManager: AwakeManager,
@@ -21,6 +22,37 @@ public final class TriggerCoordinator: ObservableObject {
         self.awakeManager = awakeManager
         self.settings = settings
         self.activityStore = activityStore
+        // S22 / P-issue-5: when pause-all is lifted, ask every enabled
+        // trigger to re-emit its current vote. AwakeManager has already
+        // cleared pendingVotes via .constraintDeactivate, so the only way
+        // a steady-state condition (Notion still running, calendar event
+        // still in progress) can wake the cup back up is by replaying
+        // through the trigger's voteStream.
+        pauseLiftObserver = NotificationCenter.default.addObserver(
+            forName: .latteTriggerPauseDidLift,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.reevaluateAll()
+            }
+        }
+    }
+
+    deinit {
+        if let pauseLiftObserver {
+            NotificationCenter.default.removeObserver(pauseLiftObserver)
+        }
+    }
+
+    /// Asks every enabled trigger to re-evaluate its current condition and
+    /// re-emit the vote. Called from the `.latteTriggerPauseDidLift`
+    /// observer, but exposed publicly so tests / future callers can drive
+    /// it directly.
+    public func reevaluateAll() {
+        for trigger in triggers where trigger.isEnabled {
+            trigger.reevaluateWatched()
+        }
     }
 
     public func register(_ trigger: any Trigger) {

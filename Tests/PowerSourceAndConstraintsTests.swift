@@ -198,6 +198,52 @@ final class AwakeManagerConstraintsTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(assertion.deactivationCount, 1)
     }
 
+    /// **S22 / P-issue-5**: pause-all from `.awakeTriggered` previously routed
+    /// through `.userDeactivate` → `enterSnoozed` which set `endsAt = now + 5min`
+    /// and `activeReason = .user`. The header rendered "Until 12:27 AM"
+    /// caption — a misleading user-timed-session signal even though the user
+    /// only paused triggers. Owner-reported during the resumed Step 6
+    /// manual smoke. After fix: constraint-driven deactivate goes
+    /// directly to `.asleep`, clears pendingVotes, sets `activeReason = .none`,
+    /// no countdown caption.
+    func testPauseAllFromTriggeredClearsCaptionAndReason() {
+        let (manager, _, _, _) = makeManager()
+        manager.receiveTriggerVote(
+            TriggerVote(wantsAwake: true, reason: "App: Notion"),
+            from: "AppTrigger"
+        )
+        XCTAssertTrue(manager.isAwake)
+        XCTAssertEqual(manager.activeReason, .trigger(id: "AppTrigger"))
+
+        manager.triggersPaused = true
+
+        XCTAssertFalse(manager.isAwake, "cup empties on pause")
+        XCTAssertNil(manager.endsAt, "no countdown caption from constraint-driven deactivation")
+        XCTAssertEqual(manager.activeReason, .none, "reason cleared when constraint forces sleep — not .user")
+    }
+
+    /// **S22 / P-issue-5**: when triggersPaused flips OFF, AwakeManager posts
+    /// `.latteTriggerPauseDidLift` so the TriggerCoordinator can re-evaluate
+    /// every enabled trigger and re-emit current votes (otherwise the cup
+    /// stays asleep until the underlying trigger naturally re-fires, which
+    /// owner observed as "doesn't auto-recover after pause OFF").
+    func testUnpausingPostsTriggerPauseDidLiftNotification() {
+        let (manager, _, _, _) = makeManager(paused: true)
+        let exp = XCTNSNotificationExpectation(name: .latteTriggerPauseDidLift)
+        manager.triggersPaused = false
+        wait(for: [exp], timeout: 1.0)
+    }
+
+    /// Pausing ON must NOT post the lift notification — only the OFF
+    /// transition does.
+    func testPausingOnDoesNotPostLiftNotification() {
+        let (manager, _, _, _) = makeManager()
+        let exp = XCTNSNotificationExpectation(name: .latteTriggerPauseDidLift)
+        exp.isInverted = true
+        manager.triggersPaused = true
+        wait(for: [exp], timeout: 0.3)
+    }
+
     func testFlippingPausedOnWhileManualAwakeDoesNotRelease() {
         let (manager, _, _, _) = makeManager()
         manager.activate(for: .indefinite)

@@ -76,6 +76,17 @@ public enum AwakeInput: Equatable, Sendable {
     /// going to sleep. Sourced from the `TriggerVote` that wraps this
     /// transition (or 0 for user-explicit Toggle OFF / list edits).
     case triggerVoteOff(id: String, graceSeconds: TimeInterval)
+    /// **S22 / P-issue-5**: a system-level constraint (pause-all flipping
+    /// ON, AC unplug while requireAC) forces deactivation. Distinct from
+    /// `.userDeactivate` because:
+    /// - constraint-driven deactivate from `.awakeTriggered` must NOT
+    ///   enter `.snoozed` — that would set `endsAt = now + 5min` and
+    ///   `activeReason = .user`, painting a misleading "Until X" caption
+    ///   in the header even though the user didn't initiate a session.
+    /// - it must clear `pendingVotes` since the constraint says "ignore
+    ///   triggers"; preserving the shadow set would replay a stale ON
+    ///   when the constraint lifts.
+    case constraintDeactivate
     case timerExpired
     case coolDownExpired
     case snoozeExpired
@@ -124,6 +135,17 @@ public enum AwakeStateMachine {
         if case .userToggle = input {
             let resolved: AwakeInput = state.assertionHeld ? .userDeactivate : .userActivate(.indefinite)
             return step(state: state, pendingVotes: pendingVotes, input: resolved, now: now)
+        }
+
+        // S22 / P-issue-5: constraint-driven deactivate (pause-all flips
+        // ON, AC unplug while requireAC) routes through a single helper
+        // that goes directly to `.asleep`, clears pendingVotes (constraint
+        // forbids shadow replay), sets reason=.none, releases the
+        // assertion, and cancels any pending timer for the leaving state.
+        // Distinct from `.userDeactivate` to avoid the misleading
+        // "Until X" snooze caption.
+        if case .constraintDeactivate = input {
+            return constraintDeactivateResult(leavingState: state)
         }
 
         switch (state, input) {
@@ -320,10 +342,32 @@ public enum AwakeStateMachine {
         // userToggle is desugared at top of function; leave a defensive default.
         case (_, .userToggle):
             return noChange(state: state, pendingVotes: pendingVotes, reason: .none)
+
+        // constraintDeactivate is short-circuited at top of function via
+        // `constraintDeactivateResult(leavingState:)`; the catch-all here
+        // makes the switch exhaustive over the input enum and would only
+        // hit if the early-return is removed by a future edit.
+        case (_, .constraintDeactivate):
+            return constraintDeactivateResult(leavingState: state)
         }
     }
 
     // MARK: - Helpers
+
+    /// Single source-of-truth for constraint-driven deactivation. See
+    /// `AwakeInput.constraintDeactivate` doc-comment for design rationale.
+    private static func constraintDeactivateResult(leavingState: AwakeState) -> AwakeStepResult {
+        var effects: [SideEffect] = leaveTimers(leavingState)
+        if leavingState.assertionHeld {
+            effects.append(.releaseAssertion)
+        }
+        return AwakeStepResult(
+            state: .asleep,
+            pendingVotes: [:],
+            effects: effects,
+            activeReason: .none
+        )
+    }
 
     private static func noChange(
         state: AwakeState,
@@ -555,10 +599,19 @@ public final class AwakeManager: ObservableObject {
     /// "pause" is for triggers, not for the user's explicit intent. If
     /// flipped on while currently in `.awakeTriggered`, the manager
     /// auto-deactivates so the cup doesn't linger on stale trigger votes.
+    /// **S22 / P-issue-5**: when flipping OFF (pause lifted), posts
+    /// `.latteTriggerPauseDidLift` so `TriggerCoordinator` can ask every
+    /// enabled trigger to re-evaluate and re-emit the current vote —
+    /// otherwise the cup stays asleep until each trigger naturally
+    /// re-fires (which never happens for steady-state conditions like
+    /// "Notion is still running").
     @Published public var triggersPaused: Bool {
         didSet {
             settings.setBool(triggersPaused, for: .triggersPaused)
             enforceConstraintsIfNeeded(reason: "triggersPaused changed")
+            if oldValue && !triggersPaused {
+                NotificationCenter.default.post(name: .latteTriggerPauseDidLift, object: self)
+            }
         }
     }
 
@@ -692,8 +745,10 @@ public final class AwakeManager: ObservableObject {
     }
 
     /// Called from constraint-flag `didSet` and AC-state observer. If the
-    /// new state forbids the current awake state, drive `process(.userDeactivate)`
-    /// to release the assertion and unwind to `.asleep`. Idempotent.
+    /// new state forbids the current awake state, drive `process(.constraintDeactivate)`
+    /// to release the assertion and unwind directly to `.asleep`
+    /// (clearing pendingVotes — see input doc-comment for rationale).
+    /// Idempotent.
     private func enforceConstraintsIfNeeded(reason: String) {
         guard state.assertionHeld else { return }
         // Manual awake states (.awakeUserIndefinite, .awakeUserTimed) are only
@@ -707,7 +762,7 @@ public final class AwakeManager: ObservableObject {
         }
         if let block = blockReason(forManualActivation: isManualState) {
             logger.info("constraint-driven deactivate (\(reason, privacy: .public)): \(block, privacy: .public)")
-            process(.userDeactivate)
+            process(.constraintDeactivate)
         }
     }
 
@@ -808,4 +863,13 @@ public final class AwakeManager: ObservableObject {
             snoozeTask = nil
         }
     }
+}
+
+extension Notification.Name {
+    /// **S22 / P-issue-5**: posted by `AwakeManager` when `triggersPaused`
+    /// transitions from true → false. `TriggerCoordinator` listens and
+    /// asks every enabled trigger to re-evaluate so steady-state
+    /// conditions (e.g. "Notion is still running") re-emit a vote ON and
+    /// the cup wakes back up. Object is the posting `AwakeManager`.
+    public static let latteTriggerPauseDidLift = Notification.Name("LatteTriggerPauseDidLift")
 }

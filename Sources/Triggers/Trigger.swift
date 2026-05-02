@@ -31,10 +31,21 @@ public protocol Trigger: AnyObject {
     /// matching watched app) always bypass this and release immediately.
     /// Default impl returns 0.
     var graceSecondsAfterOff: TimeInterval { get }
+
+    /// **S22 / P-issue-5**: re-emit the current vote based on present
+    /// conditions. Called by `TriggerCoordinator.reevaluateAll()` after
+    /// pause-all is lifted (or any other moment a stale shadow set may
+    /// have been cleared). Concrete triggers that already implement this
+    /// for their own UI flows (`AppTrigger` since S7.9, plus Calendar /
+    /// WiFi / Schedule / ExternalDisplay added in S9c+) override this;
+    /// the default empty impl handles `MockTrigger` and any future
+    /// trigger that has no steady-state condition to re-evaluate.
+    func reevaluateWatched()
 }
 
 public extension Trigger {
     var graceSecondsAfterOff: TimeInterval { 0 }
+    func reevaluateWatched() {}
 }
 
 @MainActor
