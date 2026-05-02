@@ -8,15 +8,17 @@
 
 | Field | Value |
 |---|---|
-| **Session #** | **S22** — resumed owner-driven manual smoke, Step 6 light-mode visibility (2026-05-02). Three P-issues surfaced sequentially: cup body too dark (P-issue-1), handle invisible at alpha 0.55 stroke (P-issue-2), Noir accent rendered as pure black (P-issue-3). Six-commit chain: 3 fixes + this doc-sync. Each P-issue caught a different layer of the same incomplete light-mode rebrand from S20 P2. |
-| **Theme** | "Same-coloured ink does not equal same-perceived-line. The cup outline (closed shape, 4-way edge cues) and the handle (open curve floating in background) read very differently at the same `labelColor.alpha(0.55)` stroke. Closed-shape vs open-curve perceptual asymmetry is now a tracked pattern — light-mode strokes default to solid alpha 1.0 unless a specific reason holds otherwise." |
-| **Status** | ✅ **3 fix commits + 1 doc-sync commit.** **Tests 554 → 558** (+4 net: P-issue-1 +1, P-issue-2 +2, P-issue-3 +1). **Smoke 22/22 PASS** in ~6:14. Working tree clean. |
-| **Tail commit** | `e4b340e` (fix: noir accent light-mode — charcoal grey not pure black) — doc-sync commit forthcoming after this file lands. |
+| **Session #** | **S22** — resumed owner-driven manual smoke, Step 6 light-mode visibility (2026-05-02 → 2026-05-03). **Four P-issues** total. Three from owner manual smoke (cup body too dark, handle invisible, noir as pure black) + one self-discovered during checklist preparation (no ⌘, / ⌘Q wiring on popover footer in LSUIElement context). Eight-commit chain: 4 fixes + 2 doc-sync iterations. |
+| **Theme** | "Manual smoke catches the **visible** layer; source inspection during checklist prep catches the **omitted** layer. Owner-eyes found three contrast/colour defects that automated luminance tests had missed; my source-inspection found a fourth — popover ⌘ shortcuts that never existed because LSUIElement apps have no application menu to inherit them from. Both classes of finding need to be in the loop — automated tests for what they catch, manual smoke for visual fidelity, source inspection for keybinding completeness." |
+| **Status** | ✅ **4 fix commits + 2 doc-sync commits.** **Tests 554 → 558** (+4 net: P1 +1, P2 +2, P3 +1, P4 +0 — UI-only). **Smoke 22/22 PASS** post-each-fix. Working tree clean. |
+| **Tail commit** | `272970b` (fix: popover ⌘, and ⌘Q keyboard shortcuts) — doc-sync commit forthcoming after this file lands. |
 
 ### Commit chain (S22 only — top is HEAD)
 
 ```
-(this commit)  docs: SESSION_HANDOFF wrap for S22                                     (S22 #4)
+(this commit)  docs: SESSION_HANDOFF wrap for S22 (P-issue-4 added)                   (S22 #6)
+272970b        fix: popover ⌘, and ⌘Q keyboard shortcuts                              (S22 #5)
+df50c71        docs: SESSION_HANDOFF wrap for S22 (P-issues 1-3)                      (S22 #4)
 e4b340e        fix: noir accent light-mode — charcoal grey not pure black             (S22 #3)
 69d8927        fix: light-mode cup stroke — solid coffee brown for handle visibility  (S22 #2)
 ebbd04a        fix: light-mode cup body — brighter than liquid                        (S22 #1)
@@ -29,7 +31,9 @@ ebbd04a        fix: light-mode cup body — brighter than liquid                
 | 1 | `ebbd04a` | **P-issue-1 — light-mode cup body re-fix supersedes S20 P2.** Owner reported "two layers of coffee in a handle-less cup" — cup body `(0.42, 0.32, 0.20)` and Espresso liquid `(0.42, 0.24, 0.08)` had sRGB-avg gap=0.067, blending into one brown mass with foam line reading as coffee-on-coffee boundary. Mental model was wrong: mug is a light vessel holding dark coffee. Fix: cup light → `(0.86, 0.80, 0.72)` warm tan. Replaced single-sided `avg ≤ 0.55` ceiling test with two inter-layer gap tests (cup ≥ liquid + 0.30, cup ≤ popover 0.85). | +1 |
 | 2 | `69d8927` | **P-issue-2 — light-mode stroke solid coffee brown.** After P-issue-1 fix, owner reported outline visible but handle barely visible. Same `labelColor.alpha(0.55)` stroke for both — but closed body outline reads from 4-way edge cues, while open handle curve floating in popover background perceptually washes out at alpha 0.55. Fix: `Theme.Colors.cupStroke` becomes dynamic NSColor — light: solid `(0.36, 0.20, 0.09)` coffee brown alpha 1.0; dark: `labelColor.alpha(0.55)` (legacy preserved). Two regression-pin tests: light alpha=1.0 + avg≤0.30; dark alpha=0.55 pin. | +2 |
 | 3 | `e4b340e` | **P-issue-3 — noir light charcoal grey.** Owner reported Noir accent rendered as solid black against tan cup body. Previous `(0.20, 0.20, 0.20)` was darker than every other accent (espresso=0.247, mocha=0.36) and indistinguishable from pure #000. Fix: noir light → `(0.32, 0.32, 0.32)` clear charcoal. Still the darkest accent, but visibly grey. Test `testNoirAccentLightModeIsCharcoalNotBlack` (avg ≥ 0.28). | +1 |
-| 4 | this commit | **Doc sync**: ROADMAP row 21 (S22) rewritten to consolidate all 3 P-issues; SESSION_HANDOFF rewritten for S22; memory updated; `MEMORY.md` index entry refreshed. | 0 |
+| 4 | `df50c71` | **Doc sync** for P-issues 1-3: ROADMAP row 21 + SESSION_HANDOFF + memory. | 0 |
+| 5 | `272970b` | **P-issue-4 — popover ⌘, and ⌘Q.** Self-discovered while writing the manual-smoke checklist for the remaining Step 6 surfaces: source inspection revealed the popover footer "Settings…" and "Quit" Buttons had no `.keyboardShortcut(...)` modifier. Latte runs as `LSUIElement` with `.accessory` activation policy, so there is no standard application menu providing ⌘, / ⌘Q for free — the keybindings I had told the owner to test simply did not exist. Fix: SwiftUI `.keyboardShortcut(",", modifiers: .command)` on Settings… + `.keyboardShortcut("q", modifiers: .command)` on Quit. Both bind to the popover's responder chain — fire only when popover is the key window, no cross-app focus conflict. No conflict with B1.2 global hotkey (default ⌘⇧L — different modifier set). 558 tests still PASS, smoke 22/22 PASS. UI-only — no test added (SwiftUI `.keyboardShortcut` modifier has no public introspection API). | 0 |
+| 6 | this commit | **Doc sync** for P-issue-4: ROADMAP row 21 amended to 4 P-issues + 8-commit chain; SESSION_HANDOFF + memory updated. | 0 |
 
 ### Patterns reinforced this session
 
@@ -38,6 +42,7 @@ ebbd04a        fix: light-mode cup body — brighter than liquid                
 - **Closed-shape vs open-curve perceptual asymmetry** (from P-issue-2) — same alpha-blended stroke reads stronger on a closed bounded shape (4-way edge cues) than on a free-floating curve. An alpha that works for an outline can hide a handle/curve. **Light-mode strokes default to solid alpha 1.0 unless a specific reason holds.**
 - **Floor-test against pure black** (from P-issue-3) — perceptually any RGB with avg < 0.25 reads as solid black against most cup bodies. Accent palettes need a darkness-floor regression test, not just upper-bounds.
 - **Sequential owner-report cascade** — each fix exposed the next layer of regression. Once cup body was correct, stroke became the bottleneck. Once stroke was correct, noir became the bottleneck. Step 6 manual smoke is now confirmed as the canonical popover light-mode regression catch — automated luminance tests caught some defects but missed the inter-layer + perceptual-asymmetry issues.
+- **LSUIElement popover keybinding completeness** (P-issue-4) — menu-bar-only apps with `.accessory` activation policy do not have a standard application menu, so ⌘, and ⌘Q must be wired explicitly via SwiftUI `.keyboardShortcut(...)` on the popover Buttons. There is no inherited fallback. **Source-inspection during any popover UX checklist preparation should grep for `.keyboardShortcut(` on every visible Button and flag any missing keybindings before owner spends time testing them.** Found by my own checklist prep, not by owner — this class of "documented behaviour that doesn't actually exist" is the reason source-inspection has to be in the loop alongside manual smoke.
 
 ### What was checked but not changed
 
@@ -50,7 +55,7 @@ ebbd04a        fix: light-mode cup body — brighter than liquid                
 
 ## Next-session entry points (priority order)
 
-1. **Continue Step 6 verification** — re-confirm all three fixes land visually (cup body / stroke + handle / noir), then check remaining popover items: (a) "Activate / Sleep / Activate until …" buttons, (b) Quick presets list + countdown caption tick, (c) Pause-all caption, (d) ⌘, → Settings, (e) ⌘Q → quit. Then **Step 7** (Settings 4-tab light + dark) and **Step 8** (Activity tab — Charts + colour pickers + live polling).
+1. **Continue Step 6 verification** — visual-confirm all four fixes land (cup body / stroke + handle / noir / popover ⌘ shortcuts), then 4-step compressed checklist for the remaining popover surfaces: (1) duration preset click → ✓ + caption tick, (2) Turn off click → sleep, (3) ⌘, **now wired** → Settings opens, (4) ⌘Q **now wired** → app quits. Then **Step 7** (Settings 4-tab light + dark) and **Step 8** (Activity tab — Charts + colour pickers + live polling).
 2. **Owner-blocked S8d** (~5 min Pages deploy: pick 5-9 PNGs / `deploy_pages.sh <url>` / Settings → Pages 1-click / curl validate).
 3. **Owner-blocked S8.5** ($99/yr Apple Dev Program — applied 2026-05-02, awaiting 1-2 day approval).
 4. **Owner-blocked S9** (App Store Connect metadata; depends on 8.5).
