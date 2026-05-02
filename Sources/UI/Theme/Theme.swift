@@ -54,10 +54,21 @@ public enum Theme {
                 : NSColor(srgbRed: 0.86, green: 0.80, blue: 0.72, alpha: 1.0)
         })
 
-        /// Dynamic stroke color for `CoffeeCupView`. Canvas does not always
-        /// resolve `Color.primary` against the current appearance, so we use
-        /// `NSColor.labelColor` directly to guarantee light/dark adaptation.
-        public static let cupStroke = Color(nsColor: NSColor.labelColor.withAlphaComponent(0.55))
+        /// Dynamic stroke color for `CoffeeCupView`.
+        ///
+        /// In dark mode resolves to `labelColor` at alpha 0.55 — the legacy
+        /// soft outline against the creamy near-white cup body.
+        /// In light mode resolves to solid coffee brown `(0.36, 0.20, 0.09)`
+        /// at alpha 1.0 — alpha-blended thin curves perceptually wash out
+        /// (closed body outline reads from 4-way edge cues, but the open
+        /// handle curve floating in popover background fades). See S22 /
+        /// P-issue-2 — supersedes the v1.x `labelColor.alpha(0.55)` value
+        /// which hid the handle in light mode.
+        public static let cupStroke = Color(nsColor: NSColor(name: "LatteCupStroke") { appearance in
+            appearance.isDarkAqua
+                ? NSColor.labelColor.withAlphaComponent(0.55)
+                : NSColor(srgbRed: 0.36, green: 0.20, blue: 0.09, alpha: 1.0)
+        })
         public static let accentAsleep = Color.secondary
     }
 

@@ -88,6 +88,54 @@ final class ThemeAppearanceTests: XCTestCase {
         XCTAssertEqual(darkRGB.greenComponent, 0.93, accuracy: 0.01)
         XCTAssertEqual(darkRGB.blueComponent, 0.85, accuracy: 0.01)
     }
+
+    /// **S22 / P-issue-2**: Light-mode cup stroke must be solidly opaque. The
+    /// previous `labelColor.withAlphaComponent(0.55)` formed a perceptually
+    /// faded line — the closed cup outline still read (4-way edge cue) but
+    /// the open handle curve, floating in the popover background, washed
+    /// out. Owner-reported during the resumed Step 6 smoke. Fix: solid
+    /// coffee-brown stroke in light mode (alpha 1.0). Dark-mode value stays
+    /// at the soft creamy alpha 0.55.
+    func testCupStrokeLightModeIsOpaqueAndDark() throws {
+        let nsStroke = NSColor(Theme.Colors.cupStroke)
+        let lightRGB = try XCTUnwrap(nsStroke.usingAppearance(.aqua, in: .sRGB))
+        XCTAssertEqual(
+            lightRGB.alphaComponent, 1.0, accuracy: 0.01,
+            "Light-mode stroke must be solid (alpha 1.0) — alpha-blended thin curves perceptually wash out for the handle"
+        )
+        let avg = (lightRGB.redComponent + lightRGB.greenComponent + lightRGB.blueComponent) / 3.0
+        XCTAssertLessThanOrEqual(
+            avg, 0.30,
+            "Light-mode stroke too light (avg=\(avg)) — handle won't read against the warm tan cup body or near-white popover"
+        )
+    }
+
+    /// Dark-mode stroke must keep the legacy soft alpha so the creamy cup
+    /// body's outline doesn't become a harsh contrasting line.
+    func testCupStrokeDarkModeMatchesLegacySoftAlpha() throws {
+        let nsStroke = NSColor(Theme.Colors.cupStroke)
+        let darkRGB = try XCTUnwrap(nsStroke.usingAppearance(.darkAqua, in: .sRGB))
+        XCTAssertEqual(
+            darkRGB.alphaComponent, 0.55, accuracy: 0.05,
+            "Dark-mode stroke alpha changed — regression on the v1.x creamy-cup outline look"
+        )
+    }
+
+    /// **S22 / P-issue-3**: Light-mode `CoffeeAccent.noir` must be a
+    /// distinguishable charcoal grey, not effectively black. The previous
+    /// `(0.20, 0.20, 0.20)` rendered indistinguishable from pure black on
+    /// the new warm tan cup body — owner-reported during the resumed Step
+    /// 6 smoke. Floor of avg ≥ 0.28 keeps it visibly grey while staying
+    /// the darkest accent.
+    func testNoirAccentLightModeIsCharcoalNotBlack() throws {
+        let nsNoir = NSColor(CoffeeAccent.noir.color)
+        let lightRGB = try XCTUnwrap(nsNoir.usingAppearance(.aqua, in: .sRGB))
+        let avg = (lightRGB.redComponent + lightRGB.greenComponent + lightRGB.blueComponent) / 3.0
+        XCTAssertGreaterThanOrEqual(
+            avg, 0.28,
+            "Light-mode Noir avg=\(avg) — too close to pure black, reads as solid black against tan cup body"
+        )
+    }
 }
 
 private extension NSColor {
