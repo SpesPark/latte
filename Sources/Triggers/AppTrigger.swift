@@ -367,6 +367,25 @@ public final class AppTrigger: Trigger {
         }
     }
 
+    /// **S22 / P-issue-5b**: see `Trigger.reemitCurrentVote()` doc.
+    /// `reevaluateWatched()` short-circuits when `newWatched == watchedSet`,
+    /// which is the common case during a pause-lift cycle (the user didn't
+    /// edit their watched apps, just toggled pause). This method skips the
+    /// dedup and re-emits the current ON vote when the matching set is
+    /// non-empty so the cup auto-recovers when the constraint clears.
+    /// No emission when no watched app is running — the manager is
+    /// already asleep, no need for a redundant OFF.
+    public func reemitCurrentVote() {
+        guard observation != nil else { return }
+        // Refresh matchingRunning from the system in case an app was
+        // launched/terminated during the constraint window without the
+        // observation handlers firing through.
+        matchingRunning = Set(source.runningBundleIDs).intersection(watchedSet)
+        if !matchingRunning.isEmpty {
+            emitOn()
+        }
+    }
+
     private func handleLaunch(bundleID: String) {
         guard watchedSet.contains(bundleID) else { return }
         let wasEmpty = matchingRunning.isEmpty

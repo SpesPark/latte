@@ -32,20 +32,33 @@ public protocol Trigger: AnyObject {
     /// Default impl returns 0.
     var graceSecondsAfterOff: TimeInterval { get }
 
-    /// **S22 / P-issue-5**: re-emit the current vote based on present
-    /// conditions. Called by `TriggerCoordinator.reevaluateAll()` after
-    /// pause-all is lifted (or any other moment a stale shadow set may
-    /// have been cleared). Concrete triggers that already implement this
-    /// for their own UI flows (`AppTrigger` since S7.9, plus Calendar /
-    /// WiFi / Schedule / ExternalDisplay added in S9c+) override this;
-    /// the default empty impl handles `MockTrigger` and any future
-    /// trigger that has no steady-state condition to re-evaluate.
+    /// React to a Settings-driven change in the trigger's watched-set
+    /// (e.g. user edited the AppTrigger bundle-id list, or rotated their
+    /// Wi-Fi watched SSIDs). **Idempotent — no-op when the watched-set is
+    /// unchanged.** Implemented by Calendar / WiFi / Schedule / App /
+    /// ExternalDisplay triggers since S9c. The default empty impl covers
+    /// `MockTrigger` and any future trigger without a settings-watched
+    /// surface.
     func reevaluateWatched()
+
+    /// **S22 / P-issue-5b**: emit the current vote based on present
+    /// conditions, **bypassing the dedup that `reevaluateWatched()`
+    /// applies on watched-set diff**. Called by
+    /// `TriggerCoordinator.reevaluateAll()` after a constraint that
+    /// suppressed votes (pause-all, AC-required) is lifted —
+    /// `AwakeManager` has cleared its `pendingVotes`, so the trigger
+    /// must re-yield its ON vote even when its own internal state hasn't
+    /// changed. No emission when the trigger's condition isn't met
+    /// (avoids spurious OFF votes against an already-asleep manager).
+    /// Default empty impl is correct for triggers without a steady-state
+    /// condition (e.g. `MockTrigger`).
+    func reemitCurrentVote()
 }
 
 public extension Trigger {
     var graceSecondsAfterOff: TimeInterval { 0 }
     func reevaluateWatched() {}
+    func reemitCurrentVote() {}
 }
 
 @MainActor

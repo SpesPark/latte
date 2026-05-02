@@ -37,12 +37,26 @@ public struct HeaderView: View {
     }
 
     private var statusSubtitle: String {
+        // **S22 / P-issue-5b**: every "Until X" / "Until you turn off"
+        // branch is gated on `isAwake == true` first. The `.snoozed` state
+        // (entered on `.userDeactivate` from `.awakeTriggered`, e.g. user
+        // clicks Turn off while AppTrigger is voting ON) carries
+        // `activeReason = .user` + `endsAt = now+5min` even though
+        // `isAwake == false` — without this gate, the header lied that
+        // "Until 12:27 AM" is an awake deadline when it's actually a
+        // snooze deadline against an empty cup. Same lie surfaced when
+        // pause-all routed through `.userDeactivate` before P-issue-5
+        // landed; this gate keeps us correct even if a future caller
+        // re-introduces a similar path.
         switch manager.activeReason {
         case .user:
-            if let endsAt = manager.endsAt {
-                return "Until \(Self.timeFormatter.string(from: endsAt))"
+            if manager.isAwake {
+                if let endsAt = manager.endsAt {
+                    return "Until \(Self.timeFormatter.string(from: endsAt))"
+                }
+                return "Until you turn off"
             }
-            return manager.isAwake ? "Until you turn off" : "Tap to wake"
+            return "Tap the cup to wake your Mac"
         case .trigger(let id):
             return "Awake — \(id)"
         case .launch:

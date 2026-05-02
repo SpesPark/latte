@@ -45,13 +45,18 @@ public final class TriggerCoordinator: ObservableObject {
         }
     }
 
-    /// Asks every enabled trigger to re-evaluate its current condition and
-    /// re-emit the vote. Called from the `.latteTriggerPauseDidLift`
+    /// Asks every enabled trigger to re-emit its current vote based on
+    /// present conditions. Called from the `.latteTriggerPauseDidLift`
     /// observer, but exposed publicly so tests / future callers can drive
-    /// it directly.
+    /// it directly. **S22 / P-issue-5b**: switched from
+    /// `reevaluateWatched()` (Settings-driven, dedup-on-no-diff) to
+    /// `reemitCurrentVote()` (constraint-driven, force re-emit) — owner
+    /// reported the cup didn't auto-recover after pause OFF because
+    /// `reevaluateWatched()` short-circuited when the watched-set hadn't
+    /// changed.
     public func reevaluateAll() {
         for trigger in triggers where trigger.isEnabled {
-            trigger.reevaluateWatched()
+            trigger.reemitCurrentVote()
         }
     }
 

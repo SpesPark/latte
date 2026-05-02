@@ -103,6 +103,60 @@ final class AppTriggerTests: XCTestCase {
         do { let _v = await task.value; XCTAssertNil(_v) }
     }
 
+    /// **S22 / P-issue-5b**: after pause-all is lifted, AppTrigger must
+    /// re-emit its current ON vote so the cup auto-recovers when the
+    /// constraint clears (e.g. Notion is still running). The previous
+    /// `reevaluateWatched()` short-circuits when the watched-set hasn't
+    /// changed (its design is for Settings UI list edits) — so a new
+    /// `reemitCurrentVote()` method is needed for the pause-lift hook.
+    /// Owner-reported during the resumed Step 6 manual smoke that pause
+    /// OFF didn't auto-recover even after the P-issue-5 hook landed —
+    /// because `reevaluateWatched()` returned early.
+    func testReemitCurrentVoteEmitsOnWhenWatchedAppStillRunning() async throws {
+        let (trigger, _, _) = makeFixture(running: ["us.zoom.xos"])
+        await trigger.start()
+
+        var iterator = trigger.voteStream.makeAsyncIterator()
+        let initial = await iterator.next()
+        XCTAssertEqual(initial?.wantsAwake, true)
+
+        // Simulate the AwakeManager-side pause-all cycle: the trigger's own
+        // watched-set + matchingRunning are unchanged, but AwakeManager has
+        // cleared its pendingVotes via .constraintDeactivate. Calling
+        // reemitCurrentVote() should yield the current ON vote regardless
+        // of any internal dedup that reevaluateWatched() applies.
+        trigger.reemitCurrentVote()
+        let resync = await iterator.next()
+        XCTAssertEqual(resync?.wantsAwake, true, "reemitCurrentVote must re-emit ON when matching app is still running")
+        XCTAssertTrue(resync?.reason.contains("Zoom") ?? false)
+    }
+
+    /// `reemitCurrentVote()` must be a no-op when no watched app is running —
+    /// no spurious OFF votes. The AwakeManager is already asleep; emitting
+    /// OFF would be redundant and could hit the "OFF in asleep" no-change
+    /// branch noisily.
+    func testReemitCurrentVoteNoEmitWhenNoMatchingApp() async throws {
+        let (trigger, _, _) = makeFixture(running: ["com.apple.Safari"])
+        await trigger.start()
+
+        let task = Task { @MainActor () -> TriggerVote? in
+            var it = trigger.voteStream.makeAsyncIterator()
+            return await it.next()
+        }
+        try await Task.sleep(nanoseconds: 50_000_000)
+        task.cancel()
+        do { let _v = await task.value; XCTAssertNil(_v) }
+
+        trigger.reemitCurrentVote()
+        let task2 = Task { @MainActor () -> TriggerVote? in
+            var it = trigger.voteStream.makeAsyncIterator()
+            return await it.next()
+        }
+        try await Task.sleep(nanoseconds: 50_000_000)
+        task2.cancel()
+        do { let _v = await task2.value; XCTAssertNil(_v, "no emission when no matching watched app is running") }
+    }
+
     func testSecondWatchedLaunchDoesNotReEmit() async throws {
         let (trigger, source, _) = makeFixture(running: ["us.zoom.xos"])
         await trigger.start()
