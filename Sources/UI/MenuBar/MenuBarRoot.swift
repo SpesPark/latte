@@ -95,12 +95,14 @@ public struct MenuBarRoot: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
+                .keyboardShortcut(",", modifiers: .command)
                 Spacer()
                 Button(action: { NSApp.terminate(nil) }) {
                     Text("Quit")
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
+                .keyboardShortcut("q", modifiers: .command)
             }
             .font(Theme.Fonts.caption)
             .padding(.horizontal, Theme.Spacing.lg)
