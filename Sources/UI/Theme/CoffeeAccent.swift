@@ -79,7 +79,7 @@ public enum CoffeeAccent: String, CaseIterable, Sendable, Identifiable {
             dark:  (0.92, 0.80, 0.60)
         )
         case .noir: return ColorPair(
-            light: (0.20, 0.20, 0.20),
+            light: (0.32, 0.32, 0.32),
             dark:  (0.55, 0.55, 0.55)
         )
         }
