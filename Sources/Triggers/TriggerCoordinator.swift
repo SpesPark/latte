@@ -29,10 +29,18 @@ public final class TriggerCoordinator: ObservableObject {
         // a steady-state condition (Notion still running, calendar event
         // still in progress) can wake the cup back up is by replaying
         // through the trigger's voteStream.
+        // **S22 / P-issue-6b**: queue=nil so the block runs synchronously
+        // on the posting thread. AwakeManager.deactivate() and the
+        // triggersPaused didSet both run on @MainActor, so the post is
+        // from main; queue=.main would defer the block to the next run
+        // loop iteration and (per owner-reported runtime evidence) the
+        // deferral can leak past UI navigation, leaving Settings UI
+        // stale. Synchronous execution + MainActor.assumeIsolated is
+        // safe because we only post from MainActor contexts.
         pauseLiftObserver = NotificationCenter.default.addObserver(
             forName: .latteTriggerPauseDidLift,
             object: nil,
-            queue: .main
+            queue: nil
         ) { [weak self] _ in
             MainActor.assumeIsolated {
                 self?.reevaluateAll()
@@ -45,7 +53,7 @@ public final class TriggerCoordinator: ObservableObject {
         userDeactivateObserver = NotificationCenter.default.addObserver(
             forName: .latteUserExplicitDeactivate,
             object: nil,
-            queue: .main
+            queue: nil
         ) { [weak self] _ in
             MainActor.assumeIsolated {
                 self?.disableAll()

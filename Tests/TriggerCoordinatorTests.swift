@@ -408,6 +408,45 @@ final class TriggerCoordinatorTests: XCTestCase {
         XCTAssertTrue(mock.isEnabled, "pause-all must keep triggers enabled — P-issue-6 redesign delineates pause vs Turn off")
     }
 
+    /// **S22 / P-issue-6b**: integration test using a real `AppTrigger`
+    /// to verify the production path — the protocol-level
+    /// `trigger.isEnabled = false` write must reach the underlying
+    /// `SettingsStore` so the Settings UI's fresh-read on next open
+    /// observes the persisted change. Owner-reported during retest
+    /// that the `MockTrigger`-backed test passed but the real trigger
+    /// still showed ON in Settings; this test would have caught any
+    /// SettingsStore-write regression.
+    func testTurnOffPersistsTriggerDisableToSettingsStore() {
+        let assertion = MockPowerAssertion()
+        let settings = InMemorySettingsStore()
+        settings.setBool(true, for: .appTriggerEnabled)
+        settings.appTriggerBundleIDs = ["us.zoom.xos"]
+
+        let manager = AwakeManager(assertion: assertion, settings: settings)
+        let coordinator = TriggerCoordinator(awakeManager: manager, settings: settings)
+        let appTrigger = AppTrigger(
+            settings: settings,
+            source: MockWorkspaceSource(runningBundleIDs: ["us.zoom.xos"])
+        )
+        coordinator.register(appTrigger)
+        XCTAssertTrue(appTrigger.isEnabled)
+
+        manager.receiveTriggerVote(
+            TriggerVote(wantsAwake: true, reason: "App: Zoom"),
+            from: "AppTrigger"
+        )
+        XCTAssertTrue(manager.isAwake)
+
+        manager.deactivate()
+
+        XCTAssertFalse(manager.isAwake)
+        XCTAssertFalse(appTrigger.isEnabled, "AppTrigger.isEnabled getter must reflect the disabled state")
+        XCTAssertFalse(
+            settings.bool(.appTriggerEnabled, default: false),
+            "the disable must persist to the underlying SettingsStore so the Settings UI's fresh-read on next open observes it"
+        )
+    }
+
     /// **S22 / P-issue-6**: deactivate from a state that wasn't awake
     /// must NOT post the notification or disable triggers (no-op).
     func testDeactivateFromAsleepIsNoOpForTriggerEnableState() {

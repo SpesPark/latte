@@ -84,6 +84,20 @@ private struct TriggerSection: View {
                         }
                     }
                 }
+                // **S22 / P-issue-6b**: when `TriggerCoordinator.disableAll()`
+                // flips `trigger.isEnabled` programmatically (e.g. user
+                // clicks Turn off in the popover while the Settings
+                // window is open and showing this row), the local
+                // `@State var isOn` doesn't auto-sync — it was
+                // initialized from `trigger.isEnabled` once at view
+                // creation. Refresh on every `.latteUserExplicitDeactivate`
+                // so the toggle's visual state stays consistent with the
+                // persisted UserDefaults state. No-op when Settings is
+                // closed — TriggerSection re-initializes on next open
+                // and reads the fresh value via `State(initialValue:)`.
+                .onReceive(NotificationCenter.default.publisher(for: .latteUserExplicitDeactivate)) { _ in
+                    isOn = trigger.isEnabled
+                }
 
             if isOn {
                 configBody
