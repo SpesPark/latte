@@ -389,4 +389,37 @@ final class CalendarTriggerTests: XCTestCase {
         settings.calendarTriggerTrailingMinutes = 200
         XCTAssertEqual(settings.calendarTriggerTrailingMinutes, 15)
     }
+
+    /// **S22 / P-issue-6d**: `reemitCurrentVote()` bypasses the
+    /// `activeEventIDs` dedup so a steady-state active event re-emits ON
+    /// when called (e.g. on `.latteTriggerPauseDidLift` after pause-all
+    /// is lifted). Without this, an already-emitted ON vote would not
+    /// re-fire and the cup would stay asleep until the event ends or a
+    /// new one starts.
+    func testReemitCurrentVoteBypassesDedupForActiveEvent() async {
+        let now = Date(timeIntervalSince1970: 1_750_000_000)
+        let event = CalendarEventSnapshot(
+            id: "ev-active",
+            title: "Standup",
+            startDate: now.addingTimeInterval(-60),
+            endDate: now.addingTimeInterval(600),
+            isAllDay: false,
+            calendarID: "cal-1"
+        )
+        let (trigger, _, _, _) = makeFixture(events: [event], nowOverride: now)
+        await trigger.start()
+
+        var iterator = trigger.voteStream.makeAsyncIterator()
+        let firstVote = await iterator.next()
+        XCTAssertEqual(firstVote?.wantsAwake, true)
+
+        // After start(), activeEventIDs contains the event. A normal
+        // pollOnce() would dedup (no transition). reemitCurrentVote()
+        // clears activeEventIDs and re-runs pollOnce so the active event
+        // is treated as "newly active" and re-emits ON.
+        trigger.reemitCurrentVote()
+        let secondVote = await iterator.next()
+        XCTAssertEqual(secondVote?.wantsAwake, true, "reemitCurrentVote must re-emit ON for steady-state active event")
+        XCTAssertTrue(secondVote?.reason.contains("Standup") ?? false)
+    }
 }

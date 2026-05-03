@@ -285,6 +285,17 @@ public final class CalendarTrigger: Trigger {
         Task { await pollOnce() }
     }
 
+    /// **S22 / P-issue-6d** — see `Trigger.reemitCurrentVote()` doc.
+    /// Clears `activeEventIDs` so `pollOnce()`'s diff treats every
+    /// currently-active event as newly-active and re-emits ON for each.
+    /// No emission when no events are active (pollOnce's empty-active +
+    /// no-transition path stays silent — manager is already asleep).
+    public func reemitCurrentVote() {
+        guard pollTask != nil else { return }
+        activeEventIDs = []
+        Task { await pollOnce() }
+    }
+
     /// Test seam — invoked by `start`'s polling loop, also callable directly from tests.
     public func pollOnce() async {
         guard isEnabled else { return }

@@ -296,6 +296,17 @@ public final class ExternalDisplayTrigger: Trigger {
         evaluate()
     }
 
+    /// **S22 / P-issue-6d** — see `Trigger.reemitCurrentVote()` doc.
+    /// Clears `lastVote` so `evaluate()` bypasses its dedup and re-emits
+    /// the current vote. No emission when no external display is
+    /// connected (the `lastVote == nil && !wantsAwake` early-return
+    /// holds — manager is already asleep).
+    public func reemitCurrentVote() {
+        guard isRunning else { return }
+        lastVote = nil
+        evaluate()
+    }
+
     /// Test seam — evaluate the source against the lastVote and emit only
     /// on transition. The `isRunning` gate is enforced inside the
     /// `observeTask` callback (see `start()`) so source events during a

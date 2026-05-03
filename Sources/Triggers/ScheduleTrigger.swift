@@ -279,6 +279,17 @@ public final class ScheduleTrigger: Trigger {
         Task { await pollOnce() }
     }
 
+    /// **S22 / P-issue-6d** — see `Trigger.reemitCurrentVote()` doc.
+    /// Clears `activeEntryID` so `pollOnce()`'s `(matched=Some, prev=nil)`
+    /// branch treats the current window as a fresh entry and re-emits ON.
+    /// No emission when outside all windows (the `(nil, nil)` default
+    /// branch stays silent — manager is already asleep).
+    public func reemitCurrentVote() {
+        guard pollTask != nil else { return }
+        activeEntryID = nil
+        Task { await pollOnce() }
+    }
+
     private func voteReason(for entry: ScheduleEntry) -> String {
         if !entry.label.isEmpty {
             return "Schedule: \(entry.label)"

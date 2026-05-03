@@ -229,4 +229,26 @@ final class WiFiTriggerTests: XCTestCase {
         XCTAssertTrue(r3)
         XCTAssertEqual(nd.requestAccessCalls, 1)
     }
+
+    /// **S22 / P-issue-6d**: `reemitCurrentVote()` bypasses the
+    /// `lastVote` dedup so a steady-state matching SSID re-emits ON
+    /// when called (e.g. on `.latteTriggerPauseDidLift` after pause-all
+    /// is lifted). Without this, an already-emitted ON would not
+    /// re-fire and the cup would stay asleep until the SSID changes.
+    func testReemitCurrentVoteBypassesDedupForMatchingSSID() async throws {
+        let (trigger, _, _) = makeFixture(currentSSID: "HomeNet")
+        await trigger.start()
+
+        var iterator = trigger.voteStream.makeAsyncIterator()
+        let firstVote = await iterator.next()
+        XCTAssertEqual(firstVote?.wantsAwake, true)
+
+        // After start(), lastVote=true. A normal evaluate() would dedup
+        // (lastVote == wantsAwake → no emit). reemitCurrentVote() clears
+        // lastVote and re-evaluates so the matching SSID re-emits ON.
+        trigger.reemitCurrentVote()
+        let secondVote = await iterator.next()
+        XCTAssertEqual(secondVote?.wantsAwake, true, "reemitCurrentVote must re-emit ON for steady-state matching SSID")
+        XCTAssertTrue(secondVote?.reason.contains("HomeNet") ?? false)
+    }
 }

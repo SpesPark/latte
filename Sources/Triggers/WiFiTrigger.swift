@@ -178,6 +178,17 @@ public final class WiFiTrigger: Trigger {
         evaluate()
     }
 
+    /// **S22 / P-issue-6d** — see `Trigger.reemitCurrentVote()` doc.
+    /// Clears `lastVote` so `evaluate()` bypasses its dedup and re-emits
+    /// the current vote. No emission when condition is false (the
+    /// `lastVote == nil && !wantsAwake` early-return holds — manager is
+    /// already asleep, redundant OFF would be noise).
+    public func reemitCurrentVote() {
+        guard pollTask != nil else { return }
+        lastVote = nil
+        evaluate()
+    }
+
     /// Test seam — evaluate current SSID against settings and emit if vote changed.
     public func evaluate() {
         guard isEnabled else { return }
