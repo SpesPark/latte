@@ -129,6 +129,30 @@ final class RecurringQuickPresetTests: XCTestCase {
         XCTAssertEqual(preset.minutes(from: monday12pm, calendar: Self.utcCalendar), 360)
     }
 
+    // S23 / P-issue-1: when `now` has sub-minute fractional seconds, the
+    // result must round UP so `endsAt = now + minutes*60` lands at-or-after
+    // the wall-clock target. With round-to-nearest, owner-reported case
+    // (clicking "Until 0:00 AM" preset mid-minute) had endsAt fall into the
+    // previous minute, rendering "11:59 PM" in the popover caption.
+    func testMinutesRoundsUpWhenSecondsFractional() {
+        // Monday 23:00:31 → next midnight (Tue 00:00:00) is 59m29s ahead.
+        // Round-to-nearest would give 59 (endsAt 23:59:31 = "11:59 PM").
+        // Round-up gives 60 (endsAt 00:00:31 next day = "12:00 AM").
+        var comps = DateComponents()
+        comps.year = 2026; comps.month = 5; comps.day = 4
+        comps.hour = 23; comps.minute = 0; comps.second = 31
+        comps.timeZone = TimeZone(secondsFromGMT: 0)!
+        let monday2300_31 = Self.utcCalendar.date(from: comps)!
+
+        // Midnight preset: hour=0, all weekdays.
+        let midnightPreset = makePreset(hour: 0, minute: 0, weekdays: [1, 2, 3, 4, 5, 6, 7])
+        XCTAssertEqual(
+            midnightPreset.minutes(from: monday2300_31, calendar: Self.utcCalendar),
+            60,
+            "Round-up keeps endsAt at-or-after target so caption shows the target minute, not the prior."
+        )
+    }
+
     // MARK: - Codable round-trip
 
     func testCodableRoundTrip() throws {

@@ -73,10 +73,19 @@ public struct RecurringQuickPreset: Codable, Equatable, Identifiable, Sendable {
     /// Whole minutes from `now` to the next occurrence, clamped to 1 so
     /// a click at the boundary never activates for 0 minutes (which would
     /// instantly deactivate). Mirrors `QuickPreset.minutes(from:)`.
+    ///
+    /// **S23 / P-issue-1**: rounds **up** (not to-nearest) so the
+    /// resulting `endsAt = now + minutes*60` is always at-or-after the
+    /// wall-clock target. With round-to-nearest, sub-minute fractional
+    /// `now` (e.g. clicked at 22:30:31) lost up to 30s, dropping `endsAt`
+    /// into the previous minute — the popover caption then read "11:59 PM"
+    /// for an "Until 0:00 AM" preset because the formatter only renders
+    /// time-of-day. Round-up keeps the cup awake up to ~60s past target,
+    /// matching the user mental model "until X = at least until X".
     public func minutes(from now: Date, calendar: Calendar = .current) -> Int {
         let target = nextOccurrence(after: now, calendar: calendar)
         let secondsAhead = target.timeIntervalSince(now)
-        return max(1, Int((secondsAhead / 60).rounded()))
+        return max(1, Int((secondsAhead / 60).rounded(.up)))
     }
 
     // MARK: - Persistence (SettingsStore round-trip)

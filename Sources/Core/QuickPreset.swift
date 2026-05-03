@@ -45,7 +45,12 @@ public enum QuickPreset: String, CaseIterable, Sendable {
     public func minutes(from now: Date, calendar: Calendar = .current) -> Int {
         let target = nextOccurrence(after: now, calendar: calendar)
         let secondsAhead = target.timeIntervalSince(now)
-        let mins = Int((secondsAhead / 60).rounded())
+        // S23 / P-issue-1: round up (not to-nearest) so endsAt is never
+        // before target. Same fix as RecurringQuickPreset.minutes — kept
+        // parallel even though this enum is dead code (regression tests
+        // remain). See RecurringQuickPreset.minutes for the user-facing
+        // rationale.
+        let mins = Int((secondsAhead / 60).rounded(.up))
         return max(1, mins)
     }
 
