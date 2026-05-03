@@ -13,6 +13,7 @@ public final class TriggerCoordinator: ObservableObject {
     private let logger = LatteLog.triggers
     private var consumerTasks: [String: Task<Void, Never>] = [:]
     private var pauseLiftObserver: NSObjectProtocol?
+    private var userDeactivateObserver: NSObjectProtocol?
 
     public init(
         awakeManager: AwakeManager,
@@ -37,11 +38,27 @@ public final class TriggerCoordinator: ObservableObject {
                 self?.reevaluateAll()
             }
         }
+        // S22 / P-issue-6: when the user explicitly turns off (popover
+        // Turn off / ⌘⇧L toggle from awake / AppIntent deactivate),
+        // disable every enabled trigger. Pause-all stays the path for
+        // temporary suspension; Turn off is the "big red button".
+        userDeactivateObserver = NotificationCenter.default.addObserver(
+            forName: .latteUserExplicitDeactivate,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.disableAll()
+            }
+        }
     }
 
     deinit {
         if let pauseLiftObserver {
             NotificationCenter.default.removeObserver(pauseLiftObserver)
+        }
+        if let userDeactivateObserver {
+            NotificationCenter.default.removeObserver(userDeactivateObserver)
         }
     }
 
@@ -57,6 +74,21 @@ public final class TriggerCoordinator: ObservableObject {
     public func reevaluateAll() {
         for trigger in triggers where trigger.isEnabled {
             trigger.reemitCurrentVote()
+        }
+    }
+
+    /// **S22 / P-issue-6**: disable every currently-enabled trigger.
+    /// Called from the `.latteUserExplicitDeactivate` observer to
+    /// implement the "Turn off = big red button" semantic. Each
+    /// trigger's `isEnabled` setter persists to UserDefaults so the
+    /// Settings UI reflects the state, and `stop(_:)` halts emissions
+    /// + sends an OFF vote (clearing AwakeManager's shadow set so the
+    /// snooze deadline doesn't replay this trigger). To resume, the
+    /// user re-enables the trigger in Settings.
+    public func disableAll() {
+        for trigger in triggers where trigger.isEnabled {
+            trigger.isEnabled = false
+            stop(trigger.id)
         }
     }
 

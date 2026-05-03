@@ -670,7 +670,9 @@ public final class AwakeManager: ObservableObject {
     // MARK: Public API
 
     public func toggle() {
+        let wasAwake = state.isAwake
         process(.userToggle)
+        postUserExplicitDeactivateIfTransitioned(wasAwake: wasAwake)
     }
 
     public func activate(for duration: AwakeDuration, reason: AwakeReason = .user) {
@@ -693,7 +695,23 @@ public final class AwakeManager: ObservableObject {
     }
 
     public func deactivate(reason: AwakeReason = .user) {
+        let wasAwake = state.isAwake
         process(.userDeactivate)
+        postUserExplicitDeactivateIfTransitioned(wasAwake: wasAwake)
+    }
+
+    /// **S22 / P-issue-6**: when an awake state is dismissed by an
+    /// explicit user action (popover Turn off, ⌘⇧L toggle, AppIntent
+    /// deactivate), post `.latteUserExplicitDeactivate` so the
+    /// `TriggerCoordinator` can disable every enabled trigger. This
+    /// makes Turn off the "big red button" — Pause-all keeps triggers
+    /// enabled (temporary), Turn off disables them (explicit
+    /// termination). No post when the manager wasn't awake to begin
+    /// with, and no post when the post-process state is still awake
+    /// (e.g. `.userActivate` from a toggle).
+    private func postUserExplicitDeactivateIfTransitioned(wasAwake: Bool) {
+        guard wasAwake, !state.isAwake else { return }
+        NotificationCenter.default.post(name: .latteUserExplicitDeactivate, object: self)
     }
 
     public func receiveTriggerVote(_ vote: TriggerVote, from triggerId: String) {
@@ -872,4 +890,14 @@ extension Notification.Name {
     /// conditions (e.g. "Notion is still running") re-emit a vote ON and
     /// the cup wakes back up. Object is the posting `AwakeManager`.
     public static let latteTriggerPauseDidLift = Notification.Name("LatteTriggerPauseDidLift")
+
+    /// **S22 / P-issue-6**: posted by `AwakeManager` when an explicit
+    /// user action (popover Turn off, ⌘⇧L toggle from awake, AppIntent
+    /// deactivate) transitions the manager from awake → not-awake.
+    /// `TriggerCoordinator` listens and disables every enabled trigger
+    /// — the "big red button" semantic that delineates Pause-all
+    /// (temporary, triggers stay enabled) from Turn off (explicit
+    /// termination, triggers must be re-enabled in Settings to resume).
+    /// Object is the posting `AwakeManager`.
+    public static let latteUserExplicitDeactivate = Notification.Name("LatteUserExplicitDeactivate")
 }

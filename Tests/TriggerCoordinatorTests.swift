@@ -360,6 +360,68 @@ final class TriggerCoordinatorTests: XCTestCase {
         XCTAssertTrue(manager.isAwake, "still awake via other trigger after display detach")
     }
 
+    /// **S22 / P-issue-6 — UX redesign**: clicking "Turn off" while a
+    /// trigger is voting awake must disable every enabled trigger so the
+    /// cup doesn't auto-recover after the snooze window. Owner-requested
+    /// during the resumed Step 6 manual smoke: pause-all is for
+    /// temporary suspension (triggers stay enabled), Turn off is the
+    /// "big red button" — explicit termination + trigger disable. To
+    /// resume, user must re-enable triggers in Settings. This makes the
+    /// two paths semantically distinct rather than overlapping.
+    func testTurnOffDisablesEnabledTriggers() {
+        let (coordinator, manager, _, _) = makeCoordinator()
+        let mock = MockTrigger(id: "mock-app", isEnabled: true)
+        coordinator.register(mock)
+
+        manager.receiveTriggerVote(
+            TriggerVote(wantsAwake: true, reason: "App: Notion"),
+            from: "mock-app"
+        )
+        XCTAssertTrue(manager.isAwake)
+        XCTAssertTrue(mock.isEnabled)
+
+        manager.deactivate()
+
+        XCTAssertFalse(manager.isAwake)
+        XCTAssertFalse(mock.isEnabled, "Turn off must disable enabled triggers (P-issue-6)")
+    }
+
+    /// **S22 / P-issue-6**: pause-all must NOT disable triggers — pause is
+    /// temporary, triggers stay enabled with their config preserved so a
+    /// pause OFF auto-recovers via reemitCurrentVote (P-issue-5b).
+    /// Regression guard: the disableAll() path is exclusively for
+    /// user-explicit Turn off / toggle-OFF, not for pause-all.
+    func testPauseAllDoesNotDisableTriggers() {
+        let (coordinator, manager, _, _) = makeCoordinator()
+        let mock = MockTrigger(id: "mock-app", isEnabled: true)
+        coordinator.register(mock)
+
+        manager.receiveTriggerVote(
+            TriggerVote(wantsAwake: true, reason: "App: Notion"),
+            from: "mock-app"
+        )
+        XCTAssertTrue(manager.isAwake)
+
+        manager.triggersPaused = true
+
+        XCTAssertFalse(manager.isAwake)
+        XCTAssertTrue(mock.isEnabled, "pause-all must keep triggers enabled — P-issue-6 redesign delineates pause vs Turn off")
+    }
+
+    /// **S22 / P-issue-6**: deactivate from a state that wasn't awake
+    /// must NOT post the notification or disable triggers (no-op).
+    func testDeactivateFromAsleepIsNoOpForTriggerEnableState() {
+        let (coordinator, manager, _, _) = makeCoordinator()
+        let mock = MockTrigger(id: "mock-idle", isEnabled: true)
+        coordinator.register(mock)
+
+        XCTAssertFalse(manager.isAwake)
+
+        manager.deactivate()
+
+        XCTAssertTrue(mock.isEnabled, "deactivate from asleep must not disable triggers")
+    }
+
     /// Pause-all (C-9) gates ALL trigger votes including the new
     /// ExternalDisplayTrigger — cup must NOT activate while paused even
     /// with a monitor attached.
