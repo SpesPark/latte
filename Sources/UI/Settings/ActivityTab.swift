@@ -83,26 +83,44 @@ public struct ActivityTab: View {
                 )
             }
             Section("Retention") {
-                RetentionStepper(days: $environment.activityRetentionDays)
+                RetentionPicker(days: $environment.activityRetentionDays)
             }
             Section("Chart colours") {
                 ChartColorPickers(overrides: $environment.activityChartColors)
             }
             if !entries.isEmpty {
                 Section("Export") {
-                    ExportButtons { format in
-                        export(filter.apply(to: entries), as: format)
+                    // S23 / P-issue-5: render each button as its own Section
+                    // row (was previously an HStack inside a wrapper View;
+                    // owner reported click had no effect — Form Section's
+                    // row tap-handling can swallow events when buttons sit
+                    // inside an HStack child). `.buttonStyle(.bordered)`
+                    // makes them visually distinct from row-tappable rows.
+                    Button("Export CSV…") {
+                        LatteLog.activity.info("export tap — format=csv")
+                        export(filter.apply(to: entries), as: .csv)
                     }
+                    .accessibilityIdentifier("activity.export.csv")
+                    .buttonStyle(.bordered)
+                    Button("Export JSON…") {
+                        LatteLog.activity.info("export tap — format=json")
+                        export(filter.apply(to: entries), as: .json)
+                    }
+                    .accessibilityIdentifier("activity.export.json")
+                    .buttonStyle(.bordered)
                 }
             }
         }
         .formStyle(.grouped)
         .task { await reload() }
         .onChange(of: environment.activityRetentionDays) { _ in
-            // Grow path: actor stays in sync via setRetention(), but the
-            // UI's `entries` snapshot was scoped to the old cutoff. Re-fetch
-            // so the recovered older history shows up without a tab bounce.
-            Task { await reload() }
+            // S23 / P-issue-4: skip the `isLoading = true` flip so the
+            // chart sections stay rendered during re-fetch — without it,
+            // changing retention briefly collapsed every chart section,
+            // making the form re-layout and visually jump as the spinner
+            // appeared then disappeared. Reload swaps `entries` atomically
+            // when the snapshot returns; charts re-render in place.
+            Task { await reload(showSpinner: false) }
         }
         .onReceive(NotificationCenter.default.publisher(for: .activityLogDidAppend)) { _ in
             scheduleLiveReload()
@@ -128,6 +146,11 @@ public struct ActivityTab: View {
     /// Routes the filtered snapshot through `ActivityLogExporter` and a
     /// `NSSavePanel`. Failures are logged + swallowed (panel handles the
     /// "user cancelled" path; write errors are owner-side, not crashable).
+    /// S23 / P-issue-5: panel is anchored to the Settings window via
+    /// `beginSheetModal` instead of `runModal()` so it appears on top of
+    /// the active window rather than possibly behind it. Sandbox app
+    /// receives PowerBox-granted write access to the chosen URL — no
+    /// `files.user-selected.read-write` entitlement needed for this path.
     private func export(_ entries: [ActivityLogEntry], as format: ActivityLogExporter.Format) {
         let panel = NSSavePanel()
         panel.nameFieldStringValue = ActivityLogExporter.suggestedFilename(for: format)
@@ -135,7 +158,10 @@ public struct ActivityTab: View {
         case .csv:  panel.allowedContentTypes = [.commaSeparatedText]
         case .json: panel.allowedContentTypes = [.json]
         }
-        guard panel.runModal() == .OK, let url = panel.url else { return }
+        let response = panel.runModal()
+        LatteLog.activity.info("export panel runModal returned — \(response.rawValue, privacy: .public)")
+        guard response == .OK, let url = panel.url else { return }
+        LatteLog.activity.info("export writing — \(url.path, privacy: .public)")
         do {
             switch format {
             case .csv:
@@ -144,16 +170,18 @@ public struct ActivityTab: View {
                 let data = try ActivityLogExporter.jsonData(from: entries)
                 try data.write(to: url, options: .atomic)
             }
+            LatteLog.activity.info("export wrote \(entries.count, privacy: .public) entries")
         } catch {
             LatteLog.activity.error("activity-log export failed — \(error.localizedDescription, privacy: .public)")
         }
     }
 
-    private func reload() async {
-        // Flip back to loading so a retention-change re-fetch shows the
-        // spinner instead of stale data. `defer` clears it after the actor
-        // hop completes.
-        isLoading = true
+    private func reload(showSpinner: Bool = true) async {
+        // S23 / P-issue-4: spinner is opt-out — initial load shows it, but
+        // retention-change re-fetches keep the existing chart sections
+        // visible to avoid form jump. `entries` swaps atomically when the
+        // actor returns the new snapshot.
+        if showSpinner { isLoading = true }
         defer { isLoading = false }
         guard let store else {
             entries = []
@@ -212,23 +240,11 @@ private struct DailyHeatmapChart: View {
 }
 
 // MARK: - Export buttons (C)
-
-/// Two-button row that calls back into the host with the chosen format.
-/// The host owns the NSSavePanel call so the buttons stay testable as a
-/// pure View (no AppKit side effect baked in).
-private struct ExportButtons: View {
-
-    let onExport: (ActivityLogExporter.Format) -> Void
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Button("Export CSV…") { onExport(.csv) }
-                .accessibilityIdentifier("activity.export.csv")
-            Button("Export JSON…") { onExport(.json) }
-                .accessibilityIdentifier("activity.export.json")
-        }
-    }
-}
+//
+// Buttons are now inlined directly into the Section in ActivityTab.body
+// (see S23 / P-issue-5 comment there). The previous `ExportButtons`
+// wrapper View was removed because Section's row tap-handling could
+// swallow events when the buttons sat inside an HStack child.
 
 // MARK: - Per-trigger filter picker (B)
 
@@ -256,29 +272,61 @@ private struct TriggerFilterPicker: View {
     }
 }
 
-// MARK: - Retention stepper (F)
+// MARK: - Retention picker (F)
 
 /// Owner-facing knob for `SettingsKey.activityRetentionDays`. The binding
 /// flows through `AppEnvironment` whose `didSet` writes to `SettingsStore`
 /// AND propagates the new window into the live `ActivityLogStore` actor —
 /// shrinking the window GCs stale entries on the spot.
-private struct RetentionStepper: View {
+///
+/// **S23 / P-issue-4**: replaces the previous Stepper. Owner reported the
+/// Stepper UX was disorienting — each +/- click triggered a re-fetch +
+/// chart re-layout, and chart-collapse during reload made the form bounce.
+/// Picker presents 6 preset windows (1 / 7 / 14 / 30 / 60 / 90 days)
+/// so each change is a single deliberate selection. Binding writes to
+/// `activityRetentionDays`; reader maps any non-preset stored value
+/// (e.g. legacy `22`) to its nearest preset for display.
+struct RetentionPicker: View {
 
     @Binding var days: Int
 
+    /// Preset windows offered to the user. All within
+    /// `ActivityLogStore.retentionDayRange` (1...90). Sorted ascending so
+    /// the menu reads "1 day → 90 days".
+    static let presets: [Int] = [1, 7, 14, 30, 60, 90]
+
     var body: some View {
-        Stepper(value: $days,
-                in: ActivityLogStore.retentionDayRange,
-                step: 1) {
-            HStack {
-                Text("Keep history for")
-                Spacer()
-                Text("\(days) day\(days == 1 ? "" : "s")")
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
+        Picker(selection: Binding(
+            get: { Self.nearestPreset(to: days) },
+            set: { days = $0 }
+        )) {
+            ForEach(Self.presets, id: \.self) { preset in
+                Text(Self.label(for: preset)).tag(preset)
             }
+        } label: {
+            Text("Keep history for")
         }
-        .accessibilityIdentifier("activity.retention.stepper")
+        .pickerStyle(.menu)
+        .accessibilityIdentifier("activity.retention.picker")
+    }
+
+    /// Maps an arbitrary stored value to the closest available preset.
+    /// Pre-S23 users with `22` see "30 days" selected. Distance ties prefer
+    /// the smaller preset (less surprise toward more retention).
+    static func nearestPreset(to value: Int) -> Int {
+        presets.min(by: { abs($0 - value) < abs($1 - value) }) ?? presets[0]
+    }
+
+    static func label(for preset: Int) -> String {
+        switch preset {
+        case 1: return "1 day"
+        case 7: return "1 week"
+        case 14: return "2 weeks"
+        case 30: return "1 month"
+        case 60: return "2 months"
+        case 90: return "3 months"
+        default: return "\(preset) days"
+        }
     }
 }
 
