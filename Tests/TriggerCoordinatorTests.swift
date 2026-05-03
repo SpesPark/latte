@@ -447,6 +447,57 @@ final class TriggerCoordinatorTests: XCTestCase {
         )
     }
 
+    /// **S22 / P-issue-6c**: after Turn off (which disables triggers via
+    /// `disableAll()`), re-enabling the trigger with the matching condition
+    /// still holding (e.g. Notion still running) must immediately wake
+    /// the cup. The original `.userDeactivate → enterSnoozed` path locked
+    /// the manager in `.snoozed` for 5 min and suppressed the vote ON,
+    /// even though the trigger had been disabled and re-enabled in
+    /// between. Owner-reported during the resumed Step 6 manual smoke.
+    /// Fix: `deactivate()` and `toggle()` route through
+    /// `.constraintDeactivate` so we land in `.asleep` (snooze skipped).
+    func testReenableTriggerAfterTurnOffWakesImmediatelyWhenConditionHolds() {
+        let assertion = MockPowerAssertion()
+        let settings = InMemorySettingsStore()
+        settings.setBool(true, for: .appTriggerEnabled)
+        settings.appTriggerBundleIDs = ["us.zoom.xos"]
+
+        let manager = AwakeManager(assertion: assertion, settings: settings)
+        let coordinator = TriggerCoordinator(awakeManager: manager, settings: settings)
+        let appTrigger = AppTrigger(
+            settings: settings,
+            source: MockWorkspaceSource(runningBundleIDs: ["us.zoom.xos"])
+        )
+        coordinator.register(appTrigger)
+
+        // 5.1: trigger fires while matching app is running
+        manager.receiveTriggerVote(
+            TriggerVote(wantsAwake: true, reason: "App: Zoom"),
+            from: "AppTrigger"
+        )
+        XCTAssertTrue(manager.isAwake)
+
+        // 5.2: user clicks Turn off → disableAll runs synchronously, state
+        //      transitions directly to .asleep (not .snoozed)
+        manager.deactivate()
+        XCTAssertFalse(manager.isAwake)
+        XCTAssertFalse(appTrigger.isEnabled)
+
+        // 5.5: user re-enables the trigger; matching app still running.
+        //      Re-emit the vote ON the same way Settings UI's Toggle ON
+        //      onChange would (trigger.isEnabled = true + receiveTriggerVote).
+        appTrigger.isEnabled = true
+        manager.receiveTriggerVote(
+            TriggerVote(wantsAwake: true, reason: "App: Zoom"),
+            from: "AppTrigger"
+        )
+
+        XCTAssertTrue(
+            manager.isAwake,
+            "re-enabled trigger with steady-state condition must wake the cup immediately — no 5-min snooze lockout (P-issue-6c)"
+        )
+    }
+
     /// **S22 / P-issue-6**: deactivate from a state that wasn't awake
     /// must NOT post the notification or disable triggers (no-op).
     func testDeactivateFromAsleepIsNoOpForTriggerEnableState() {

@@ -671,7 +671,24 @@ public final class AwakeManager: ObservableObject {
 
     public func toggle() {
         let wasAwake = state.isAwake
-        process(.userToggle)
+        // **S22 / P-issue-6c**: when toggling from awake → not-awake, route
+        // through `.constraintDeactivate` so we go directly to `.asleep`
+        // (clearing pendingVotes, no snooze). The original `.userToggle →
+        // .userDeactivate → enterSnoozed` path locked the manager in
+        // `.snoozed` for 5 min, which suppressed any vote ON from a
+        // user-re-enabled trigger — owner reported during the resumed Step
+        // 6 manual smoke that re-enabling AppTrigger after Turn off did
+        // not wake the cup until snooze expired. Snooze was originally
+        // meant to prevent immediate re-fire from the SAME trigger; with
+        // P-issue-6's `disableAll()` clearing the trigger config on
+        // user-explicit deactivate, snooze is moot — the trigger can't
+        // re-fire until the user explicitly re-enables it, at which
+        // point an immediate wake is the correct UX.
+        if state.assertionHeld {
+            process(.constraintDeactivate)
+        } else {
+            process(.userActivate(.indefinite))
+        }
         postUserExplicitDeactivateIfTransitioned(wasAwake: wasAwake)
     }
 
@@ -696,7 +713,11 @@ public final class AwakeManager: ObservableObject {
 
     public func deactivate(reason: AwakeReason = .user) {
         let wasAwake = state.isAwake
-        process(.userDeactivate)
+        // **S22 / P-issue-6c**: see `toggle()` doc-comment. User-explicit
+        // deactivate routes through `.constraintDeactivate` so we go
+        // directly to `.asleep` and skip the 5-min snooze that would
+        // otherwise suppress vote ON from a re-enabled trigger.
+        process(.constraintDeactivate)
         postUserExplicitDeactivateIfTransitioned(wasAwake: wasAwake)
     }
 

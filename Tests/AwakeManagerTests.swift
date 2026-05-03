@@ -586,16 +586,31 @@ final class AwakeManagerWorkedExampleTests: XCTestCase {
         XCTAssertFalse(assertion.isActive, "v1 default releases the assertion immediately")
     }
 
-    /// §8.3 user snoozes during a call; new vote goes to shadow; expiry promotes.
-    func test83_userSnoozesDuringCall_shadowSetPreserved() {
+    /// **S22 / P-issue-6c**: user-explicit deactivate (popover Turn off /
+    /// ⌘⇧L toggle / AppIntent) routes through `.constraintDeactivate`,
+    /// which lands directly in `.asleep` and clears `pendingVotes`. Snooze
+    /// is intentionally bypassed because P-issue-6's `disableAll()`
+    /// already disables every enabled trigger on this transition — the
+    /// snooze was originally a re-fire suppressor, but with no triggers
+    /// enabled there's nothing to re-fire. Owner-requested redesign:
+    /// pause-all = temporary suspend (auto-recover when conditions hold);
+    /// Turn off = explicit termination (re-enable in Settings to resume).
+    /// Replaces the previous test83 which encoded the v1 snooze contract.
+    func test83_userDeactivateDuringCall_goesAsleepImmediately() {
         let (manager, assertion, _) = makeManager()
         manager.receiveTriggerVote(TriggerVote(wantsAwake: true, reason: "A"), from: "cal")
         manager.deactivate()
-        if case .snoozed = manager.state {} else { XCTFail() }
-        XCTAssertFalse(assertion.isActive, "snooze releases assertion")
+        XCTAssertEqual(manager.state, .asleep, "user-explicit deactivate skips snooze (P-issue-6c)")
+        XCTAssertFalse(assertion.isActive, "deactivate releases assertion")
 
+        // Subsequent ON vote arrives (e.g. in a real run, this would mean
+        // the user re-enabled the trigger and the trigger re-emitted) —
+        // since state is .asleep, the vote freshly transitions to
+        // .awakeTriggered. No snooze suppression.
         manager.receiveTriggerVote(TriggerVote(wantsAwake: true, reason: "B"), from: "app")
-        if case .snoozed = manager.state {} else { XCTFail("snooze must suppress new votes") }
+        if case .awakeTriggered = manager.state {} else {
+            XCTFail("post-deactivate vote ON must wake fresh — no snooze lockout (P-issue-6c)")
+        }
     }
 
     /// §8.4 user activates manually, trigger fires later, timer expires → triggered.
@@ -610,9 +625,11 @@ final class AwakeManagerWorkedExampleTests: XCTestCase {
         }
     }
 
-    /// §8.5 user force-off during cool-down → snoozed (not asleep).
-    /// Requires grace>0 to actually enter cooling-down state.
-    func test85_userForceOffDuringCooling_goesSnoozed() {
+    /// **S22 / P-issue-6c**: user force-off during cool-down lands in
+    /// `.asleep` (not `.snoozed`), symmetric with all other user-explicit
+    /// deactivate paths under the post-P6 redesign. Replaces the previous
+    /// test85 which encoded the v1 snooze contract.
+    func test85_userForceOffDuringCooling_goesAsleep() {
         let (manager, _, _) = makeManager()
         manager.receiveTriggerVote(
             TriggerVote(wantsAwake: true, reason: "A", graceSecondsAfterOff: 30),
@@ -625,7 +642,7 @@ final class AwakeManagerWorkedExampleTests: XCTestCase {
         if case .coolingDown = manager.state {} else { XCTFail("expected coolingDown, got \(manager.state)") }
 
         manager.deactivate()
-        if case .snoozed = manager.state {} else { XCTFail() }
+        XCTAssertEqual(manager.state, .asleep, "user-explicit deactivate during cool-down lands directly in .asleep (P-issue-6c)")
     }
 
     /// §8.6 cold launch always = asleep.
