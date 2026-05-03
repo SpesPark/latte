@@ -32,13 +32,13 @@ public struct CustomDurationRow: View {
         return VStack(spacing: 0) {
             Button(action: { isExpanded.toggle() }) {
                 HStack(spacing: Theme.Spacing.sm) {
-                    Rectangle()
-                        .fill(isActive ? accent : Color.clear)
-                        .frame(width: 3)
-                        .padding(.vertical, 4)
+                    // S23 / P-issue-3: stripe drawn via `.overlay` below.
+                    // See `DurationPickerRow` for rationale.
+                    Color.clear.frame(width: 3)
 
                     Text("Custom…")
                         .font(Theme.Fonts.body)
+                        .foregroundStyle(isActive ? .primary : .secondary)
 
                     Spacer()
 
@@ -61,6 +61,15 @@ public struct CustomDurationRow: View {
                         .fill(isHovered ? Color.primary.opacity(0.06) : Color.clear)
                         .padding(.horizontal, Theme.Spacing.sm)
                 )
+                .overlay(alignment: .leading) {
+                    if isActive {
+                        Capsule(style: .continuous)
+                            .fill(accent)
+                            .frame(width: 3)
+                            .padding(.vertical, 6)
+                            .padding(.leading, Theme.Spacing.lg - 3)
+                    }
+                }
             }
             .buttonStyle(.plain)
             .onHover { isHovered = $0 }

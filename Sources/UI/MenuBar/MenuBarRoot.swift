@@ -34,7 +34,13 @@ public struct MenuBarRoot: View {
                 CustomDurationRow(
                     isExpanded: $customExpanded,
                     minutes: $customMinutes,
-                    isActive: manager.isAwake && isUnlistedCustomDuration(manager.activeDuration),
+                    // S23 / P-issue-2: AND `activeRecurringPresetID == nil` so a
+                    // preset-driven `.minutes(N)` (which is also "unlisted") doesn't
+                    // poach the Custom row's checkmark — the recurring preset row
+                    // owns the marker via its own `isActive`.
+                    isActive: manager.isAwake
+                        && isUnlistedCustomDuration(manager.activeDuration)
+                        && manager.activeRecurringPresetID == nil,
                     onStart: {
                         manager.activate(for: .minutes(customMinutes))
                     }
@@ -58,9 +64,14 @@ public struct MenuBarRoot: View {
                     ForEach(activePresets) { preset in
                         RecurringQuickPresetRow(
                             preset: preset,
+                            isActive: manager.isAwake
+                                && manager.activeRecurringPresetID == preset.id,
                             action: {
                                 let mins = preset.minutes(from: .now)
-                                manager.activate(for: .minutes(mins))
+                                // S23 / P-issue-2: tag the activation so the
+                                // popover shows the checkmark on this row,
+                                // not on Custom.
+                                manager.activate(for: .minutes(mins), fromRecurringPreset: preset.id)
                             }
                         )
                     }

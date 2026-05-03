@@ -506,6 +506,94 @@ final class AwakeStateMachineTests: XCTestCase {
         XCTAssertTrue(manager.isAwake, "still awake during cool-down (assertion held)")
         XCTAssertTrue(assertion.isActive)
     }
+
+    // MARK: - S23 / P-issue-2: activeRecurringPresetID lifecycle
+
+    /// Activating from a recurring preset publishes the preset ID so the
+    /// popover can show the checkmark on the matching row.
+    @MainActor
+    func testManager_activateFromRecurringPreset_publishesPresetID() {
+        let manager = AwakeManager(
+            assertion: MockPowerAssertion(),
+            settings: InMemorySettingsStore()
+        )
+        let presetID = UUID()
+
+        manager.activate(for: .minutes(90), fromRecurringPreset: presetID)
+
+        XCTAssertEqual(manager.activeRecurringPresetID, presetID)
+        XCTAssertTrue(manager.isAwake)
+    }
+
+    /// Subsequent non-preset activation (manual duration row click) clears
+    /// the marker — popover checkmark moves off the recurring preset row.
+    @MainActor
+    func testManager_activateWithoutPreset_clearsPriorPresetID() {
+        let manager = AwakeManager(
+            assertion: MockPowerAssertion(),
+            settings: InMemorySettingsStore()
+        )
+        manager.activate(for: .minutes(90), fromRecurringPreset: UUID())
+        XCTAssertNotNil(manager.activeRecurringPresetID)
+
+        manager.activate(for: .minutes(30))   // non-preset path
+
+        XCTAssertNil(manager.activeRecurringPresetID)
+        XCTAssertTrue(manager.isAwake)
+    }
+
+    /// Deactivating clears the preset ID (state transitions to .asleep).
+    @MainActor
+    func testManager_deactivate_clearsPresetID() {
+        let manager = AwakeManager(
+            assertion: MockPowerAssertion(),
+            settings: InMemorySettingsStore()
+        )
+        manager.activate(for: .minutes(90), fromRecurringPreset: UUID())
+
+        manager.deactivate()
+
+        XCTAssertNil(manager.activeRecurringPresetID)
+        XCTAssertEqual(manager.state, .asleep)
+    }
+
+    /// Trigger vote during preset awake records a shadow vote — the manager
+    /// stays in `.awakeUserTimed`, so the preset ID is intentionally
+    /// preserved (still a user-driven session). Verifies the marker doesn't
+    /// drop on every received vote, only on actual state transitions out of
+    /// `.awakeUserTimed`.
+    @MainActor
+    func testManager_triggerVoteOnDuringPresetAwake_preservesPresetID() {
+        let manager = AwakeManager(
+            assertion: MockPowerAssertion(),
+            settings: InMemorySettingsStore()
+        )
+        let presetID = UUID()
+        manager.activate(for: .minutes(90), fromRecurringPreset: presetID)
+
+        manager.receiveTriggerVote(
+            TriggerVote(wantsAwake: true, reason: "on", graceSecondsAfterOff: 0),
+            from: "t"
+        )
+
+        // Still in .awakeUserTimed (vote recorded as shadow), preset ID kept.
+        XCTAssertEqual(manager.activeRecurringPresetID, presetID)
+    }
+
+    /// Activating indefinite (toggle/⌘⇧L) clears the preset ID — indefinite
+    /// is never a recurring preset.
+    @MainActor
+    func testManager_activateIndefinite_clearsPresetID() {
+        let manager = AwakeManager(
+            assertion: MockPowerAssertion(),
+            settings: InMemorySettingsStore()
+        )
+        manager.activate(for: .minutes(90), fromRecurringPreset: UUID())
+
+        manager.activate(for: .indefinite)
+
+        XCTAssertNil(manager.activeRecurringPresetID)
+    }
 }
 
 // MARK: - Worked examples from 03 §8 — integration on AwakeManager.

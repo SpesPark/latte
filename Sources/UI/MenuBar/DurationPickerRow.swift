@@ -19,13 +19,19 @@ public struct DurationPickerRow: View {
         let accent = environment.coffeeAccent.color
         return Button(action: action) {
             HStack(spacing: Theme.Spacing.sm) {
-                Rectangle()
-                    .fill(isActive ? accent : Color.clear)
-                    .frame(width: 3)
-                    .padding(.vertical, 4)
+                // S23 / P-issue-3: layout-only spacer reserving 3pt for the
+                // active stripe drawn via `.overlay` below. The previous
+                // `Rectangle().fill(isActive ? accent : Color.clear)` child
+                // never rendered visibly on this row even when isActive=true
+                // (only the right-side checkmark appeared). Decoupling stripe
+                // drawing from HStack layout via an overlay sidesteps the
+                // SwiftUI quirk and matches the reliable pattern across all
+                // three popover row types.
+                Color.clear.frame(width: 3)
 
                 Text(duration.label)
                     .font(Theme.Fonts.body)
+                    .foregroundStyle(isActive ? .primary : .secondary)
 
                 Spacer()
 
@@ -43,6 +49,15 @@ public struct DurationPickerRow: View {
                     .fill(isHovered ? Color.primary.opacity(0.06) : Color.clear)
                     .padding(.horizontal, Theme.Spacing.sm)
             )
+            .overlay(alignment: .leading) {
+                if isActive {
+                    Capsule(style: .continuous)
+                        .fill(accent)
+                        .frame(width: 3)
+                        .padding(.vertical, 6)
+                        .padding(.leading, Theme.Spacing.lg - 3)
+                }
+            }
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }

@@ -572,6 +572,17 @@ public final class AwakeManager: ObservableObject {
     @Published public private(set) var activeDuration: AwakeDuration?
     @Published public private(set) var activeReason: AwakeReason = .none
 
+    /// **S23 / P-issue-2**: when an awake session was started by clicking a
+    /// `RecurringQuickPreset` in the popover, holds that preset's UUID so
+    /// the popover can render the checkmark on the matching preset row
+    /// instead of the Custom row (the `.minutes(N)` duration derived from
+    /// a wall-clock target is never in `AwakeDuration.presets`, so without
+    /// this signal the Custom row would claim the active marker).
+    /// Cleared automatically on any non-`.awakeUserTimed` state and on any
+    /// non-preset activation. Single source of truth — no view-local state
+    /// needed.
+    @Published public private(set) var activeRecurringPresetID: UUID?
+
     // MARK: Settings
     @Published public var allowDisplaySleep: Bool {
         didSet {
@@ -692,12 +703,21 @@ public final class AwakeManager: ObservableObject {
         postUserExplicitDeactivateIfTransitioned(wasAwake: wasAwake)
     }
 
-    public func activate(for duration: AwakeDuration, reason: AwakeReason = .user) {
+    public func activate(
+        for duration: AwakeDuration,
+        reason: AwakeReason = .user,
+        fromRecurringPreset presetID: UUID? = nil
+    ) {
         if let block = blockReason(forManualActivation: true) {
             logger.info("manual activation blocked: \(block, privacy: .public)")
             return
         }
         lastUserDuration = duration
+        // S23 / P-issue-2: set BEFORE process() so publishDerived sees the
+        // correct value when transitioning into .awakeUserTimed. Non-preset
+        // callers default to nil → existing presetID gets cleared, so a
+        // manual 30m click after a preset click correctly drops the marker.
+        activeRecurringPresetID = presetID
         process(.userActivate(duration))
         // The FSM hardcodes `.user` as the reason for `.userActivate` inputs
         // because the input itself doesn't carry one. When the caller wants
@@ -838,12 +858,16 @@ public final class AwakeManager: ObservableObject {
         case .awakeUserTimed(let endsAt):
             self.endsAt = endsAt
             self.activeDuration = lastUserDuration
+            // activeRecurringPresetID is set by activate(...) before process()
+            // and intentionally preserved here.
         case .awakeUserIndefinite:
             self.endsAt = nil
             self.activeDuration = .indefinite
+            self.activeRecurringPresetID = nil
         case .asleep, .awakeTriggered, .coolingDown, .snoozed:
             self.endsAt = state.endsAt
             self.activeDuration = nil
+            self.activeRecurringPresetID = nil
         }
     }
 
