@@ -8,15 +8,17 @@
 
 | Field | Value |
 |---|---|
-| **Session #** | **S22** — resumed owner-driven manual smoke (2026-05-02 → 2026-05-03). **Seven P-issues** total. Three light-mode visual + one popover keybinding gap (reverted) + one pause-all snooze caption + one P5b follow-up (lift hook called wrong protocol method) + one P-issue-6 UX redesign (Turn off becomes "big red button" disabling all enabled triggers). Sixteen-commit chain. |
-| **Theme** | "Pause-all and Turn off had been semantically conflated through the single `.userDeactivate` FSM input. Owner's mental model is two distinct off-paths: pause = temporary (triggers stay enabled, auto-recover when conditions still hold), Turn off = explicit termination (triggers disabled, user re-enables in Settings). Forcing them through one transition created the confused middle-ground that surfaced as misleading captions and surprising 5-min auto-recovery. Two notifications, two observer chains, two clear semantics." |
-| **Status** | ✅ **7 fix commits + 1 revert + 5 doc-sync commits.** **Tests 554 → 566** (+12 net: P1 +1, P2 +2, P3 +1, P4 +0/reverted, P5 +3, P5b +2, P6 +3). **Smoke 22/22 PASS** post-each-fix. Working tree clean. |
-| **Tail commit** | `d78fca3` (feat: Turn off becomes "big red button" — disables all enabled triggers — S22 / P-issue-6) — doc-sync commit forthcoming after this file lands. |
+| **Session #** | **S22** — resumed owner-driven manual smoke (2026-05-02 → 2026-05-03). **Eight P-issues** total. Three light-mode visual + one popover keybinding gap (reverted) + one pause-all snooze caption + one P5b follow-up + one P6 UX redesign + one P6b observer-sync follow-up (queue=.main async leaked past UI navigation; TriggerSection @State stale). Eighteen-commit chain. |
+| **Theme** | "Two follow-up P-issues this session — both P5→P5b and P6→P6b — surfaced the same meta-pattern: my unit tests passed but the live app didn't. P5b: AppTrigger.reevaluateWatched dedup hid the empty re-emit. P6b: NotificationCenter queue=.main + @State stale-cache hid the UI sync gap. Tests don't always validate runtime semantics. Owner manual smoke catches what the harness doesn't." |
+| **Status** | ✅ **8 fix commits + 1 revert + 6 doc-sync commits.** **Tests 554 → 567** (+13 net: P1 +1, P2 +2, P3 +1, P4 +0/reverted, P5 +3, P5b +2, P6 +3, P6b +1). **Smoke 22/22 PASS** post-each-fix. Working tree clean. |
+| **Tail commit** | `55c2c78` (fix: Turn off → trigger disable now reaches Settings UI — S22 / P-issue-6b) — doc-sync commit forthcoming after this file lands. |
 
 ### Commit chain (S22 only — top is HEAD)
 
 ```
-(this commit)  docs: SESSION_HANDOFF wrap for S22 (P-issue-6)                        (S22 #16)
+(this commit)  docs: SESSION_HANDOFF wrap for S22 (P-issue-6b)                       (S22 #18)
+55c2c78        fix: Turn off → trigger disable now reaches Settings UI               (S22 #17) ← P-issue-6b
+6c46e2c        docs: SESSION_HANDOFF wrap for S22 (P-issue-6)                        (S22 #16)
 d78fca3        feat: Turn off becomes "big red button" — disables all triggers       (S22 #15) ← P-issue-6
 5b83eb9        docs: SESSION_HANDOFF wrap for S22 (P-issue-5b)                       (S22 #14)
 c4703db        fix: pause-lift auto-recovery + Turn off caption                      (S22 #13) ← P-issue-5b
@@ -44,6 +46,7 @@ ebbd04a        fix: light-mode cup body — brighter than liquid                
 | P5 | `895947a`. Pause-all from `.awakeTriggered` painted misleading "Until X" caption (because `enterSnoozed` sets `endsAt + reason=.user`). Plus: `.snoozed` lockout held 5 min after pause OFF, with no auto-recovery for steady-state triggers. **Two-part fix**: (a) new `AwakeInput.constraintDeactivate` + helper that goes directly to `.asleep` clearing pendingVotes; (b) `triggersPaused` didSet posts `.latteTriggerPauseDidLift` on true→false transition; `TriggerCoordinator` subscribes and calls `reevaluateAll()` invoking `Trigger.reevaluateWatched()`. | +3 |
 | P5b | `c4703db`. **P5 fix was incomplete on the trigger side.** Owner re-tested: pause OFF still didn't auto-recover, and Turn off pressed while AppTrigger was voting ON painted the same "Until X" caption. Two distinct root causes: (a) `reevaluateWatched()` short-circuits on watched-set no-diff (Settings UI dedup) so pause-lift never actually re-emitted; (b) HeaderView returned "Until X" whenever endsAt!=nil regardless of isAwake, so .snoozed (entered via Turn off → .userDeactivate from .awakeTriggered) painted the snooze deadline as if it were an awake deadline. Fix: new `Trigger.reemitCurrentVote()` protocol method (bypasses dedup); `AppTrigger.reemitCurrentVote()` impl; `TriggerCoordinator.reevaluateAll()` switched from `reevaluateWatched()` to `reemitCurrentVote()`. HeaderView gates every "Until …" branch on `isAwake == true`. | +2 |
 | P6 | `d78fca3`. **Owner-requested UX redesign.** Even with the P5b caption fix, owner found the Turn-off-while-trigger-active behaviour confusing: trigger stayed enabled, 5 min later cup auto-recovered. Mental model: pause = temporary (auto-recover when conditions hold), Turn off = explicit termination (disable triggers, manual re-enable). Implementation: new `Notification.Name.latteUserExplicitDeactivate` posted by `AwakeManager` from `deactivate()` and `toggle()` on awake → not-awake transitions only. `TriggerCoordinator` subscribes (mirror of `.latteTriggerPauseDidLift`) and calls new `disableAll()` which flips `trigger.isEnabled = false` (persists to UserDefaults) + calls `stop(_:)` (halts emissions, emits OFF vote). Pause-all explicitly NOT affected — keeps the temporary-suspend semantic. Tests: golden path + pause-all-doesn't-disable regression guard + asleep-deactivate-no-op. | +3 |
+| P6b | `55c2c78`. **P6 fix passed unit tests but didn't reach the live UI.** Owner reported the Triggers tab toggle still showed ON after Turn off. Two defects. (a) Observer registered with `queue: .main` defers the block to OperationQueue.main, which fires on the next run-loop iteration; the popover-dismiss + Settings-show transition can leak past the deferral. Switched both observers to `queue: nil` — block runs synchronously on the posting thread. Both posts are from @MainActor, so MainActor.assumeIsolated continues to hold. (b) `TriggerSection`'s `@State var isOn` initializes from `trigger.isEnabled` ONCE at view creation; programmatic UserDefaults writes don't refresh the local @State. Added `.onReceive` for `.latteUserExplicitDeactivate` that re-reads `trigger.isEnabled` into `isOn`. New integration test uses a real `AppTrigger` to verify `trigger.isEnabled = false` reaches the underlying `SettingsStore` — `MockTrigger` has its own non-persisted storage. | +1 |
 
 ### Patterns reinforced this session
 
@@ -58,7 +61,10 @@ ebbd04a        fix: light-mode cup body — brighter than liquid                
 - **HeaderView captions must gate `isAwake` before reading `endsAt`** (P-issue-5b) — `endsAt` is published for both awake-deadline (`.awakeUserTimed`) AND not-awake-deadline (`.snoozed`, `.coolingDown`) states. The "Until X" phrasing is only correct for the awake-deadline subset. Same defect surfaced through the Turn-off → snoozed path even before pause-all was wired.
 - **Two distinct off-paths for distinct mental models** (P-issue-6) — pause-all (temporary suspend, triggers stay enabled, auto-recover when conditions still hold) vs Turn off (explicit termination, triggers disabled, user re-enables in Settings). Conflating both into a single FSM transition forces a confused middle ground (the original `.userDeactivate → .snoozed` semantics that surfaced as "5 min later the cup comes back even though I said off"). Each path needs its own notification + observer wiring.
 - **`isEnabled` setter as the persistence boundary for trigger state** (P-issue-6) — flipping `trigger.isEnabled = false` programmatically is equivalent to the user toggling it OFF in Settings: same UserDefaults key, same UI reflection. New code that needs to "kill" a trigger should use this rather than introducing a parallel disable mechanism.
-- **Sequential cascade in resumed manual smoke** — each owner-driven fix exposes the next layer (cup body → stroke → noir → popover keybinding gap → pause-all snooze caption → P5 incomplete trigger-side → Turn off auto-recovery confusion). Step 6 is now confirmed as the canonical popover regression catch and the surface that drove every meaningful S22 P-issue.
+- **NotificationCenter `queue: .main` is a deferral** (P-issue-6b) — even from the main thread, scheduling on OperationQueue.main runs the block on the next run-loop turn; UI navigation between post and observer can leak past it. Use `queue: nil` for "must run before any subsequent UI read" semantics, with `MainActor.assumeIsolated` for actor safety when posters are @MainActor.
+- **`@State` initialized from a non-observable model is a stale-cache hazard** (P-issue-6b) — when programmatic writes to the underlying model bypass the SwiftUI binding (e.g. `trigger.isEnabled = false` from a coordinator), the @State retains the previous value until view re-creation. Add an `.onReceive` for the relevant change notification to re-sync.
+- **Mock-backed tests can hide model-vs-store regressions** (P-issue-6b) — `MockTrigger` stores `isEnabled` as an instance property; `AppTrigger.isEnabled` setter persists through `SettingsStore`. Tests using only mocks pass even if the protocol-level write doesn't reach the store. Add at least one integration test using the production trigger type whenever the contract involves persistence.
+- **Sequential cascade in resumed manual smoke** — each owner-driven fix exposes the next layer (cup body → stroke → noir → popover keybinding gap → pause-all snooze caption → P5 incomplete trigger-side → P6 redesign → P6b observer-sync gap). Owner manual smoke continues to find what unit tests can't. Step 6 is now confirmed as the canonical popover regression catch and the surface that drove every meaningful S22 P-issue.
 
 ### What was checked but not changed
 
@@ -93,11 +99,11 @@ The v1.x feature backlog stays **functionally exhausted**. S22 is a P-issue-driv
 cd ~/Documents/Claude/Projects/Latte
 pkill -9 -f "Latte.app" 2>/dev/null   # zombie 제거 — LSMultipleInstancesProhibited
 git log --oneline -16
-xcodebuild test -scheme Latte -destination 'platform=macOS,arch=arm64' 2>&1 | grep "Executed 566 tests"
+xcodebuild test -scheme Latte -destination 'platform=macOS,arch=arm64' 2>&1 | grep "Executed 567 tests"
 ~/dev/smoke-harness/run.sh --project .   # SERIAL — xcodebuild test ↔ harness 병렬 금지 (S10.1 lesson)
 ```
 
-**Expect**: 566/566 tests PASS in ~8.5s. Smoke 22/22 PASS in ~6:14.
+**Expect**: 567/567 tests PASS in ~8.5s. Smoke 22/22 PASS in ~6:14.
 
 **Note**: S16-S22 occasionally hit `LaunchServices Could not launch LatteTests` once — cleared by `pkill -9 -f "Latte.app"`. Cold-start ritual is mandatory.
 
