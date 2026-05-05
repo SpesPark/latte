@@ -1,7 +1,5 @@
 import SwiftUI
 import Charts
-import AppKit
-import UniformTypeIdentifiers
 
 /// Activity history tab (C-3). Renders the trigger fire log as a 24h
 /// stacked bar + 14d heatmap + the in-memory "currently active" list.
@@ -17,7 +15,7 @@ public struct ActivityTab: View {
     @EnvironmentObject private var environment: AppEnvironment
 
     @State private var entries: [ActivityLogEntry] = []
-    @State private var isLoading = true
+    @State private var hasLoaded = false
     @State private var filter: ActivityFilter = .all
     /// Coalesces bursty `.activityLogDidAppend` notifications. Multiple
     /// trigger fires inside a 300 ms window collapse into a single reload —
@@ -37,9 +35,7 @@ public struct ActivityTab: View {
 
     public var body: some View {
         Form {
-            if isLoading {
-                ProgressView().controlSize(.small)
-            } else if entries.isEmpty {
+            if entries.isEmpty {
                 Section {
                     VStack(spacing: 12) {
                         Image(systemName: "chart.bar.xaxis")
@@ -88,39 +84,25 @@ public struct ActivityTab: View {
             Section("Chart colours") {
                 ChartColorPickers(overrides: $environment.activityChartColors)
             }
-            if !entries.isEmpty {
-                Section("Export") {
-                    // S23 / P-issue-5: render each button as its own Section
-                    // row (was previously an HStack inside a wrapper View;
-                    // owner reported click had no effect — Form Section's
-                    // row tap-handling can swallow events when buttons sit
-                    // inside an HStack child). `.buttonStyle(.bordered)`
-                    // makes them visually distinct from row-tappable rows.
-                    Button("Export CSV…") {
-                        LatteLog.activity.info("export tap — format=csv")
-                        export(filter.apply(to: entries), as: .csv)
-                    }
-                    .accessibilityIdentifier("activity.export.csv")
-                    .buttonStyle(.bordered)
-                    Button("Export JSON…") {
-                        LatteLog.activity.info("export tap — format=json")
-                        export(filter.apply(to: entries), as: .json)
-                    }
-                    .accessibilityIdentifier("activity.export.json")
-                    .buttonStyle(.bordered)
-                }
-            }
         }
         .formStyle(.grouped)
-        .task { await reload() }
+        .task {
+            // S24 follow-up: `.task` re-fires every tab re-entry (SwiftUI
+            // cancels on disappear, restarts on appear). Re-running
+            // `reload()` re-assigned `entries` even when snapshot was
+            // identical, causing Swift Charts to re-render the bar /
+            // heatmap / daily-totals views and the NSScrollView under
+            // `.formStyle(.grouped)` to briefly resettle, manifesting as
+            // a "scroll position from a previous visit flashes" flicker
+            // on every tab return. Gate first-time load with `hasLoaded`;
+            // incremental updates flow via `.onReceive` notifications
+            // and the retention `.onChange`.
+            guard !hasLoaded else { return }
+            hasLoaded = true
+            await reload()
+        }
         .onChange(of: environment.activityRetentionDays) { _ in
-            // S23 / P-issue-4: skip the `isLoading = true` flip so the
-            // chart sections stay rendered during re-fetch — without it,
-            // changing retention briefly collapsed every chart section,
-            // making the form re-layout and visually jump as the spinner
-            // appeared then disappeared. Reload swaps `entries` atomically
-            // when the snapshot returns; charts re-render in place.
-            Task { await reload(showSpinner: false) }
+            Task { await reload() }
         }
         .onReceive(NotificationCenter.default.publisher(for: .activityLogDidAppend)) { _ in
             scheduleLiveReload()
@@ -143,46 +125,13 @@ public struct ActivityTab: View {
         }
     }
 
-    /// Routes the filtered snapshot through `ActivityLogExporter` and a
-    /// `NSSavePanel`. Failures are logged + swallowed (panel handles the
-    /// "user cancelled" path; write errors are owner-side, not crashable).
-    /// S23 / P-issue-5: panel is anchored to the Settings window via
-    /// `beginSheetModal` instead of `runModal()` so it appears on top of
-    /// the active window rather than possibly behind it. Sandbox app
-    /// receives PowerBox-granted write access to the chosen URL — no
-    /// `files.user-selected.read-write` entitlement needed for this path.
-    private func export(_ entries: [ActivityLogEntry], as format: ActivityLogExporter.Format) {
-        let panel = NSSavePanel()
-        panel.nameFieldStringValue = ActivityLogExporter.suggestedFilename(for: format)
-        switch format {
-        case .csv:  panel.allowedContentTypes = [.commaSeparatedText]
-        case .json: panel.allowedContentTypes = [.json]
-        }
-        let response = panel.runModal()
-        LatteLog.activity.info("export panel runModal returned — \(response.rawValue, privacy: .public)")
-        guard response == .OK, let url = panel.url else { return }
-        LatteLog.activity.info("export writing — \(url.path, privacy: .public)")
-        do {
-            switch format {
-            case .csv:
-                try Data(ActivityLogExporter.csv(from: entries).utf8).write(to: url, options: .atomic)
-            case .json:
-                let data = try ActivityLogExporter.jsonData(from: entries)
-                try data.write(to: url, options: .atomic)
-            }
-            LatteLog.activity.info("export wrote \(entries.count, privacy: .public) entries")
-        } catch {
-            LatteLog.activity.error("activity-log export failed — \(error.localizedDescription, privacy: .public)")
-        }
-    }
-
-    private func reload(showSpinner: Bool = true) async {
-        // S23 / P-issue-4: spinner is opt-out — initial load shows it, but
-        // retention-change re-fetches keep the existing chart sections
-        // visible to avoid form jump. `entries` swaps atomically when the
-        // actor returns the new snapshot.
-        if showSpinner { isLoading = true }
-        defer { isLoading = false }
+    private func reload() async {
+        // S24 follow-up: no spinner state. The original spinner branch (S15)
+        // produced a 1-2 frame "spinner only" render on tab entry that
+        // looked like a different screen popping in before the chart
+        // sections appeared. Always render the entries-driven layout —
+        // empty placeholder while `entries` is empty, charts once the
+        // snapshot resolves — so the layout stays stable across loads.
         guard let store else {
             entries = []
             return
