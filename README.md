@@ -1,19 +1,24 @@
 # Latte
 
-A macOS menu-bar utility that keeps your Mac awake **automatically based on context** — calendar events, app activity, Wi-Fi networks. Solves the "Mac slept mid-Zoom-call" problem that incumbents (Amphetamine, Caffeinated) leave unaddressed.
+A macOS menu-bar utility that keeps your Mac awake **automatically based on context** — calendar events, app activity, Wi-Fi networks, external displays, and time-of-day schedules. Solves the "Mac slept mid-Zoom-call" problem that incumbents (Amphetamine, Caffeinated) leave unaddressed.
 
-> **Status**: v1.0 code-side ship-ready. 309/309 tests passing. Owner-side App Store prep is the only remaining work — see [ROADMAP.md](ROADMAP.md).
+> **Status**: v1.9 code-side ship-ready. 586/586 tests passing, 22/22 smoke scenarios PASS. App Store prep (Pages deploy + ASC submission) is the only remaining work — see [ROADMAP.md](ROADMAP.md).
 
 ## What it does
 
 - **Calendar events** — Wakes during scheduled meetings, idles between them.
 - **App-presence** — Add Zoom, Slack, Final Cut, anything. Awake while it's running.
 - **Wi-Fi network** — Awake on home/office Wi-Fi, idle on coffee-shop networks (or invert the logic).
-- **Awake state visualization** — Menu-bar icon visually reflects whether Latte is currently keeping your Mac awake (filled cup vs cup-and-saucer vs clock — your pick).
+- **External display** — Awake whenever a specific monitor is connected (lid-open or clamshell).
+- **Schedule** — Recurring time-of-day windows (e.g. weekday 9-6) keep the machine awake.
+- **Custom recurring presets** — User-defined "Until 5 PM Mon-Fri"-style quick actions in the popover.
+- **Activity log** — Per-trigger history with 24h chart, 14d heatmap, daily totals, click-to-jump filtering.
+- **Awake state visualization** — Menu-bar icon visually reflects whether Latte is currently keeping your Mac awake (filled cup / cup-and-saucer / clock — your pick).
+- **Custom global hotkey** — Default ⌘⇧L; rebind via Settings → General with a Spotlight-style recorder.
 - **First-run onboarding** — 3-step wizard so first-time users aren't dropped into an empty Settings window.
 - **Launch at Login** — Standard SMAppService toggle.
 
-Focus mode trigger is deferred to v1.x — Apple requires a Communication Notifications entitlement to read Focus state reliably (V2-03b in `docs/v2-backlog.md`).
+Focus-mode trigger remains deferred — Apple requires a Communication Notifications entitlement to read Focus state reliably (V2-03b in `docs/v2-backlog.md`).
 
 ## Pricing
 
@@ -21,10 +26,10 @@ Focus mode trigger is deferred to v1.x — Apple requires a Communication Notifi
 
 ## Tech stack
 
-- **Swift 5.10** + **SwiftUI** (`MenuBarExtra` macOS 13+)
+- **Swift 6** + **SwiftUI** (`MenuBarExtra(.window)` macOS 13+, builds with Xcode 26+)
 - **Min OS**: macOS 13 Ventura
 - **Project generation**: [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`project.yml` → `.xcodeproj`)
-- **Tests**: XCTest, 309 cases covering FSM transitions, trigger lifecycle, URL parsing, settings, and integration paths
+- **Tests**: XCTest, 586 cases covering FSM transitions, trigger lifecycle, URL parsing, settings, activity logging, key-chord handling, and integration paths
 
 ## URL scheme
 
@@ -64,7 +69,7 @@ xcodebuild -scheme Latte -configuration Release \
 
 ## Smoke harness
 
-Latte ships with a `.smoke/` config wired to `~/dev/smoke-harness/` — a separate cross-project tool that drives the app through 12 deterministic scenarios via screencapture, defaults, pmset, and the URL scheme. End-to-end run takes ~2:30 and produces 17 PNG artifacts.
+Latte ships with a `.smoke/` config wired to `~/dev/smoke-harness/` — a separate cross-project tool that drives the app through 22 deterministic scenarios via screencapture, defaults, pmset, and the URL scheme. End-to-end run takes ~6:14 and produces PNG artifacts plus a JSONL report.
 
 ```bash
 ~/dev/smoke-harness/run.sh --project ~/Documents/Claude/Projects/Latte
@@ -95,24 +100,25 @@ Latte/
 ├── ROADMAP.md
 ├── project.yml                ← XcodeGen spec
 ├── Sources/
-│   ├── App/                   ← @main + composition root + URL handler
-│   ├── Core/                  ← FSM, power assertion, settings, launch-at-login
-│   ├── Triggers/              ← Calendar / App / Wi-Fi (Focus deferred)
+│   ├── App/                   ← @main + composition root + URL handlers + AppEnvironment
+│   ├── Core/                  ← FSM, power assertion, settings, launch-at-login, key-chord coordinator, activity log
+│   ├── Triggers/              ← Calendar / App / Wi-Fi / ExternalDisplay / Schedule (Focus deferred)
 │   ├── Intents/               ← AppIntents + AppShortcuts
 │   └── UI/
-│       ├── Components/        ← CoffeeCupView (Canvas + TimelineView)
+│       ├── Components/        ← CoffeeCupView (Canvas + TimelineView), charts
 │       ├── Demo/              ← latte://demo/cup window
-│       ├── MenuBar/
+│       ├── MenuBar/           ← popover root + duration / preset rows + key handler
 │       ├── Onboarding/        ← First-run wizard
-│       ├── Settings/          ← General / Triggers / About + URL routing
+│       ├── Settings/          ← General / Triggers / Activity / About + URL routing
 │       └── Theme/
 ├── Resources/                 ← Info.plist + Assets.xcassets
 ├── Configuration/             ← Latte.entitlements
-├── Tests/                     ← 309 XCTest cases
-├── .smoke/                    ← smoke-harness config + scenarios
+├── Tests/                     ← 586 XCTest cases
+├── scripts/                   ← deploy_pages.sh / validate_pages.sh
+├── .smoke/                    ← smoke-harness config + 22 scenarios
 └── docs/
     ├── design/
-    ├── site/                  ← marketing + privacy HTML
+    ├── site/                  ← marketing + privacy HTML (gh-pages source of truth)
     └── store/                 ← App Store metadata
 ```
 
