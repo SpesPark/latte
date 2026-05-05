@@ -53,7 +53,6 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         let root = SettingsRoot(
             manager: manager,
             coordinator: coordinator,
-            activityStore: environment.activityStore,
             initialTab: initialTab,
             initialFocusedTriggerId: focusedTriggerId
         )

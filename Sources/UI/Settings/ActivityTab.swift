@@ -7,15 +7,12 @@ import Charts
 public struct ActivityTab: View {
 
     @ObservedObject public var coordinator: TriggerCoordinator
-    public let store: ActivityLogStore?
     /// Invoked when the user clicks a row in "Currently active" — flips the
     /// SettingsRoot selection to `.triggers` and scrolls to that trigger
     /// (C-3 deferred D). Default no-op so previews / unit-test hosts work.
     public let onJumpToTrigger: (String) -> Void
     @EnvironmentObject private var environment: AppEnvironment
 
-    @State private var entries: [ActivityLogEntry] = []
-    @State private var hasLoaded = false
     @State private var filter: ActivityFilter = .all
     /// Coalesces bursty `.activityLogDidAppend` notifications. Multiple
     /// trigger fires inside a 300 ms window collapse into a single reload —
@@ -25,51 +22,57 @@ public struct ActivityTab: View {
 
     public init(
         coordinator: TriggerCoordinator,
-        store: ActivityLogStore?,
         onJumpToTrigger: @escaping (String) -> Void = { _ in }
     ) {
         self.coordinator = coordinator
-        self.store = store
         self.onJumpToTrigger = onJumpToTrigger
     }
 
     public var body: some View {
+        // S25 / P-issue-4: `AppEnvironment.activityEntries` is pre-loaded
+        // at boot. `nil` → snapshot still resolving (only possible if the
+        // user opens Settings within the first tens of ms of launch);
+        // top section omitted so no misleading placeholder ever flashes.
+        // `[]` → loaded, no entries → explanatory placeholder. Non-empty
+        // → charts.
         Form {
-            if entries.isEmpty {
-                Section {
-                    VStack(spacing: 12) {
-                        Image(systemName: "chart.bar.xaxis")
-                            .font(.system(size: 36))
-                            .foregroundStyle(.secondary)
-                        Text("Trigger fires will appear here.")
-                            .font(.headline)
-                        Text("Once any trigger turns Latte on or off, the event is recorded for 14 days.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
+            if let entries = environment.activityEntries {
+                if entries.isEmpty {
+                    Section {
+                        VStack(spacing: 12) {
+                            Image(systemName: "chart.bar.xaxis")
+                                .font(.system(size: 36))
+                                .foregroundStyle(.secondary)
+                            Text("Trigger fires will appear here.")
+                                .font(.headline)
+                            Text("Once any trigger turns Latte on or off, the event is recorded for 14 days.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 24)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 24)
-                }
-            } else {
-                Section {
-                    TriggerFilterPicker(filter: $filter, observed: ActivityFilter.triggerIdsObserved(in: entries))
-                }
-                let filtered = filter.apply(to: entries)
-                Section("Last 24 hours") {
-                    HourlyAwakeChart(
-                        entries: filtered,
-                        overrides: environment.activityChartColors
-                    )
-                    .frame(height: 160)
-                }
-                Section("Last \(environment.activityRetentionDays) days") {
-                    DailyHeatmapChart(entries: filtered, days: environment.activityRetentionDays)
-                        .frame(height: 200)
-                }
-                Section("Daily totals") {
-                    DailyTotalsChart(entries: filtered, days: environment.activityRetentionDays)
+                } else {
+                    Section {
+                        TriggerFilterPicker(filter: $filter, observed: ActivityFilter.triggerIdsObserved(in: entries))
+                    }
+                    let filtered = filter.apply(to: entries)
+                    Section("Last 24 hours") {
+                        HourlyAwakeChart(
+                            entries: filtered,
+                            overrides: environment.activityChartColors
+                        )
                         .frame(height: 160)
+                    }
+                    Section("Last \(environment.activityRetentionDays) days") {
+                        DailyHeatmapChart(entries: filtered, days: environment.activityRetentionDays)
+                            .frame(height: 200)
+                    }
+                    Section("Daily totals") {
+                        DailyTotalsChart(entries: filtered, days: environment.activityRetentionDays)
+                            .frame(height: 160)
+                    }
                 }
             }
             Section("Currently active") {
@@ -86,23 +89,8 @@ public struct ActivityTab: View {
             }
         }
         .formStyle(.grouped)
-        .task {
-            // S24 follow-up: `.task` re-fires every tab re-entry (SwiftUI
-            // cancels on disappear, restarts on appear). Re-running
-            // `reload()` re-assigned `entries` even when snapshot was
-            // identical, causing Swift Charts to re-render the bar /
-            // heatmap / daily-totals views and the NSScrollView under
-            // `.formStyle(.grouped)` to briefly resettle, manifesting as
-            // a "scroll position from a previous visit flashes" flicker
-            // on every tab return. Gate first-time load with `hasLoaded`;
-            // incremental updates flow via `.onReceive` notifications
-            // and the retention `.onChange`.
-            guard !hasLoaded else { return }
-            hasLoaded = true
-            await reload()
-        }
         .onChange(of: environment.activityRetentionDays) { _ in
-            Task { await reload() }
+            Task { await environment.refreshActivityEntries() }
         }
         .onReceive(NotificationCenter.default.publisher(for: .activityLogDidAppend)) { _ in
             scheduleLiveReload()
@@ -120,24 +108,9 @@ public struct ActivityTab: View {
         liveReloadTask = Task { @MainActor in
             do {
                 try await Task.sleep(nanoseconds: 300_000_000)
-                await reload()
+                await environment.refreshActivityEntries()
             } catch { /* cancelled — newer notification superseded this one */ }
         }
-    }
-
-    private func reload() async {
-        // S24 follow-up: no spinner state. The original spinner branch (S15)
-        // produced a 1-2 frame "spinner only" render on tab entry that
-        // looked like a different screen popping in before the chart
-        // sections appeared. Always render the entries-driven layout —
-        // empty placeholder while `entries` is empty, charts once the
-        // snapshot resolves — so the layout stays stable across loads.
-        guard let store else {
-            entries = []
-            return
-        }
-        let cutoff = Date().addingTimeInterval(-Double(environment.activityRetentionDays) * ActivityLogStore.secondsPerDay)
-        entries = await store.snapshot(since: cutoff)
     }
 }
 

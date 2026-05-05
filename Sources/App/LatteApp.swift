@@ -43,6 +43,13 @@ final class LatteAppDelegate: NSObject, NSApplicationDelegate, ObservableObject 
                 env.applyActivateOnLaunchIfEnabled()
             }
         }
+        // S25 / P-issue-4: pre-load activity entries off the boot path
+        // so the user's first Activity tab visit doesn't pay the actor
+        // hop + JSON decode cost on the first frame. Independent of
+        // bootTriggers — runs in parallel so neither blocks the other.
+        Task { @MainActor in
+            await env.loadActivityEntriesEagerly()
+        }
     }
 
     /// AppKit calls this when the app is launched (or already running) with one

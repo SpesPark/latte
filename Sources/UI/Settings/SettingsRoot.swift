@@ -15,7 +15,6 @@ public struct SettingsRoot: View {
 
     @ObservedObject public var manager: AwakeManager
     @ObservedObject public var coordinator: TriggerCoordinator
-    public let activityStore: ActivityLogStore?
     @State private var selection: SettingsTab
     /// Set by ActivityTab via the row-tap callback (D). TriggersTab observes
     /// this and scrolls to the matching `TriggerSection` on appear / change.
@@ -24,13 +23,11 @@ public struct SettingsRoot: View {
     public init(
         manager: AwakeManager,
         coordinator: TriggerCoordinator,
-        activityStore: ActivityLogStore? = nil,
         initialTab: SettingsTab = .general,
         initialFocusedTriggerId: String? = nil
     ) {
         self.manager = manager
         self.coordinator = coordinator
-        self.activityStore = activityStore
         _selection = State(initialValue: initialTab)
         _focusedTriggerId = State(initialValue: initialFocusedTriggerId)
     }
@@ -47,7 +44,6 @@ public struct SettingsRoot: View {
 
             ActivityTab(
                 coordinator: coordinator,
-                store: activityStore,
                 onJumpToTrigger: { id in
                     focusedTriggerId = id
                     selection = .triggers

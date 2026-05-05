@@ -91,6 +91,15 @@ public final class AppEnvironment: ObservableObject {
         }
     }
 
+    /// Pre-loaded snapshot of activity log entries (S25 / P-issue-4).
+    /// `nil` until `loadActivityEntriesEagerly()` resolves the first actor
+    /// snapshot during app boot. Once non-nil, ActivityTab reads directly
+    /// from this property — no actor hop, no first-frame placeholder
+    /// flicker on first tab visit. Live updates (notification-driven
+    /// reload) also update this property so the cached snapshot stays
+    /// in sync with disk.
+    @Published public var activityEntries: [ActivityLogEntry]? = nil
+
     public init(
         settings: SettingsStore = UserDefaultsSettingsStore(),
         launchAtLoginService: LaunchAtLoginService? = nil,
@@ -190,6 +199,29 @@ public final class AppEnvironment: ObservableObject {
             // ran but produced no assertion.
             LatteLog.awake.info("activate-at-launch: no-op - manager not awake after activate (blocked by input-boundary gate)")
         }
+    }
+
+    /// Eager pre-load of activity entries on app boot (S25 / P-issue-4).
+    /// Idempotent — subsequent calls are no-ops once `activityEntries`
+    /// is non-nil. Lazy-load contract still holds: `snapshot()` reads
+    /// the file but never creates it (smoke 22 file-absent invariant).
+    public func loadActivityEntriesEagerly() async {
+        guard activityEntries == nil else { return }
+        await refreshActivityEntries()
+    }
+
+    /// Re-fetches the activity snapshot and updates `activityEntries`.
+    /// Called by ActivityTab on `.activityLogDidAppend` (debounced) and
+    /// on retention-window changes (S25 / P-issue-4).
+    public func refreshActivityEntries() async {
+        guard let store = activityStore else {
+            activityEntries = []
+            return
+        }
+        let cutoff = Date().addingTimeInterval(
+            -Double(activityRetentionDays) * ActivityLogStore.secondsPerDay
+        )
+        activityEntries = await store.snapshot(since: cutoff)
     }
 
     /// Boot path: request permission for each enabled trigger that requires it,
