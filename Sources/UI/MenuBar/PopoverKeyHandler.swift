@@ -29,22 +29,16 @@ public enum PopoverKeyHandler {
         modifiers: NSEvent.ModifierFlags,
         character: String?
     ) -> PopoverKeyAction {
-        // Only the user-pressed chord modifiers participate in matching.
-        // `.capsLock` / `.numericPad` / `.function` / `.help` are state
-        // bits the OS sets independently and must not gate the match —
-        // a numpad-comma or capslock-on press of ⌘, should still open
-        // Settings.
+        // Only user-pressed chord modifiers participate; `.capsLock` /
+        // `.numericPad` / `.function` / `.help` are OS state bits that
+        // are ignored so a numpad-comma or capslock-on press still
+        // matches.
         let chordMask: NSEvent.ModifierFlags = [.command, .shift, .option, .control]
-        let pressed = modifiers.intersection(chordMask)
-        guard pressed == .command else { return .passthrough }
-        guard let character, !character.isEmpty else { return .passthrough }
+        guard modifiers.intersection(chordMask) == .command else { return .passthrough }
         switch character {
-        case ",":
-            return .openSettings
-        case "q", "Q":
-            return .quit
-        default:
-            return .passthrough
+        case ",":          return .openSettings
+        case "q", "Q":     return .quit
+        default:           return .passthrough  // also catches nil / "" via Optional<String> non-match
         }
     }
 }
