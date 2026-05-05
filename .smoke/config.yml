@@ -1,4 +1,4 @@
-# smoke-harness config for Latte (S8c).
+# smoke-harness config for Latte (S8c, rebuild-gated since S28).
 # Run with:
 #   ~/dev/smoke-harness/run.sh --project ~/Documents/Claude/Projects/Latte
 #
@@ -9,3 +9,11 @@
 bundle_id: com.parkbyeongjun.latte
 app_path: ~/Library/Developer/Xcode/DerivedData/Latte-hcfmwngrrkeynehkwodtxrrnyxyq/Build/Products/Release/Latte.app
 screenshots_dir: ~/Documents/Claude/Projects/Latte/.smoke/artifacts
+
+# Rebuild gate (S28 — closes the S27 stale-binary discovery).
+# Harness rebuilds Release before scenarios when any source under
+# build_source_dir is newer than build_binary_path.
+# Override with --no-build (e.g., when iterating on harness itself).
+build_command: xcodebuild -scheme Latte -configuration Release build -quiet
+build_source_dir: Sources
+build_binary_path: ~/Library/Developer/Xcode/DerivedData/Latte-hcfmwngrrkeynehkwodtxrrnyxyq/Build/Products/Release/Latte.app/Contents/MacOS/Latte
