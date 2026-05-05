@@ -111,9 +111,12 @@ public struct MenuBarRoot: View {
             // doesn't reach the `MenuBarExtra(.window)` popover, so we
             // install an `NSEvent.addLocalMonitorForEvents(.keyDown)` in
             // `.onAppear` below (scoped to popover open/close) that maps
-            // ⌘, → Settings and ⌘Q → Quit via `PopoverKeyHandler.decide`.
-            // The monitor is removed on `.onDisappear` so the keys go
-            // back to their default no-op behaviour outside the popover.
+            // ⌘Q → Quit via `PopoverKeyHandler.decide`. The monitor is
+            // removed on `.onDisappear` so the key goes back to its
+            // default no-op behaviour outside the popover.
+            // S27: ⌘, popover binding removed (low-value — popover is
+            // already mouse-bound for trigger selection). Only ⌘Q
+            // remains.
             HStack {
                 Button(action: openSettings) {
                     Text("Settings…")
@@ -146,9 +149,6 @@ public struct MenuBarRoot: View {
                 modifiers: event.modifierFlags,
                 character: event.charactersIgnoringModifiers
             ) {
-            case .openSettings:
-                openSettings()
-                return nil   // consume
             case .quit:
                 NSApp.terminate(nil)
                 return nil   // consume (terminate is async, so be explicit)
