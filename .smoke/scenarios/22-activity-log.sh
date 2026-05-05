@@ -18,6 +18,15 @@
 set -euo pipefail
 source "$HARNESS_LIB/log.sh"
 
+# Feature-presence guard (S28). Asserts ActivityTab is compiled into the
+# Release binary; without this, URL routing falls back to General when the
+# tab is missing and the rest of the scenario is a false positive (S27
+# stale-binary discovery).
+bash "$HARNESS_LIB/assert_binary_type.sh" \
+  "$SMOKE_APP_PATH/Contents/MacOS/Latte" \
+  '\bLatte\.ActivityTab\b' \
+  "22-activity-log" >/dev/null
+
 bash "$HARNESS_LIB/reset_prefs.sh" "$SMOKE_BUNDLE_ID" >/dev/null
 
 # Wipe activity-log.json so we observe the create-on-first-append path.

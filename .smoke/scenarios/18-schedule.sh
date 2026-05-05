@@ -12,6 +12,15 @@
 set -euo pipefail
 source "$HARNESS_LIB/log.sh"
 
+# Feature-presence guard (S28). Asserts ScheduleTrigger is compiled into the
+# Release binary; without this, the runtime "now-entry holds assertion"
+# branch would fail with an unclear error rather than an actionable
+# stale-binary diagnostic (S27 stale-binary discovery).
+bash "$HARNESS_LIB/assert_binary_type.sh" \
+  "$SMOKE_APP_PATH/Contents/MacOS/Latte" \
+  '\bLatte\.ScheduleTrigger\b' \
+  "18-schedule" >/dev/null
+
 # --- helpers ---
 write_entries () {
   # Write a JSON array of ScheduleEntry to defaults as raw -data.

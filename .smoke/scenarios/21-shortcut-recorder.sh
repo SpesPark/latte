@@ -14,6 +14,15 @@
 set -euo pipefail
 source "$HARNESS_LIB/log.sh"
 
+# Feature-presence guard (S28). Asserts the chord-recorder coordinator is
+# compiled into the Release binary; absent this type, the silent-default
+# check would still pass on a binary that lacks the recorder UI (S27
+# stale-binary discovery).
+bash "$HARNESS_LIB/assert_binary_type.sh" \
+  "$SMOKE_APP_PATH/Contents/MacOS/Latte" \
+  '\bLatte\.KeyboardShortcutCoordinator\b' \
+  "21-shortcut-recorder" >/dev/null
+
 bash "$HARNESS_LIB/reset_prefs.sh" "$SMOKE_BUNDLE_ID" >/dev/null
 
 # Seed: onboarding done. Enable the toggle so the recorder field is in
