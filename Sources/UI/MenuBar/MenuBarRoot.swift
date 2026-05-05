@@ -9,6 +9,13 @@ public struct MenuBarRoot: View {
     @State private var customExpanded: Bool = false
     @State private var customMinutes: Int = 60
 
+    /// Local NSEvent monitor token, installed in `.onAppear` (popover
+    /// open) and removed in `.onDisappear` (popover close). Carries
+    /// ⌘, → Settings and ⌘Q → Quit through a key-event handler since
+    /// SwiftUI `.keyboardShortcut(...)` doesn't fire inside the
+    /// `MenuBarExtra(.window)` popover (S26 / B6 — S22 P-issue-4).
+    @State private var keyMonitor: Any?
+
     public init(manager: AwakeManager) {
         self.manager = manager
     }
@@ -100,17 +107,13 @@ public struct MenuBarRoot: View {
 
             Divider().opacity(0.5)
 
-            // S22 / P-issue-4: `.keyboardShortcut(",", modifiers: .command)` /
-            // `.keyboardShortcut("q", modifiers: .command)` were attempted
-            // here so ⌘, / ⌘Q would dismiss-and-act from the popover, but
-            // owner-confirmed they don't fire in the LSUIElement /
-            // .accessory NSStatusItem popover context — the popover's
-            // window doesn't appear to enter the SwiftUI responder chain
-            // for keyEquivalent dispatch even when key. Owner deferred as
-            // non-critical; mouse click still works. Revisit if Apple
-            // changes popover focus handling in a future macOS, or
-            // migrate to a NSEvent local monitor on popover-show if
-            // explicitly requested.
+            // S26 / B6 (S22 P-issue-4 close-out): `.keyboardShortcut(...)`
+            // doesn't reach the `MenuBarExtra(.window)` popover, so we
+            // install an `NSEvent.addLocalMonitorForEvents(.keyDown)` in
+            // `.onAppear` below (scoped to popover open/close) that maps
+            // ⌘, → Settings and ⌘Q → Quit via `PopoverKeyHandler.decide`.
+            // The monitor is removed on `.onDisappear` so the keys go
+            // back to their default no-op behaviour outside the popover.
             HStack {
                 Button(action: openSettings) {
                     Text("Settings…")
@@ -130,6 +133,36 @@ public struct MenuBarRoot: View {
         }
         .frame(width: Theme.Sizes.menuBarWidth)
         .liquidGlassBackground()
+        .onAppear { installKeyMonitor() }
+        .onDisappear { removeKeyMonitor() }
+    }
+
+    private func installKeyMonitor() {
+        // Idempotent: in case `.onAppear` fires twice for the same
+        // popover instance, only one monitor stays installed.
+        if keyMonitor != nil { return }
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            switch PopoverKeyHandler.decide(
+                modifiers: event.modifierFlags,
+                character: event.charactersIgnoringModifiers
+            ) {
+            case .openSettings:
+                openSettings()
+                return nil   // consume
+            case .quit:
+                NSApp.terminate(nil)
+                return nil   // consume (terminate is async, so be explicit)
+            case .passthrough:
+                return event
+            }
+        }
+    }
+
+    private func removeKeyMonitor() {
+        if let monitor = keyMonitor {
+            NSEvent.removeMonitor(monitor)
+            keyMonitor = nil
+        }
     }
 
     @ViewBuilder
