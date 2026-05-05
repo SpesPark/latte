@@ -31,11 +31,20 @@ Then in GitHub repo Settings → Pages → Source = `gh-pages` branch / root.
 
 To update the site later (after edits in `docs/site/`):
 ```bash
+# Preferred — automated (S26 / S8d)
+scripts/deploy_pages.sh             # diffs docs/site/ vs staging, commits + pushes
+scripts/validate_pages.sh           # curl 200 check on the live URL
+
+# Manual equivalent (if scripts unavailable)
 cd ../latte-gh-pages-staging
 cp /path/to/Latte/docs/site/{index,privacy}.html .
 git add . && git commit -m "site: update"
 git push
 ```
+
+`scripts/deploy_pages.sh --dry-run` shows the diff without writing.
+`scripts/validate_pages.sh <url>` accepts an explicit URL (auto-derives
+from the gh-pages worktree's `origin` remote when omitted).
 
 If you ever need to rebuild from scratch (lost the worktree, etc.):
 ```bash
