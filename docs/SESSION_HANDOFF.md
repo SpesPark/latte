@@ -106,25 +106,43 @@ S31 is the i18n P1 anchor. v1.x version unchanged at v1.9 (matcha + i18n are pre
 
 ## Cold-start (다음 세션 진입)
 
+**S31 NEW**: one-command cold-start ritual at [`scripts/latte-resume.sh`](scripts/latte-resume.sh).
+
+```bash
+# Option A — one-command resume (recommended)
+bash ~/Documents/Claude/Projects/Latte/scripts/latte-resume.sh
+
+# Option B — add a shell function to ~/.zshrc for `latte` from anywhere:
+#   latte() { cd ~/Documents/Claude/Projects/Latte && bash scripts/latte-resume.sh; }
+# Then just:
+latte
+```
+
+The script bundles zombie cleanup, git state, remote check, Pages live check, Xcode project sanity, i18n catalog summary, owner-side pending table, and next-session entry points into one ~3-second invocation. Exit 0 = healthy, exit 1 = drift detected.
+
+To run tests / smoke after the resume check:
+
+```bash
+# Tests (~9s, expect 594 PASS)
+xcodebuild test -scheme Latte -destination 'platform=macOS,arch=arm64' 2>&1 | grep "Executed"
+
+# Smoke harness (~6-7min, expect 22/22 PASS, SERIAL with xcodebuild)
+~/dev/smoke-harness/run.sh --project .
+
+# Start Claude Code in this directory
+claude
+```
+
+**Manual fallback** (if the script is missing — e.g., before this branch is merged to main):
+
 ```bash
 cd ~/Documents/Claude/Projects/Latte
 pkill -9 -f "Latte.app" 2>/dev/null
 git log --oneline -8
-
-# S31 NEW: if running from a fresh worktree, regenerate Xcode project
 [ -d Latte.xcodeproj ] || xcodegen generate
-
-# Verify infra
 git remote -v
-gh auth status 2>&1 | head -5
 curl -s -o /dev/null -w "Pages /: %{http_code}\n" https://spespark.github.io/latte/
-
-# Verify i18n catalog (S31 NEW)
 python3 -c "import json; d = json.load(open('Resources/Localizable.xcstrings')); print(f'{len(d[\"strings\"])} keys, source={d[\"sourceLanguage\"]}, v{d[\"version\"]}')"
-
-# Tests (expect 594 + smoke 22)
-xcodebuild test -scheme Latte -destination 'platform=macOS,arch=arm64' 2>&1 | grep "Executed 594 tests"
-~/dev/smoke-harness/run.sh --project .
 ```
 
 **Expect**: 86 keys in catalog (en + ko populated; 9 other language cells empty); 594/594 tests PASS; smoke 22/22 PASS.
