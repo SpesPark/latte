@@ -1,11 +1,13 @@
 import XCTest
 @testable import Latte
 
-/// Verifies the Localizable.xcstrings catalog is well-formed and that the
-/// P1 owner-verifiable language (ko) covers every source string. Other
-/// languages (ja, zh-Hans, zh-Hant, es, de, fr, pt-BR, it, ru) are added in
-/// Phase H (S32 / community PR welcome), so they are NOT asserted here yet —
-/// only the en source and ko coverage are required for P1 to ship.
+/// Verifies the Localizable.xcstrings catalog is well-formed and that
+/// every one of the 10 non-source supported languages (ko + 9 Phase H
+/// targets: ja, zh-Hans, zh-Hant, es, de, fr, pt-BR, it, ru) covers
+/// every source string with a non-empty translation. ko has a stricter
+/// "not identical to en source" guard (owner-reviewed anchor); other
+/// languages are machine-assisted with community PR welcome — see
+/// README for translation contribution flow.
 final class LocalizationCatalogTests: XCTestCase {
 
     // MARK: - Catalog file discovery
@@ -54,7 +56,48 @@ final class LocalizationCatalogTests: XCTestCase {
         XCTAssertNotNil(json["strings"] as? [String: Any])
     }
 
-    // MARK: - Coverage invariants (P1 — ko only)
+    // MARK: - Coverage invariants (P1 + Phase H — all 11 languages)
+
+    /// All 10 non-source supported languages must have a non-empty
+    /// translation for every catalog entry. Mirrors
+    /// `LanguagePreference.supported` minus the source language "en".
+    func testEveryEntryCoversAllPhaseHLanguages() throws {
+        let json = try loadCatalog()
+        guard let strings = json["strings"] as? [String: Any] else {
+            XCTFail("strings object missing"); return
+        }
+        let targets = LanguagePreference.supported
+            .map(\.code)
+            .filter { $0 != "en" }
+
+        var gaps: [String: [String]] = [:]  // lang → missing keys
+        for (key, entry) in strings {
+            guard
+                let entryDict = entry as? [String: Any],
+                let localizations = entryDict["localizations"] as? [String: Any]
+            else {
+                for lang in targets { gaps[lang, default: []].append(key) }
+                continue
+            }
+            for lang in targets {
+                guard
+                    let langEntry = localizations[lang] as? [String: Any],
+                    let stringUnit = langEntry["stringUnit"] as? [String: Any],
+                    let value = stringUnit["value"] as? String,
+                    !value.isEmpty
+                else {
+                    gaps[lang, default: []].append(key)
+                    continue
+                }
+            }
+        }
+
+        XCTAssertTrue(gaps.isEmpty, """
+            Every supported language must have a non-empty translation for every \
+            catalog entry. Missing per language: \
+            \(gaps.mapValues { $0.sorted() })
+            """)
+    }
 
     func testEveryEntryHasKoTranslation() throws {
         let json = try loadCatalog()
