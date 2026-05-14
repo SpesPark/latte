@@ -1,7 +1,7 @@
-https://bj-park.github.io/latte/privacy.html
+https://spespark.github.io/latte/privacy.html
 
 Notes:
 - REQUIRED field in App Store Connect. Submission is rejected without a working Privacy Policy URL.
 - URL must be HTTPS, must return HTTP 200, must contain a Privacy Policy at the linked path.
-- Verify before submission with: curl -sI https://bj-park.github.io/latte/privacy.html | head -5
+- Verify before submission with: curl -sI https://spespark.github.io/latte/privacy.html | head -5
 - Owner may move to custom domain (e.g. https://latte.app/privacy) per V2-22.

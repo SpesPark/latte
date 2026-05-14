@@ -74,7 +74,7 @@ When Latte (or the harness) needs a permission you haven't granted, jump straigh
 The `gh-pages` branch is pre-staged at `../latte-gh-pages-staging/`. After creating the GitHub repo:
 
 ```bash
-~/dev/smoke-harness/deploy_pages.sh git@github.com:bj-park/latte.git
+~/dev/smoke-harness/deploy_pages.sh https://github.com/SpesPark/latte.git
 ```
 
 Adds the remote, pushes the branch, and prints the Pages URL to validate. The single remaining manual click is enabling Pages in repo Settings → Pages → Source = `gh-pages` (Apple does not provide an API for this).

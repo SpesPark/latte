@@ -1,6 +1,6 @@
-https://bj-park.github.io/latte/
+https://spespark.github.io/latte/
 
 Notes:
-- Default GitHub Pages URL for `bj-park/latte`. Owner may revisit per `docs/v2-backlog.md` V2-22 (split site repo, custom domain).
+- Default GitHub Pages URL for `SpesPark/latte` (live since S29, 2026-05-15). Owner may revisit per `docs/v2-backlog.md` V2-22 (split site repo, custom domain).
 - For v1.0, support URL = marketing URL (same landing page with email contact in footer).
 - If volume justifies it post-launch, split into a dedicated /support page with FAQ + contact form.

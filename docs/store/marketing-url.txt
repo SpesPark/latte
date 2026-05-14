@@ -1,5 +1,5 @@
-https://bj-park.github.io/latte/
+https://spespark.github.io/latte/
 
 Notes:
-- Default GitHub Pages URL for `bj-park/latte`. Owner may revisit per `docs/v2-backlog.md` V2-22 (custom domain such as `latte.app`).
+- Default GitHub Pages URL for `SpesPark/latte` (live since S29, 2026-05-15). Owner may revisit per `docs/v2-backlog.md` V2-22 (custom domain such as `latte.app`).
 - Optional in App Store Connect, but recommended — gives reviewers (and users) a one-click context page.

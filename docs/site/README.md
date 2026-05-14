@@ -23,7 +23,7 @@ git worktree list
 # Expected: latte-gh-pages-staging  e3738a9 [gh-pages]
 
 cd ../latte-gh-pages-staging
-git remote add origin <github-url>     # e.g. git@github.com:bj-park/latte.git
+git remote add origin <github-url>     # e.g. https://github.com/SpesPark/latte.git
 git push -u origin gh-pages
 ```
 
@@ -57,9 +57,9 @@ git add . && git commit -m "site: rebuild"
 ```
 
 GitHub Pages settings → Source = `gh-pages` branch → root.
-URLs:
-- Landing: `https://bj-park.github.io/latte/`
-- Privacy: `https://bj-park.github.io/latte/privacy.html`
+URLs (LIVE since S29, 2026-05-15):
+- Landing: `https://spespark.github.io/latte/`
+- Privacy: `https://spespark.github.io/latte/privacy.html`
 
 ### Option B — separate `latte-site` repo (cleaner for App Store reviewer)
 
@@ -73,8 +73,8 @@ git push -u origin main
 
 GitHub Pages settings → Source = `main` branch → root.
 URLs:
-- Landing: `https://bj-park.github.io/latte-site/`
-- Privacy: `https://bj-park.github.io/latte-site/privacy.html`
+- Landing: `https://spespark.github.io/latte-site/`
+- Privacy: `https://spespark.github.io/latte-site/privacy.html`
 
 ### Option C — custom domain (post-launch, optional)
 
