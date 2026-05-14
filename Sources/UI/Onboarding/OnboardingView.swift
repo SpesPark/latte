@@ -1,10 +1,12 @@
 import SwiftUI
 
-/// First-run wizard. Three short steps:
-/// 1. Welcome — explain the wedge in two sentences.
-/// 2. Pick triggers — let the user enable any of the four context
+/// First-run wizard. Four short steps:
+/// 1. Language — pick UI language (S32 Phase D). Writes
+///    AppleLanguages; visible effect lands on the next launch.
+/// 2. Welcome — explain the wedge in two sentences.
+/// 3. Pick triggers — let the user enable any of the context
 ///    triggers; permission is requested when they confirm.
-/// 3. Done — confirm + dismiss.
+/// 4. Done — confirm + dismiss.
 ///
 /// The wizard never blocks: at any step the user can hit "Skip" and
 /// the app falls through to the menu bar with no triggers enabled
@@ -16,9 +18,10 @@ public struct OnboardingView: View {
     @EnvironmentObject private var environment: AppEnvironment
     let onClose: () -> Void
 
-    @State private var step: Step = .welcome
+    @State private var step: Step = .language
     @State private var pendingEnables: Set<String> = []
     @State private var isApplying: Bool = false
+    @State private var selectedLanguage: String = LanguagePreference.current()
 
     public init(
         state: OnboardingState,
@@ -48,10 +51,46 @@ public struct OnboardingView: View {
     @ViewBuilder
     private var content: some View {
         switch step {
+        case .language: languageStep
         case .welcome: welcomeStep
         case .pickTriggers: triggerStep
         case .done: doneStep
         }
+    }
+
+    private var languageStep: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Choose your language")
+                    .font(Theme.Fonts.title)
+                Text("Latte will restart in this language on next launch. You can change this any time in Settings.")
+                    .font(Theme.Fonts.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            ScrollView {
+                LazyVGrid(
+                    columns: [GridItem(.flexible(), spacing: Theme.Spacing.sm),
+                              GridItem(.flexible(), spacing: Theme.Spacing.sm)],
+                    spacing: Theme.Spacing.sm
+                ) {
+                    ForEach(LanguagePreference.supported) { option in
+                        LanguageOnboardingButton(
+                            option: option,
+                            isSelected: selectedLanguage == option.code,
+                            onTap: { selectLanguage(option.code) }
+                        )
+                    }
+                }
+                .padding(.top, Theme.Spacing.xs)
+            }
+        }
+    }
+
+    private func selectLanguage(_ code: String) {
+        selectedLanguage = code
+        LanguagePreference.apply(code)
     }
 
     private var welcomeStep: some View {
@@ -157,7 +196,7 @@ public struct OnboardingView: View {
 
             Spacer()
 
-            if step != .welcome {
+            if step != .language && step != .welcome {
                 Button("Back") {
                     step = step.previous
                 }
@@ -176,6 +215,7 @@ public struct OnboardingView: View {
 
     private var continueButtonTitle: String {
         switch step {
+        case .language: return "Continue"
         case .welcome: return "Continue"
         case .pickTriggers: return "Apply"
         case .done: return "Open Latte"
@@ -194,6 +234,8 @@ public struct OnboardingView: View {
 
     private func advance() async {
         switch step {
+        case .language:
+            step = .welcome
         case .welcome:
             step = .pickTriggers
         case .pickTriggers:
@@ -259,17 +301,63 @@ public struct OnboardingView: View {
 extension OnboardingView {
 
     enum Step: Int, CaseIterable {
+        case language
         case welcome
         case pickTriggers
         case done
 
         var previous: Step {
             switch self {
-            case .welcome: return .welcome
+            case .language: return .language
+            case .welcome: return .language
             case .pickTriggers: return .welcome
             case .done: return .pickTriggers
             }
         }
+    }
+}
+
+// MARK: - LanguageOnboardingButton
+
+private struct LanguageOnboardingButton: View {
+
+    let option: LanguagePreference.Option
+    let isSelected: Bool
+    let onTap: () -> Void
+    @EnvironmentObject private var environment: AppEnvironment
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: Theme.Spacing.sm) {
+                Text(option.nativeName)
+                    .font(Theme.Fonts.body)
+                    .foregroundStyle(.primary)
+                Spacer(minLength: 0)
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(environment.coffeeAccent.color)
+                }
+            }
+            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.vertical, Theme.Spacing.sm)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous)
+                    .fill(isSelected ? environment.coffeeAccent.color.opacity(0.12) : Color.secondary.opacity(0.08))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous)
+                    .strokeBorder(
+                        isSelected ? environment.coffeeAccent.color.opacity(0.6) : Color.secondary.opacity(0.20),
+                        lineWidth: isSelected ? 1.5 : 1
+                    )
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(option.nativeName)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 

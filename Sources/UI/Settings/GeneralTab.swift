@@ -5,6 +5,12 @@ public struct GeneralTab: View {
     @ObservedObject public var manager: AwakeManager
     @EnvironmentObject public var environment: AppEnvironment
 
+    /// Mirror of AppleLanguages's first entry. Hydrated from the
+    /// live UserDefaults at view init; changes write through via
+    /// `LanguagePreference.apply` so the next launch boots in the
+    /// selected language.
+    @State private var selectedLanguage: String = LanguagePreference.current()
+
     public init(manager: AwakeManager) {
         self.manager = manager
     }
@@ -135,6 +141,26 @@ public struct GeneralTab: View {
                 Text("Appearance").font(Theme.Fonts.subheadline)
             } footer: {
                 Text("The icon and accent color update immediately. SF Symbols adapt to the system tint and dark mode automatically.")
+                    .font(Theme.Fonts.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                Picker(selection: $selectedLanguage) {
+                    ForEach(LanguagePreference.supported) { option in
+                        Text(option.nativeName).tag(option.code)
+                    }
+                } label: {
+                    Text("Language").font(Theme.Fonts.body)
+                }
+                .pickerStyle(.menu)
+                .onChange(of: selectedLanguage) { newValue in
+                    LanguagePreference.apply(newValue)
+                }
+            } header: {
+                Text("Language").font(Theme.Fonts.subheadline)
+            } footer: {
+                Text("Restart Latte to apply.")
                     .font(Theme.Fonts.caption)
                     .foregroundStyle(.secondary)
             }
