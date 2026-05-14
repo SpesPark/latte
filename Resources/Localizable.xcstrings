@@ -1,0 +1,590 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+
+    "About" : {
+      "comment" : "Settings tab label — About tab",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "정보" } }
+      }
+    },
+    "Activate at launch" : {
+      "comment" : "GeneralTab — Toggle label. Activates indefinite caffeinate at app launch.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "실행 시 활성화" } }
+      }
+    },
+    "Activated at launch" : {
+      "comment" : "AssertionStatusFormatter — reasonLabel for .launch",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "실행 시 활성화됨" } }
+      }
+    },
+    "Activity" : {
+      "comment" : "Settings tab label — Activity tab",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "활동" } }
+      }
+    },
+    "Add" : {
+      "comment" : "Generic add button (preset editor, etc.)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "추가" } }
+      }
+    },
+    "Add from running apps" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "실행 중인 앱에서 추가" } }
+      }
+    },
+    "Add preset…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "프리셋 추가…" } }
+      }
+    },
+    "Add schedule" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "일정 추가" } }
+      }
+    },
+    "Advanced — add by bundle ID" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "고급 — 번들 ID로 추가" } }
+      }
+    },
+    "All triggers" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "모든 트리거" } }
+      }
+    },
+    "Allow display to sleep" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "디스플레이는 잠자기 허용" } }
+      }
+    },
+    "Appearance" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "외관" } }
+      }
+    },
+    "Asleep" : {
+      "comment" : "AssertionStatusFormatter — stateLabel when isAwake=false",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "잠자는 중" } }
+      }
+    },
+    "Awake" : {
+      "comment" : "AssertionStatusFormatter — stateLabel when isAwake=true",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "깨어 있음" } }
+      }
+    },
+    "Behavior" : {
+      "comment" : "GeneralTab — Behavior section header",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "동작" } }
+      }
+    },
+    "Cancel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "취소" } }
+      }
+    },
+    "Chart colours" : {
+      "comment" : "ActivityTab — chart color customization section",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "차트 색상" } }
+      }
+    },
+    "Coffee tone" : {
+      "comment" : "GeneralTab — Appearance section, picker label",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "커피 톤" } }
+      }
+    },
+    "Currently active" : {
+      "comment" : "ActivityTab — section showing live trigger state",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "현재 활성" } }
+      }
+    },
+    "Currently on battery — Latte is not holding awake." : {
+      "comment" : "GeneralTab — battery-aware mode caption",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "현재 배터리 사용 중 — Latte가 깨움 상태를 유지하지 않고 있습니다." } }
+      }
+    },
+    "Custom presets" : {
+      "comment" : "GeneralTab — Custom presets section header",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "사용자 프리셋" } }
+      }
+    },
+    "Daily totals" : {
+      "comment" : "ActivityTab — section header for 14-day chart",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "일별 합계" } }
+      }
+    },
+    "Days" : {
+      "comment" : "Recurring preset editor — day-of-week selector label",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "요일" } }
+      }
+    },
+    "Deep brown" : {
+      "comment" : "CoffeeAccent.shortDescription — .espresso",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "진한 갈색" } }
+      }
+    },
+    "Define wall-clock targets that appear in the menu-bar popover only on selected weekdays." : {
+      "comment" : "GeneralTab — Custom presets description",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "선택한 요일에만 메뉴바 팝오버에 나타나는 시각 기준 목표를 정의합니다." } }
+      }
+    },
+    "Delete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "삭제" } }
+      }
+    },
+    "Edit preset" : {
+      "comment" : "RecurringQuickPresetEditor — title when editing existing preset",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "프리셋 편집" } }
+      }
+    },
+    "Edit…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "편집…" } }
+      }
+    },
+    "Enable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "사용" } }
+      }
+    },
+    "Enable the shortcut above to record a different chord." : {
+      "comment" : "ShortcutRecorderField — disabled state hint",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "위 단축키를 활성화하면 다른 키 조합을 녹음할 수 있습니다." } }
+      }
+    },
+    "Exclude all-day events" : {
+      "comment" : "Calendar trigger config — toggle",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "종일 이벤트 제외" } }
+      }
+    },
+    "From" : {
+      "comment" : "RecurringQuickPresetEditor — start-time field label",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "시작" } }
+      }
+    },
+    "General" : {
+      "comment" : "Settings tab label — General tab",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "일반" } }
+      }
+    },
+    "Green tea" : {
+      "comment" : "CoffeeAccent.shortDescription — .matcha (S30)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "녹차" } }
+      }
+    },
+    "Idle" : {
+      "comment" : "AssertionStatusFormatter — reasonLabel for .none",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "대기 중" } }
+      }
+    },
+    "Keep history for" : {
+      "comment" : "ActivityTab — retention picker label",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "기록 보관" } }
+      }
+    },
+    "Keep your Mac awake when it matters." : {
+      "comment" : "AboutTab — hero subtitle",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "중요한 순간, Mac을 깨어 있게." } }
+      }
+    },
+    "Label" : {
+      "comment" : "RecurringQuickPresetEditor — text field label",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "이름" } }
+      }
+    },
+    "Label (optional)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "이름 (선택)" } }
+      }
+    },
+    "Last 24 hours" : {
+      "comment" : "ActivityTab — chart timeframe option",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "지난 24시간" } }
+      }
+    },
+    "Launch at login" : {
+      "comment" : "GeneralTab — Toggle label, LaunchAtLogin",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "로그인 시 실행" } }
+      }
+    },
+    "Light beige" : {
+      "comment" : "CoffeeAccent.shortDescription — .latte",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "연한 베이지" } }
+      }
+    },
+    "Manually activated" : {
+      "comment" : "AssertionStatusFormatter — reasonLabel for .user",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "수동으로 활성화됨" } }
+      }
+    },
+    "Match only these displays" : {
+      "comment" : "ExternalDisplay trigger config — toggle",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "이 디스플레이에서만 동작" } }
+      }
+    },
+    "Menu bar icon" : {
+      "comment" : "GeneralTab — Appearance section",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "메뉴바 아이콘" } }
+      }
+    },
+    "Mid-tone brown" : {
+      "comment" : "CoffeeAccent.shortDescription — .mocha",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "중간 갈색" } }
+      }
+    },
+    "Mode" : {
+      "comment" : "AboutTab — assertion mode row label",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "모드" } }
+      }
+    },
+    "Monochrome" : {
+      "comment" : "CoffeeAccent.shortDescription — .noir",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "단색" } }
+      }
+    },
+    "Network name" : {
+      "comment" : "Wi-Fi trigger config — text field placeholder",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "네트워크 이름" } }
+      }
+    },
+    "New custom preset" : {
+      "comment" : "RecurringQuickPresetEditor — title when adding new",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "새 프리셋" } }
+      }
+    },
+    "No filter — any external display awakes Latte." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "필터 없음 — 어떤 외부 디스플레이가 연결되어도 Latte가 깨어납니다." } }
+      }
+    },
+    "No new running apps to add." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "추가할 수 있는 실행 중인 앱이 없습니다." } }
+      }
+    },
+    "Nothing active right now." : {
+      "comment" : "ActivityTab — empty state for Currently active section",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "현재 활성화된 트리거가 없습니다." } }
+      }
+    },
+    "Off these networks" : {
+      "comment" : "Wi-Fi trigger config — exclude mode",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "이 네트워크가 아닐 때" } }
+      }
+    },
+    "On AC power" : {
+      "comment" : "AssertionStatusFormatter — powerLabel when isOnAC=true",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "전원 연결됨" } }
+      }
+    },
+    "On battery — Latte is suspended" : {
+      "comment" : "AssertionStatusFormatter — powerLabel when isOnAC=false + requireACForAwake=true",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "배터리 사용 중 — Latte 일시 중지" } }
+      }
+    },
+    "On these networks" : {
+      "comment" : "Wi-Fi trigger config — include mode",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "이 네트워크일 때" } }
+      }
+    },
+    "Once any trigger turns Latte on or off, the event is recorded for 14 days." : {
+      "comment" : "ActivityTab — privacy + retention explanation",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "트리거가 Latte를 켜거나 끌 때마다 해당 이벤트는 14일간 기록됩니다." } }
+      }
+    },
+    "Permission denied. Grant access in System Settings → Privacy & Security." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "권한이 거부되었습니다. 시스템 설정 → 개인정보 보호 및 보안에서 접근을 허용하세요." } }
+      }
+    },
+    "Permission will be requested the first time the trigger fires." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "트리거가 처음 발동할 때 권한을 요청합니다." } }
+      }
+    },
+    "Press the new shortcut. Esc cancels." : {
+      "comment" : "ShortcutRecorderField — recording state hint",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "새 단축키를 누르세요. Esc로 취소." } }
+      }
+    },
+    "Preview" : {
+      "comment" : "GeneralTab — Appearance section, live preview cup",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "미리보기" } }
+      }
+    },
+    "Remove schedule" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "일정 제거" } }
+      }
+    },
+    "Reset" : {
+      "comment" : "ShortcutRecorderField — restore default chord button",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "기본값" } }
+      }
+    },
+    "Reset to defaults" : {
+      "comment" : "ActivityTab — chart palette reset",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "기본값으로 초기화" } }
+      }
+    },
+    "Retention" : {
+      "comment" : "ActivityTab — retention section header",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "보관 기간" } }
+      }
+    },
+    "Select all" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "모두 선택" } }
+      }
+    },
+    "Shortcut" : {
+      "comment" : "GeneralTab — shortcut row label",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "단축키" } }
+      }
+    },
+    "Show" : {
+      "comment" : "ActivityTab — filter picker label",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "표시" } }
+      }
+    },
+    "Sleep when on battery" : {
+      "comment" : "GeneralTab — Toggle label, battery-aware mode",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "배터리 사용 시 잠자기" } }
+      }
+    },
+    "State" : {
+      "comment" : "GeneralTab — Status section, current state row",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "상태" } }
+      }
+    },
+    "Status" : {
+      "comment" : "GeneralTab — Status section header",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "상태" } }
+      }
+    },
+    "System + display awake" : {
+      "comment" : "AssertionStatusFormatter — modeLabel when allowDisplaySleep=false",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "시스템 + 디스플레이 깨움" } }
+      }
+    },
+    "System awake (display may sleep)" : {
+      "comment" : "AssertionStatusFormatter — modeLabel when allowDisplaySleep=true",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "시스템 깨움 (디스플레이는 잠자기 가능)" } }
+      }
+    },
+    "The icon and accent color update immediately. SF Symbols adapt to the system tint and dark mode automatically." : {
+      "comment" : "GeneralTab — Appearance section footnote",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "아이콘과 강조 색상이 즉시 반영됩니다. SF Symbols는 시스템 색조와 다크 모드에 자동으로 맞춰집니다." } }
+      }
+    },
+    "This preset will be removed from the popover." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "이 프리셋은 팝오버에서 제거됩니다." } }
+      }
+    },
+    "Time" : {
+      "comment" : "RecurringQuickPresetEditor — time field label",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "시간" } }
+      }
+    },
+    "To" : {
+      "comment" : "RecurringQuickPresetEditor — end-time field label",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "종료" } }
+      }
+    },
+    "Trigger active" : {
+      "comment" : "AssertionStatusFormatter — reasonLabel for .trigger with no specific reason",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "트리거 활성" } }
+      }
+    },
+    "Trigger fires will appear here." : {
+      "comment" : "ActivityTab — empty-state placeholder",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "트리거 발동 기록이 여기에 표시됩니다." } }
+      }
+    },
+    "Triggers" : {
+      "comment" : "Settings tab label — Triggers tab",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "트리거" } }
+      }
+    },
+    "Until" : {
+      "comment" : "GeneralTab — Status section, 'until X' caption",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "종료" } }
+      }
+    },
+    "Use all calendars" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "모든 캘린더 사용" } }
+      }
+    },
+    "Warm amber" : {
+      "comment" : "CoffeeAccent.shortDescription — .caramel",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "따뜻한 호박색" } }
+      }
+    },
+    "Watched calendars" : {
+      "comment" : "Calendar trigger config — section header",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "감시 중인 캘린더" } }
+      }
+    },
+    "© 2026 Latte. All rights reserved." : {
+      "comment" : "AboutTab — footer",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "© 2026 Latte. 모든 권리 보유." } }
+      }
+    }
+
+  },
+  "version" : "1.0"
+}

@@ -27,7 +27,9 @@ public enum CoffeeAccent: String, CaseIterable, Sendable, Identifiable {
     /// Default for new installs and for malformed persisted values.
     public static let `default`: CoffeeAccent = .espresso
 
-    /// Human-readable picker label.
+    /// Human-readable picker label. Brand identifier — NOT localized
+    /// (Espresso / Matcha / etc. remain stable across locales, matching
+    /// Apple's product-name pattern). See S31 i18n proposal.
     public var displayName: String {
         switch self {
         case .espresso: return "Espresso"
@@ -39,15 +41,18 @@ public enum CoffeeAccent: String, CaseIterable, Sendable, Identifiable {
         }
     }
 
-    /// One-line picker subtitle / accessibility hint.
+    /// One-line picker subtitle / accessibility hint. **Localized** via
+    /// `String(localized:)` against `Localizable.xcstrings`. Per S31
+    /// owner direction: descriptions translate ("Green tea" → "녹차");
+    /// brand names (above) stay English.
     public var shortDescription: String {
         switch self {
-        case .espresso: return "Deep brown"
-        case .caramel:  return "Warm amber"
-        case .mocha:    return "Mid-tone brown"
-        case .latte:    return "Light beige"
-        case .matcha:   return "Green tea"
-        case .noir:     return "Monochrome"
+        case .espresso: return String(localized: "Deep brown")
+        case .caramel:  return String(localized: "Warm amber")
+        case .mocha:    return String(localized: "Mid-tone brown")
+        case .latte:    return String(localized: "Light beige")
+        case .matcha:   return String(localized: "Green tea")
+        case .noir:     return String(localized: "Monochrome")
         }
     }
 

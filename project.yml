@@ -5,6 +5,23 @@ options:
     macOS: "13.0"
   createIntermediateGroups: true
   defaultConfig: Debug
+  developmentLanguage: en
+
+# S31 — i18n P1. Listed regions reach App Store via CFBundleLocalizations
+# auto-derived from these on build. xcstrings file at Resources/Localizable.xcstrings
+# is the single source of truth for all 11 languages.
+knownRegions:
+  - en
+  - ko
+  - ja
+  - zh-Hans
+  - zh-Hant
+  - es
+  - de
+  - fr
+  - pt-BR
+  - it
+  - ru
 
 settings:
   base:
@@ -15,6 +32,9 @@ settings:
     CURRENT_PROJECT_VERSION: "1"
     ENABLE_HARDENED_RUNTIME: YES
     SWIFT_STRICT_CONCURRENCY: complete
+    # Xcode 15+ String Catalog auto-extraction
+    SWIFT_EMIT_LOC_STRINGS: YES
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
 
 targets:
   Latte:
@@ -24,6 +44,7 @@ targets:
       - path: Sources
     resources:
       - path: Resources/Assets.xcassets
+      - path: Resources/Localizable.xcstrings
     settings:
       base:
         INFOPLIST_FILE: Resources/Info.plist
