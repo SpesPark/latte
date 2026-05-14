@@ -301,15 +301,15 @@
 - **When to revisit**: before first push to a public GitHub repo (Phase B1 deployment, or earlier if owner wants to push the private repo to GitHub). For App Store Connect, the git author has no impact — Apple only cares about the App Store Connect account email + the developer team.
 - **Action when revisiting**: just re-run `git config --global user.email <new>` + `git config --global user.name <new>`. Future commits pick it up; past commits stay as-is.
 
-### V2-22 — GitHub Pages URL / hosting revisit
+### V2-22 — GitHub Pages URL / hosting revisit — ✅ CLOSED (S29, 2026-05-15)
 
-- **Decided in S8 (2026-04-27)**: `bj-park` GitHub username + `latte` repo name. URLs default to `https://bj-park.github.io/latte/` and `https://bj-park.github.io/latte/privacy.html`.
-- **Why deferred**: owner asked to ship with a sensible default and revisit later. The actual `bj-park/latte` repo on GitHub has not been created yet — these URLs are aspirational until Phase B1 GitHub Pages setup runs.
-- **When to revisit**:
-  - Before App Store submission (Phase E). The Privacy URL **must** return HTTP 200 at App Store submission — verify with `curl -sI <url>` immediately before submitting.
-  - If owner wants to split site into a separate `latte-site` repo (cleaner separation; `docs/site/README.md` Option B describes this).
-  - If owner buys a custom domain (e.g., `latte.app`, `getlatte.app`) — update `docs/site/CNAME` (create new), update DNS, update `docs/store/{support,marketing,privacy}-url.txt`.
-- **Action when revisiting**: sweep `bj-park` and `latte` references the same way as V2-20 — files involved are `docs/site/README.md`, `docs/store/{support,marketing,privacy}-url.txt`. The HTML in `docs/site/index.html` + `privacy.html` does not embed the URL itself, so they don't need touching unless adding a `<link rel="canonical">` tag for SEO.
+- **Closed in S29**: GitHub username is `SpesPark` (not `bj-park` — `bj-park` was already taken on GitHub at S29 availability probe). Live URLs: https://spespark.github.io/latte/ and https://spespark.github.io/latte/privacy.html (both validated 200 + text/html via `scripts/validate_pages.sh`). Main repo remote: `origin = https://github.com/SpesPark/latte.git` (PUBLIC, default = main).
+- **Original S8 decision (superseded)**: `bj-park` GitHub username + `latte` repo. Aspirational URLs `https://bj-park.github.io/latte/*`.
+- **Future revisit triggers**:
+  - If owner buys a custom domain (e.g., `latte.app`, `getlatte.app`) — create `docs/site/CNAME` with the domain, update DNS A/CNAME records, update `docs/store/{support,marketing,privacy}-url.txt` to the custom domain.
+  - If owner splits site into a separate `latte-site` repo (cleaner separation; `docs/site/README.md` Option B describes this; not needed now that the in-repo `docs/site/` flow with `scripts/deploy_pages.sh` is wired).
+  - If owner adds a `<link rel="canonical">` tag for SEO once analytics are added.
+- **Updating Pages content** (future workflow): edit `docs/site/{index,privacy}.html` on main branch → `scripts/deploy_pages.sh https://github.com/SpesPark/latte.git` → ~30-60s CDN rebuild → `scripts/validate_pages.sh https://spespark.github.io/latte/`.
 
 ---
 

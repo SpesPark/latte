@@ -8,77 +8,83 @@
 
 | Field | Value |
 |---|---|
-| **Session #** | **S28** — Smoke harness rebuild gate + feature-presence assertion (2026-05-05). Same-day continuation of S27. Closes the **S27 stale-binary infrastructure discovery** without touching Latte source. Step A added the `xcodebuild build -configuration Release` rebuild gate to `~/dev/smoke-harness/run.sh` (cross-project, owner-local) so the harness no longer runs scenarios against a pre-existing stale `Build/Products/Release/Latte.app`; gate is config-driven (3 optional `build_*` keys) and includes a `--no-build` escape hatch. Step B added `~/dev/smoke-harness/lib/assert_binary_type.sh` (cross-project, owner-local) — a `nm \| swift-demangle \| grep` wrapper that asserts a Swift type symbol is present in the running binary. Per-scenario assertion calls landed in 4 scenarios (`18-schedule`, `20-external-display`, `21-shortcut-recorder`, `22-activity-log`) so a stale or feature-stripped binary FAILs the scenario with a clear diagnostic instead of falsely PASSing on URL routing + window capture. Step C (S8d Pages) deferred — owner has no decision yet on GitHub username / `gh` vs web UI / SSH key status. |
-| **Theme** | "S27 owner-confirmed P-issue claims rest on the new binary, not the v1.2 binary owner had been running for 5 days. Two infrastructure gaps caused the stale-binary class of false positive: (1) `xcodebuild test` rebuilds the test bundle but not the standalone Release `.app`, so smoke runs after `xcodebuild test` could be against any prior Release build; (2) smoke scenarios verify URL routing + window capture only — neither introspects whether the feature under test is even compiled into the binary. S28 closes both: gate the harness on source-vs-binary mtime (cheap, deterministic, no penalty when up to date) and add per-scenario `assert_binary_type` calls that grep the demangled symbol table for the type implementing the feature. The `nm \| swift-demangle \| grep` primitive is the cheapest "is feature X compiled in?" check — works without running the app, without NSAccessibility, without source-side instrumentation. Acceptable floor: catches "type was removed entirely" but not "type's body was emptied or render no-op'd"; the latter is owner-manual-smoke territory anyway. **Cross-project tooling commit split**: harness-side changes (run.sh / new lib helper / README) live in `~/dev/smoke-harness/` (owner-local, not git-tracked); Latte-side changes (config keys + scenario assertion calls) commit here. Future repo readers see only the per-project knobs; the cross-project plumbing serves the other 9+ macOS apps in the pipeline." |
-| **Status** | ✅ **2 code commits** (`beae984` Step A — `.smoke/config.yml` build-gate keys, +9 lines; `7d10ef4` Step B — scenario assertion calls, +35 lines across 4 files) + this docs commit. **Tests 587/587 PASS in 9.08s** (no Latte source touched in S28). **Smoke 22/22 PASS** with rebuild gate active and 4 feature-presence assertions firing GREEN on fresh binary. **Negative test verified**: bogus pattern `\bLatte\.NoSuchTabZZZ\b` in scenario 22 fires the assertion red and FAILs the scenario with rc=1 and a clear "stale or feature-stripped binary" message. **Step A reverify** (3 cases): up-to-date binary → `rebuild = up to date` skip; touched source → `STEP rebuild (source newer than binary)` triggers + binary mtime updated to post-build; `--no-build` flag with stale source → `skipped (--no-build)` no rebuild + binary unchanged. Working tree clean (excluding `.claude/`). |
-| **Tail commit** | `7d10ef4` (Step B) + this docs wrap commit. Step A = `beae984`. |
+| **Session #** | **S29** — S8d Pages unlock + V2-22 GitHub remote (2026-05-15). Same-day decision sequence from owner closes the S28-deferred Step C (S8d). Three owner decisions (GitHub username, `gh` CLI vs web UI, SSH key status) resolved in-session: **(Q1) username `SpesPark`** (3 alternates checked via curl-based availability probe; `Spes`/`bj-park` both already taken on GitHub, picked `SpesPark` from 13 verified-available variants). **(Q2) `gh` CLI path** (`brew install gh` + browser OAuth via Google SSO + `gh auth setup-git` wires keychain credential helper). **(Q3) SSH key not registered** — HTTPS + token path adopted (gh's keyring-stored token used by git via `gh auth git-credential` helper). After unlock: `gh repo create SpesPark/latte --public --source=. --remote=origin --push` from main repo (creates repo, adds origin, pushes main in one shot). gh-pages push from staging worktree (no `git remote add` needed — main repo + worktree share `.git`, origin already visible). Pages auto-enabled by gh-pages branch push (confirmed via 409 "already enabled" + status=building; settled to `built` after ~36s polling). `scripts/validate_pages.sh` confirms 200 + text/html on both `/` and `/privacy.html`. **No Latte source touched** in S29 — infrastructure unlock only, 587/587 tests unchanged. |
+| **Theme** | "S8d had been deferred since S26 because 3 mechanical decisions needed owner attention — once those land, the unlock is ~10 minutes of API-driven work, not days of waiting. The unlock also auto-completes V2-22 (GitHub remote on main repo) as a side effect of `gh repo create --source=.`. Three lessons reinforce: (1) **availability probe before commitment** — checked `SpesPark` and 14 variants via `curl -sI` HTTP-status pattern (200 = taken, 404 = available) so the owner-side decision was made against verified-available data; bj-park (the script default) turned out already-taken too, which would have surfaced as a confusing git push failure later. (2) **gh credential helper requires explicit `gh auth setup-git`** even after `gh auth login` with the 'Authenticate Git? Yes' prompt — `~/.gitconfig` was empty post-login until `gh auth setup-git` ran (likely owner skipped or fell through the git-config write step in the OAuth flow). Explicit setup-git call after login is the safer ordering. (3) **Pages auto-enable on first gh-pages branch push** — the explicit `POST /repos/.../pages` API call returned 409 'already enabled' because GitHub provisions the site automatically when a `gh-pages` branch lands on a new repo. Owner-side 'Settings → Pages → Source' click was unnecessary; the API path collapses to status polling (`GET .../pages` until `status=built`) + validate. The S28 handoff predicted ~5 min of manual web-UI work for Pages enable; actual was 0 min." |
+| **Status** | ✅ **0 Latte source commits** + 1 docs wrap commit (S29 is infrastructure unlock — no `Sources/` or `Tests/` touched). **Tests 587/587** unchanged from S28 (no Latte code modified). **Smoke 22/22** unchanged from S28 (no scenarios touched). **Pages live**: https://spespark.github.io/latte/ + https://spespark.github.io/latte/privacy.html both validated 200 + text/html. **Main repo remote wired**: `origin = https://github.com/SpesPark/latte.git` (PUBLIC, default branch `main`). **gh CLI installed**: `gh 2.92.0` via Homebrew. **gh auth**: SpesPark account, HTTPS protocol, token scopes `gist`+`read:org`+`repo`+`workflow` stored in macOS keyring. **Git credential helper**: `~/.gitconfig` now has `[credential "https://github.com"] helper = !/opt/homebrew/bin/gh auth git-credential` after explicit `gh auth setup-git` post-login. **V2-22 closed** (GitHub remote was the only V2-22 requirement). **Working tree clean** (excluding `.claude/` worktree machinery). |
+| **Tail commit** | (this S29 docs wrap commit) — preceded by S28 chain (`0786a1c` → `7d10ef4` → `beae984`). |
 
-### Commit chain (S28 only — top is HEAD)
-
-```
-(this commit)  docs: SESSION_HANDOFF + ROADMAP wrap for S28                                  (S28 #3)
-7d10ef4        test(smoke): feature-presence assertion for scenarios 18/20/21/22 (Step B)    (S28 #2)
-beae984        chore: smoke-harness rebuild gate config keys (Step A)                        (S28 #1)
-```
-
-### What landed this session
+### What landed this session (no Latte source commits — docs wrap only)
 
 | Step | Resolution path | Tests Δ |
 |---|---|---|
-| A — Smoke harness rebuild gate (commit `beae984`) | `~/dev/smoke-harness/run.sh` (owner-local, not in this repo) gained: (1) optional rebuild stanza driven by 3 new YAML keys (`build_command`, `build_source_dir` defaults `Sources`, `build_binary_path` with `~` expansion) — empty `build_command` skips gate (preserves non-Xcode projects); (2) `--no-build` flag on `run.sh` for "use whatever's there" iteration on the harness itself; (3) mtime check via `find <source_dir> -type f -newer <binary> -print -quit \| grep -q .` returns the first newer source file in milliseconds and short-circuits — runs trigger rebuild, no hits skip; (4) explicit "binary missing" branch always rebuilds (covers first run); (5) `eval "$BUILD_COMMAND"` in a `cd "$project"` subshell so harness CWD doesn't drift; (6) fail-fast on rebuild error with exit 6 (before launching scenarios). README updated with "Required keys" + "Optional rebuild gate (recommended for Xcode projects)" tables and `--no-build` flag docs. **In this repo**: `.smoke/config.yml` gained the 3 keys (+9 lines). **Verified** 3 scenarios: up-to-date binary → "rebuild = up to date"; touched source file → "STEP rebuild (source newer than binary): xcodebuild ..." + post-rebuild mtime > source mtime + subsequent run is "up to date"; `--no-build` with stale source → "skipped (--no-build)" + binary mtime unchanged. Full smoke 22/22 PASS regression after gate landed. | 0 |
-| B — Feature-presence assertion (commit `7d10ef4`) | New helper `~/dev/smoke-harness/lib/assert_binary_type.sh` (owner-local): takes `<binary-path> <demangled-pattern> [label]`, runs `nm "$bin" \| xcrun swift-demangle \| grep -cE "$pat"` (each `\| true`-guarded against `pipefail` no-match exit so the count drives the result), exits 0 on `count > 0` with `smoke_ok` log, exits 1 on `count == 0` with `smoke_error` "stale or feature-stripped binary". Exit codes 2/3/4 cover bad usage / missing binary / missing toolchain. **In this repo**: 4 scenarios gained an assertion call right after `set -euo pipefail` + log source, before any `reset_prefs`/`launch_app` work — so a stale binary fails fast with a clear diagnostic instead of mysteriously breaking later. Patterns chosen: `\bLatte\.ScheduleTrigger\b` (18), `\bLatte\.ExternalDisplayTrigger\b` (20), `\bLatte\.KeyboardShortcutCoordinator\b` (21), `\bLatte\.ActivityTab\b` (22). Word-boundary anchors prevent partial matches against demangled subsymbols. **Negative test**: temporarily replaced scenario 22's pattern with `\bLatte\.NoSuchTabZZZ\b`, ran `--scenario 22-activity-log`, harness output: `ERROR 22-activity-log: pattern '\bLatte\.NoSuchTabZZZ\b' NOT in Latte — stale or feature-stripped binary` + `ERROR scenario 22-activity-log FAILED rc=1` + `1 scenario(s) failed`. Pattern restored. Full smoke 22/22 PASS regression after assertions landed. | 0 |
-| C — S8d Pages owner-blocked | Inspected pre-conditions: Latte main repo has no remote, staging worktree at `../latte-gh-pages-staging/` is on `gh-pages` branch with 1 commit and no remote, `scripts/{deploy_pages,validate_pages}.sh` are present and executable (S26 landed them), but `gh` CLI is **not installed** on this machine. Owner has 3 open decisions: (1) GitHub username (script default is `bj-park`, not confirmed); (2) `brew install gh` + `gh repo create` vs web-UI repo creation + manual `git remote add origin`; (3) SSH key registration status (alternative is `gh auth login` for HTTPS+token). Owner noted "1,2,3 결정된 거 없음" — defer to next session. Cold-start instructions (below) include the exact 4-step decision sequence that unblocks S8d once owner answers the three. | 0 |
+| 1 — gh CLI install | `brew install gh` → gh 2.92.0 in `/opt/homebrew/Cellar/gh/2.92.0`. ~38MB single-bottle install, no caveats beyond zsh completions location. | 0 |
+| 2 — SpesPark account + `gh auth login` | Owner signed up at github.com via Google SSO (display name = username = `SpesPark` confirmed via `curl -s -o /dev/null -w '%{http_code}' https://github.com/SpesPark` returning 200 post-signup). Then owner ran `gh auth login` → GitHub.com / HTTPS / Authenticate Git: Yes / browser OAuth (8-char code paste at https://github.com/login/device). Token stored in macOS keyring with scopes `gist`+`read:org`+`repo`+`workflow`. | 0 |
+| 3 — Git credential helper wiring | Initial `git config --global --get-regexp credential.` returned empty — the in-flow "Authenticate Git? Yes" step did not write the helper (gh 2.92 may have a different prompt sequence, or owner fell through). Explicit `gh auth setup-git` wrote `[credential "https://github.com"] helper = !/opt/homebrew/bin/gh auth git-credential` to `~/.gitconfig`. Verified `git config --get-all credential.https://github.com.helper` returns the gh-credential entry. Global fallback remains `osxkeychain`. | 0 |
+| 4 — Repo create + main push | From main repo on `main` branch: `gh repo create SpesPark/latte --public --description "..." --source=. --remote=origin --push`. Creates PUBLIC repo, adds origin = https://github.com/SpesPark/latte.git, pushes current branch (main), sets `main` as default. Single command does repo create + remote add + push. Verified via `gh repo view SpesPark/latte --json url,visibility,defaultBranchRef`. | 0 |
+| 5 — gh-pages push from staging | `cd ~/Documents/Claude/Projects/latte-gh-pages-staging && git push -u origin gh-pages`. Staging worktree shares `.git` with main repo, so `origin` was already visible — no `git remote add` needed. 1 commit (`e3738a9` site: initial Latte marketing + privacy pages) pushed. Verified both branches present via `gh api repos/SpesPark/latte/branches`. | 0 |
+| 6 — Pages enable (auto) | Explicit `POST /repos/SpesPark/latte/pages` returned `409 GitHub Pages is already enabled` — GitHub auto-provisions Pages when a `gh-pages` branch lands on a new repo. Polled `GET .../pages` until `status=built` (~36s, 7 attempts at 6s interval). `html_url`: https://spespark.github.io/latte/ (subdomain lowercased — GitHub canonicalises). | 0 |
+| 7 — validate_pages.sh | `scripts/validate_pages.sh https://spespark.github.io/latte/` → `[validate] / OK (200, text/html; charset=utf-8)` + `[validate] /privacy.html OK (200, text/html; charset=utf-8)` + `all checks passed — Pages site is App Store submission ready`. | 0 |
+| Security scan | `git grep -nIE '(api[_-]?key\|secret[_-]?key\|password\s*=\|TOKEN\s*=\|sk-[a-zA-Z0-9]{20,}\|ghp_[...]\|AKIA[...]\|PRIVATE KEY)' HEAD` and tracked-files scan for `.env` / `.pem` / `.p8` / credentials → both clean before public push went out. Latte's local-only architecture (no secrets in source) is consistent with the green scan. | 0 |
 
 ### Patterns reinforced this session
 
-- **`xcodebuild test` rebuilds the test bundle but not the standalone Release `.app`** (Step A) — confirmed in S27 discovery, codified in S28 rebuild gate. CI / smoke harnesses must run `xcodebuild build -configuration Release` explicitly when their scenarios target the Release `.app`. Without it, scenarios run against whatever the most recent `xcodebuild build -configuration Release` produced — which can be days or weeks stale.
-- **mtime-based rebuild gate over unconditional rebuild** (Step A) — `find <source_dir> -type f -newer <binary> -print -quit \| grep -q .` runs in milliseconds for typical Swift projects (~50-500 files) and short-circuits at the first hit; "no source change" runs stay at full speed (no ~30s rebuild penalty). The "newer than binary mtime" semantic is more defensible than wall-clock thresholds because it follows what the source-control system records, not when the developer happened to run the harness.
-- **`nm \| xcrun swift-demangle \| grep` is the cheapest "is feature X compiled in?" check** (Step B) — works without running the app, without NSAccessibility permission, without source-side instrumentation, without OSLog signposts. Trade-off: only catches "type was removed entirely" (rename to a different name, or `#if false` exclusion, or git revert wiping the file); does NOT catch "type's body was emptied or render no-op'd." That's an acceptable floor for closing the URL-routing-fallback false-positive class — owners can still hit the latter case but at least won't be surprised when a v1.2-era binary lacks a v1.9 type entirely.
-- **Cross-project tooling commits split: harness changes go to owner-local tree, project-specific config goes in repo** (Steps A+B) — Latte's commits only touch `.smoke/config.yml` + 4 scenario files (44 lines added across them). The cross-project plumbing (`run.sh` rebuild gate logic, `lib/assert_binary_type.sh` helper, `README.md` docs) lives in `~/dev/smoke-harness/` which is owner-local and not git-tracked. Future Latte repo readers see only the per-project knobs (build keys + scenario assertion calls); the cross-project infrastructure serves the other 9+ macOS apps in the owner's pipeline. The split is also bisect-friendly — if a regression appears in a future Latte commit, `git bisect` is over a small surface; if the harness itself regresses, the bisect surface is the harness tree.
+- **Availability probe before commitment** (Steps 1-2) — `curl -s -o /dev/null -w "%{http_code}" https://github.com/<name>` returns 200 for taken usernames and 404 for available. Batch 15 variants in a `for` loop to give owners a real menu. Owner's initial pick (`Spes`) and the script default (`bj-park`) both turned out 200 — without the probe, the gh repo create would have failed at namespace-collision and the owner would have made the pivot decision under time pressure. The probe is cheap, deterministic, and pre-resolves the "first choice unavailable" branch.
+- **`gh auth setup-git` is not implied by `gh auth login`'s git-prompt** (Step 3) — Even after picking "Authenticate Git with your GitHub credentials? Yes" in the OAuth flow, `~/.gitconfig` had no credential helper. Run `gh auth setup-git` explicitly as a separate step after `gh auth login` to wire the helper. Without it, git pushes to github.com fall through to osxkeychain → username/password prompt → owner confusion. The explicit-after-login ordering removes the conditional behavior and gives the same end state regardless of the OAuth path the owner picked.
+- **GitHub Pages auto-enables on first `gh-pages` branch push** (Step 6) — `POST /repos/<owner>/<repo>/pages` returned `409 already enabled` immediately after `git push -u origin gh-pages`. The S28 handoff anticipated ~5 min of web-UI clicking to enable Pages (Settings → Pages → Source = gh-pages / root); actual was 0 min of clicks. The validate path collapses to `gh api repos/.../pages` status polling (`building` → `built`, ~30-60s) + `scripts/validate_pages.sh <url>`. Future S8d-style unlocks for other macOS apps in the pipeline can rely on this auto-enable — no manual GitHub UI clicks needed.
+- **`gh repo create --source=. --push` auto-completes "remote add" + "first push"** (Step 4) — Single command for the post-decision unlock collapses what was historically 3 commands (`git remote add origin <url>`, `git push -u origin main`, `gh repo view` to confirm) into 1. This is also why V2-22 (originally a separate "set up GitHub remote on main repo" item) is now closed as a no-marginal-effort side effect — the gh CLI path does both in one invocation.
+- **Worktrees share `.git`, so `origin` propagates** (Step 5) — Adding `origin` to the main repo at `~/Documents/Claude/Projects/Latte` made it immediately visible from the staging worktree at `~/Documents/Claude/Projects/latte-gh-pages-staging` without re-running `git remote add`. `git remote -v` from the staging worktree shows the same remote URL. For multi-branch deployment patterns (main + gh-pages in separate worktrees), set up the remote once on the main repo and push branches from their respective worktrees.
 
 ### What was checked but not changed
 
-- 21-shortcut-recorder.sh / 18-schedule.sh / 20-external-display.sh / 22-activity-log.sh — read in full to identify the post-`set -euo pipefail` insertion point. No structural changes; all assertions inserted before the existing `reset_prefs.sh` invocation.
-- ROADMAP rows 1-25 (S1-S26 history) — ROADMAP.md is over 38KB and exceeds the read-tool limit; updated only the S28 row insertion + header status + version row. Earlier history untouched.
-- v1.x autonomous-coding backlog list — unchanged from S27. Owner-blocked: S8d Pages deploy, S8.5 Apple Dev Program (awaiting Apple), S9 ASC meta (depends on S8.5), V2-22 GitHub remote. Multi-session candidates needing owner direction: C-3 iCloud sync of activity history, B1.2 deferred (per-action chords / iCloud chord sync), V2-06 lid-closed-only mode + per-display position requirement.
+- 587/587 tests and smoke 22/22 — S29 made zero Latte source changes (no `Sources/`, `Tests/`, `.smoke/scenarios/`, `project.yml` touched). The S28-validated state holds. No re-run was needed during S29; if the owner wants belt-and-braces, run cold-start ritual at S30 start (will hit the rebuild-gate "up to date" path since source mtime is older than binary mtime).
+- `docs/v2-backlog.md` V2-22 row — closed in this docs wrap (status flips to ✅ Done via S29).
+- S28 docs and patterns — accurate description of the rebuild gate + assertion infrastructure. No retroactive corrections from S29 perspective.
 
 ### What was deferred to a later session
 
-- **S22~S27 P-issue re-verification queue** — owner confirmed all 21 P-issue fixes against the fresh May 5 binary at the start of S28 ("다 잘 진행됨 / 다 존재"). Considered closed unless owner surfaces specific regressions in subsequent manual smoke. The S27 worry that some "fix confirmed" claims might have been "feature wasn't even in the binary owner was running" did not materialise — all 21 P-issues hold against the fresh binary.
-- **Step C — S8d Pages owner-blocked walkthrough** — defer entirely to S29 / first owner-driven session because owner has no current decision on (1) GitHub username, (2) `gh` CLI vs web UI, (3) SSH key status. Pre-conditions ready: scripts present + executable, staging worktree on `gh-pages` with 1 initial commit, Latte main repo clean.
-- **Default chord change for ⌘⇧L** — still tracked as "consider only if systematic collision evidence emerges" (S27 patterns memo). No new evidence in S28.
+- **S8.5 Apple Developer Program** — still awaiting Apple review (applied 2026-05-02; typical wait 1-2 days; now 13 days). Owner should ping Apple via the Developer Support portal if no update by 2026-05-17.
+- **S9 App Store Connect metadata** — depends on S8.5 (need Dev Program enrollment to create the App Store Connect listing). Materials are pre-staged: `docs/store/` has 14 metadata text files in en + ko, screenshot guide, reviewer notes. Once S8.5 unblocks, S9 is mechanical paste-into-form work.
+- **Cross-project rebuild-gate lift-and-shift** (S27/S28 carryover) — the smoke harness rebuild gate added in S28 can be applied to the other 9+ macOS apps in the owner's pipeline by adding 3 lines of `build_*` config to each project's `.smoke/config.yml`. Not on the critical path; pick up when working on the next app.
+- **Smoke scenario coverage extension** (S28 carryover) — `assert_binary_type` is currently in scenarios 18/20/21/22 (the four where the S27 stale-binary discovery bit). Symmetric coverage for 01-17 + 19 is ~10 assertion lines (~30 min). Only worth doing if a stale-binary recurrence surfaces.
+- **C-3 iCloud sync / B1.2 iCloud chord sync** — joint design (CloudKit + conflict resolution). Multi-session, owner direction needed on whether/when to start.
+- **V2-06 still-deferred** (lid-closed-only mode, per-display position requirement) — small UX features, no critical-path blocker.
+- **B1.2 still-deferred** (per-action chords, false-negative chord-reserved indicator) — owner direction needed.
 
-The v1.x autonomous-coding backlog after S28:
-- Owner-blocked: S8d Pages deploy (one-command after the 3 decisions land), S8.5 Apple Dev Program (awaiting Apple), S9 ASC meta (depends on S8.5), V2-22 GitHub remote.
-- Multi-session candidates that need owner direction: C-3 iCloud sync of activity history, B1.2 deferred (per-action chords / iCloud chord sync), V2-06 lid-closed-only mode + per-display position requirement.
-- Single autonomous candidates that don't fit S28-style "infrastructure close-out": none currently identified.
+The v1.x autonomous-coding backlog after S29:
+- **Owner-blocked (Apple-side wait)**: S8.5 (Apple Dev Program review), S9 (depends on S8.5).
+- **No longer owner-blocked**: S8d ✅ closed this session, V2-22 ✅ closed as side effect.
+- **Multi-session candidates needing owner direction**: C-3 iCloud sync, B1.2 deferred items, V2-06 deferred items.
+- **Single autonomous candidates**: rebuild-gate lift-and-shift to other projects, smoke scenario coverage symmetric extension. Neither is on the critical path.
 
 ---
 
 ## Next-session entry points (priority order)
 
-**0. (HIGH) S8d Pages owner-blocked unlock** — Owner makes 3 decisions, then ~5 minutes of mechanical work:
-   - **Q1**: GitHub username? Script default is `bj-park` (`gh repo create bj-park/latte`). Confirm or override.
-   - **Q2**: `gh` CLI or web UI? `gh` path: `brew install gh` + `gh auth login` + `gh repo create <USER>/latte --public --source=. --remote=origin --push` (pushes main in one shot). Web path: https://github.com/new (Public, no README/license/gitignore — repo must be empty for `git push -u origin main` to work) + manual `git remote add origin git@github.com:<USER>/latte.git` + `git push -u origin main`.
-   - **Q3**: SSH key registered to GitHub account? If no: either register one at https://github.com/settings/keys (preferred, persists) or use HTTPS clone URL + `gh auth login` token (works but re-auth on token expiry).
-   - **Then**: `cd ../latte-gh-pages-staging && git remote add origin <repo-url> && git push -u origin gh-pages`. GitHub web → Settings → Pages → Source = `gh-pages` branch, `/ (root)`. Wait ~1 min for CDN. Run `scripts/validate_pages.sh https://<USER>.github.io/latte/` to confirm 200 + content-type + non-empty title on `/` and `/privacy.html`.
-   - **Output**: `docs/site/{index,privacy}.html` live at `https://<USER>.github.io/latte/`. V2-22 (GitHub remote on main repo) lands as a side-effect of step Q2.
+**0. (BLOCKER) S8.5 Apple Developer Program** — applied 2026-05-02, now Day 13 of typical 1-2 day wait. Action: check email + https://developer.apple.com/account/ enrollment status. If still pending, owner can call Apple Developer Support (only owner can — phone/portal authentication tied to Apple ID). Once approved, S9 (ASC metadata paste) unblocks.
 
-**1. (BLOCKER) Owner-blocked S8.5** (Apple Dev Program — applied 2026-05-02). 1-2 days awaiting Apple.
+**1. (BLOCKER) S9 App Store Connect metadata** — depends on S8.5. Materials pre-staged in `docs/store/`:
+   - `metadata/en/{name,subtitle,description,keywords,promotional_text,whats_new}.txt`
+   - `metadata/ko/{...}.txt`
+   - `support_url.txt` → `https://spespark.github.io/latte/`
+   - `marketing_url.txt` → same
+   - `privacy_url.txt` → `https://spespark.github.io/latte/privacy.html`
+   - `reviewer_notes.txt`
+   - `screenshot_guide.md`
+   - The URLs are now LIVE — verify any `<acct>` placeholder in metadata text was already replaced; if not, sed-replace to `spespark`.
 
-**2. (BLOCKER) Owner-blocked S9** (App Store Connect; depends on S8.5).
+**2. (LOW) Pre-flight verify smoke 22/22 against new public repo state** *(optional belt-and-braces)* — S29 changed no Latte source so smoke is logically unchanged, but the cold-start ritual would catch any drift if owner pulls main on a different machine. `~/dev/smoke-harness/run.sh --project ~/Documents/Claude/Projects/Latte` will rebuild gate "up to date" and PASS 22/22.
 
-**3. (LOW) Smoke harness rebuild gate adoption in other projects** *(carried from S27 cross-project goal)* — once S28 is owner-validated on Latte (this session), apply the same `build_command` / `build_source_dir` / `build_binary_path` keys to the `.smoke/config.yml` of the next 1-2 projects in the pipeline. The harness `run.sh` change already supports them (no further harness-side work). Lift-and-shift effort per project: ~3 lines + verification run.
+**3. (LOW) Smoke harness rebuild-gate adoption in other projects** *(carried from S27/S28)* — apply `build_command` / `build_source_dir` / `build_binary_path` keys to the `.smoke/config.yml` of the next 1-2 macOS apps in the owner's pipeline. ~3 lines per project + a verification run.
 
-**4. (LOW) C-3 iCloud sync of activity history** + **B1.2 iCloud chord sync** — joint design (CloudKit + conflict resolution). Multi-session, requires owner direction on whether/when to start.
+**4. (LOW) Smoke scenario coverage extension** — `assert_binary_type` for scenarios 01-17 + 19 (the older v1.0~v1.1 features). ~30 min autonomous work. Only worth doing if a stale-binary recurrence surfaces.
 
-**5. (LOW) V2-06 still-deferred**: lid-closed-only mode, per-display position requirement.
+**5. (LOW) C-3 iCloud sync of activity history** + **B1.2 iCloud chord sync** — joint design (CloudKit + conflict resolution). Multi-session, requires owner direction on whether/when to start.
 
-**6. (LOW) B1.2 still-deferred** (per 07-spec §1): per-action chords, false-negative chord-reserved indicator (the iCloud part overlaps with C-3 #4 above).
+**6. (LOW) V2-06 still-deferred**: lid-closed-only mode, per-display position requirement.
 
-**7. (LOW) Smoke scenario coverage extension** — S28 added `assert_binary_type` to the 4 scenarios where the S27 stale-binary discovery bit (`18`/`20`/`21`/`22`). Older scenarios (`01`-`17`, `19`) do not have assertions because their features are v1.0~v1.1 and stale-binary risk is lower. If owner wants symmetric coverage, ~10 scenarios would each gain one assertion line — half-hour effort. Not on the hot path; worth doing only if a future stale-binary recurrence shows up in scenario 13/15/16/17.
+**7. (LOW) B1.2 still-deferred** (per 07-spec §1): per-action chords, false-negative chord-reserved indicator.
 
-S28 is an infrastructure close-out session. v1.x version unchanged at v1.9.
+S29 is an infrastructure unlock session. v1.x version unchanged at v1.9. With S8d + V2-22 closed, the v1.x owner-blocked queue narrows to S8.5 + S9 (Apple-side only).
 
 ---
 
@@ -89,75 +95,75 @@ cd ~/Documents/Claude/Projects/Latte
 pkill -9 -f "Latte.app" 2>/dev/null   # zombie 제거 — LSMultipleInstancesProhibited
 git log --oneline -8
 
-# S28 NEW: harness now rebuilds Release automatically — explicit step optional but cheap to verify
+# S29 NEW: confirm origin remote + Pages still live
+git remote -v                                                  # origin = https://github.com/SpesPark/latte.git
+gh auth status 2>&1 | head -5                                  # ✓ Logged in to github.com account SpesPark
+curl -s -o /dev/null -w "%{http_code}\n" https://spespark.github.io/latte/  # 200
+
+# S28 unchanged: harness rebuild gate is up to date if no source touched
 xcodebuild -scheme Latte -configuration Release build -quiet 2>&1 | tail -3
-stat -f "%Sm  %N" ~/Library/Developer/Xcode/DerivedData/Latte-hcfmwngrrkeynehkwodtxrrnyxyq/Build/Products/Release/Latte.app/Contents/MacOS/Latte   # confirm mtime ≥ today
+stat -f "%Sm  %N" ~/Library/Developer/Xcode/DerivedData/Latte-hcfmwngrrkeynehkwodtxrrnyxyq/Build/Products/Release/Latte.app/Contents/MacOS/Latte
 
 xcodebuild test -scheme Latte -destination 'platform=macOS,arch=arm64' 2>&1 | grep "Executed 587 tests"
 ~/dev/smoke-harness/run.sh --project .   # SERIAL — xcodebuild test ↔ harness 병렬 금지 (S10.1 lesson)
-                                         # Harness rebuild gate runs first; "rebuild = up to date" if nothing changed
 ```
 
-**Expect**: 587/587 tests PASS in ~9s. Release binary mtime = today (gate auto-rebuilds if source touched). Smoke 22/22 PASS in ~6:14 with feature-presence assertions firing GREEN at the top of scenarios 18/20/21/22.
+**Expect**: origin remote pointing at SpesPark/latte; gh auth showing SpesPark; Pages 200; 587/587 tests PASS in ~9s; smoke 22/22 PASS in ~6:14 with feature-presence assertions firing GREEN.
 
-**Diagnostic stream (carry over from S24)**: `/usr/bin/log stream --predicate 'subsystem == "com.parkbyeongjun.latte" AND category == "activity"' --info --debug --style compact` (`--info --debug` flags are mandatory or info-level logs are silently filtered).
-
-**Note**: S16-S28 occasionally hit `LaunchServices Could not launch LatteTests` once — cleared by `pkill -9 -f "Latte.app"`. Cold-start ritual is mandatory. **S27 lesson still applies**: a flaky 13-soak-short failure right after `xcodebuild test` is the same zombie-residue pattern (Latte.app from xcodebuild's test runner left around) — kill + retry (or wait the smoke harness's own `quit_app` step) clears it.
-
-**S28 NEW useful**:
-- Harness `--no-build` flag bypasses the rebuild gate (escape hatch when iterating on harness itself or owner explicitly wants to test against a known-old binary).
-- Helper `~/dev/smoke-harness/lib/assert_binary_type.sh <binary> <demangled-pattern> [label]` is callable directly for ad-hoc "is type X in this binary?" checks.
-- The `nm \| xcrun swift-demangle` primitive lists every Swift type/method/closure symbol in the binary — useful for `grep -oE "Latte\.[A-Z][A-Za-z0-9]*" \| sort -u` when picking patterns for new scenarios.
+**S29 NEW useful**:
+- `gh repo view SpesPark/latte --web` opens the repo in browser
+- `gh api repos/SpesPark/latte/pages --jq '.status'` returns current Pages status (`built` / `building` / `errored`)
+- `scripts/validate_pages.sh https://spespark.github.io/latte/` re-runs the App-Store-readiness curl check
+- `gh repo edit SpesPark/latte --description "<new desc>"` updates the public description without web UI
+- For future `gh-pages` updates: `scripts/deploy_pages.sh https://github.com/SpesPark/latte.git` syncs `docs/site/{index,privacy}.html` → `../latte-gh-pages-staging/` → push origin gh-pages. Use HTTPS URL until SSH key is registered; SSH form is `git@github.com:SpesPark/latte.git`.
 
 ---
 
 ## How to resume
 
 1. Read this file first (always overwritten last session).
-2. Skim `ROADMAP.md` row 27 (S28) for the most recent session, row 26 (S27) for the immediately prior session.
-3. Memory: `~/.claude/projects/.../memory/MEMORY.md` (now 14-line index) → drill into `project_latte_v1_9.md` for the S20→S27 section + (after this session's wrap) the S28 entry.
+2. Skim `ROADMAP.md` row 28 (S29) for this session, row 27 (S28) for the immediately prior session.
+3. Memory: `~/.claude/projects/.../memory/MEMORY.md` (now 14-line index) → drill into `project_latte_v1_9.md` for the S20→S29 section.
 4. **Don't** re-read S1-S11 memory entries — consolidated during S13.
 
 ---
 
-## Owner-side pending (S28 update)
+## Owner-side pending (S29 update)
 
 | # | What | Why blocked | Effort |
 |---|---|---|---|
-| **S22~S27 P-issue queue** | **CLOSED this session** — owner verified all 21 fixes against fresh May 5 binary ("다 잘 진행됨 / 다 존재") | Was: 5 days of manual smoke against v1.2-era stale binary | 0 (closed) |
-| **Verify fresh binary** | **CLOSED this session** — owner confirmed 7 features visible | Was: stale-binary discovery in S27 wrap | 0 (closed) |
-| **S8d Q1+Q2+Q3** | Owner decides: GitHub username, `gh` vs web UI, SSH key status. Then ~5 min mechanical work to push main + gh-pages + enable Pages + run `scripts/validate_pages.sh`. | Owner-only decision sequence | ~5 min after decisions |
-| S8.5 | Apple Developer Program — applied 2026-05-02 | Awaiting Apple review | 1-2 days |
-| S9 | App Store Connect 메타 입력 | S8.5 의존 | varies |
-| V2-22 | GitHub repo push (main branch) — auto-completed via S8d Q2 path | Same dependency chain as S8d | 0 marginal |
+| **S8d** | **CLOSED this session** — SpesPark/latte repo live, gh-pages branch pushed, Pages serving https://spespark.github.io/latte/ + /privacy.html | Was: 3 owner decisions (username, gh CLI, SSH key) | 0 (closed) |
+| **V2-22** | **CLOSED this session** — `gh repo create --source=. --push` auto-added origin to main repo | Was: depended on S8d unlock | 0 (closed) |
+| S8.5 | Apple Developer Program — applied 2026-05-02 | Awaiting Apple review (Day 13). Owner should check email + portal; consider calling Developer Support if Day 14+ | 1-2 days (typical) |
+| S9 | App Store Connect 메타 입력 + screenshots upload + binary submission | S8.5 의존; materials pre-staged in `docs/store/` | varies (1-3 sessions once S8.5 unblocks) |
 
 ---
 
-## v1.9 owner-visible behavior reference (post-S28, no behaviour change)
+## v1.9 owner-visible behavior reference (post-S29, no behaviour change)
 
-S28 changed no Latte runtime behaviour — only smoke harness infrastructure (rebuild gate) and per-scenario assertion calls. The reference list below is unchanged from S27 wrap.
+S29 changed zero Latte runtime behaviour — only repo infrastructure (GitHub remote + Pages live). The reference list below is unchanged from S28 wrap.
 
-- Activity tab no longer flashes the empty-state placeholder ("Trigger fires will appear here") on the first-ever entry per app launch (S25 P-issue-4 — pre-loaded at boot via `AppEnvironment.activityEntries`).
-- Activity tab no longer offers Export CSV / Export JSON (feature removed S24 — non-functional across multiple fix attempts).
-- Activity tab no longer flashes a spinner-only frame on first entry (S24 P-issue-2).
-- Activity tab no longer flashes the previous scroll position on every tab re-entry (S24 P-issue-3 — first-load gate).
-- Recurring Quick presets render an active marker (left coffee-accent stripe + right checkmark) on the picked preset row, not on Custom (S23 P-issue-2 + P-issue-3).
-- All three popover row types (duration / custom / recurring preset) show consistent left stripe + right checkmark when active (S23 P-issue-3 universal stripe).
-- "Until X" caption shows the target wall-clock minute (e.g. "12:00 AM" for midnight preset), never one minute before due to whole-minute precision (S23 P-issue-1).
-- Activity tab Retention is a Picker (1 day / 1 week / 2 weeks / 1 month / 2 months / 3 months), not a Stepper. Switching retention does not collapse the chart sections (S23 P-issue-4).
-- **S26 P1 / verified S27**: Popover footer ⌘Q quits Latte from inside the popover. Carbon-registered global awake-toggle chord (default ⌘⇧L, owner rebound to ⌘⌃L in S27) is unaffected (passes through). System ⌘⇧Q (log out) passes through.
-- **S27**: ⌘, in popover passes through (no longer opens Settings — shortcut removed; mouse → Settings… footer button is the supported path).
+- Activity tab no longer flashes the empty-state placeholder on first-ever entry per app launch (S25 P-issue-4).
+- Activity tab Export CSV/JSON removed (S24).
+- Activity tab no longer flashes spinner-only frame on first entry (S24 P-issue-2).
+- Activity tab no longer flashes previous scroll position on tab re-entry (S24 P-issue-3).
+- Recurring Quick presets render active marker on picked row (left stripe + right checkmark) (S23 P-issue-2/3).
+- All three popover row types show consistent active marker (S23 P-issue-3).
+- "Until X" caption shows target wall-clock minute (S23 P-issue-1).
+- Activity tab Retention is a Picker (S23 P-issue-4).
+- Popover footer ⌘Q quits Latte from inside popover; global awake-toggle chord unaffected (S26/S27).
+- ⌘, in popover passes through (S27).
 
 Carryover from earlier sessions (unchanged):
 
 - v1.0~v1.8 owner-visible feature set (5 trigger types, custom presets, activity log, theme customisation, etc.)
-- S22 fixes: pause-all snooze caption, Turn off "big red button" (disables all triggers), HeaderView caption gates, cross-trigger pause-lift auto-recovery, recurring presets light-mode visuals.
+- S22 fixes: pause-all snooze caption, "big red button" Turn off, HeaderView caption gates, cross-trigger pause-lift auto-recovery, recurring presets light-mode visuals.
 
 ---
 
 ## ⌘⇧L behaviour reference (read before next chord-related work)
 
-Unchanged from S27 wrap. **`AwakeManager.toggle()` at line 683 ALREADY implements** "if caffeinate ON → Turn off (disable all triggers); if caffeinate OFF → Indefinitely activate" — no code change pending. Future ⌘⇧L-related work (e.g., per-action chords for B1.2 deferred) builds on this.
+Unchanged from S27/S28 wrap. **`AwakeManager.toggle()` already implements** "if caffeinate ON → Turn off (disable all triggers); if caffeinate OFF → Indefinitely activate" — no code change pending.
 
 ```
 AwakeManager.toggle():
@@ -169,15 +175,15 @@ AwakeManager.toggle():
   }
 ```
 
-Don't re-research this in a future session — the behaviour is correct, only the chord (default ⌘⇧L, owner-rebindable) is collision-prone.
+Don't re-research — behaviour is correct, only the chord (default ⌘⇧L, owner-rebindable, owner currently using ⌘⌃L) is collision-prone.
 
 ---
 
-## Smoke harness infrastructure reference (S28 NEW)
+## Smoke harness infrastructure reference (S28 unchanged)
 
-**Where the rebuild gate lives**: `~/dev/smoke-harness/run.sh` (owner-local, NOT git-tracked). Compares newest source mtime under `<project>/Sources` (or whatever `build_source_dir` says) to the binary mtime; rebuilds via `build_command` if any source is newer or binary is missing. `--no-build` flag skips the gate.
+**Where the rebuild gate lives**: `~/dev/smoke-harness/run.sh` (owner-local, NOT git-tracked).
 
-**Where the feature-presence helper lives**: `~/dev/smoke-harness/lib/assert_binary_type.sh` (owner-local, NOT git-tracked). Pattern: `nm <bin> \| xcrun swift-demangle \| grep -cE <pattern>` returns 0 with `smoke_ok` if count > 0, else 1 with `smoke_error` "stale or feature-stripped binary".
+**Where the feature-presence helper lives**: `~/dev/smoke-harness/lib/assert_binary_type.sh` (owner-local, NOT git-tracked).
 
 **Per-scenario assertion call template** (already in 18/20/21/22):
 
@@ -188,15 +194,40 @@ bash "$HARNESS_LIB/assert_binary_type.sh" \
   "scenario-name-for-log" >/dev/null
 ```
 
-Insert right after `set -euo pipefail` + `source "$HARNESS_LIB/log.sh"` so the assertion runs before `reset_prefs`/`launch_app`. A stale binary fails the scenario before any UI work happens, with the diagnostic visible in `harness/run.sh`'s output.
-
 **Adoption checklist for the next macOS app** (V2-30 cross-project leverage):
 
 ```yaml
 # .smoke/config.yml
 build_command: xcodebuild -scheme <App> -configuration Release build -quiet
-build_source_dir: Sources                                                # or wherever
+build_source_dir: Sources
 build_binary_path: ~/Library/Developer/Xcode/DerivedData/<App>-<hash>/Build/Products/Release/<App>.app/Contents/MacOS/<App>
 ```
 
-Then add `assert_binary_type` calls to scenarios that test specific features. Helper takes any Swift type pattern; `\bAppName\.TypeName\b` is the recommended form.
+Then add `assert_binary_type` calls to scenarios that test specific features.
+
+---
+
+## GitHub repo + Pages infrastructure reference (S29 NEW)
+
+**Main repo remote**: `origin = https://github.com/SpesPark/latte.git` (PUBLIC, default = main). Owner of repo: `SpesPark` account.
+
+**gh-pages branch**: pushed from `~/Documents/Claude/Projects/latte-gh-pages-staging/` worktree. Contains `index.html` + `privacy.html` (marketing landing + Privacy Policy, dark-mode-aware).
+
+**Live URLs**:
+- Landing: https://spespark.github.io/latte/
+- Privacy: https://spespark.github.io/latte/privacy.html
+- Repo: https://github.com/SpesPark/latte
+
+**Updating Pages content** (future):
+1. Edit `docs/site/{index,privacy}.html` on main branch.
+2. Run `scripts/deploy_pages.sh https://github.com/SpesPark/latte.git` (HTTPS form; switch to `git@github.com:SpesPark/latte.git` once owner registers SSH key).
+3. Script diffs against staging worktree, commits changed files, pushes origin/gh-pages.
+4. ~30-60s for Pages CDN to rebuild.
+5. `scripts/validate_pages.sh https://spespark.github.io/latte/` to verify.
+
+**Token rotation** (when needed):
+- `gh auth refresh -s gist,read:org,repo,workflow` re-issues the gh CLI token.
+- macOS keyring stores it under `gh:github.com`.
+- Git credential helper auto-picks up the new token (no per-push re-auth).
+
+**SSH key registration** (optional, future): add at https://github.com/settings/keys → switch deploy_pages.sh URLs to `git@github.com:SpesPark/latte.git` form.
