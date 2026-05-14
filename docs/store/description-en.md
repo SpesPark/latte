@@ -45,7 +45,7 @@ Native SwiftUI menu bar app with a coffee-cup view that animates with steam part
 
 A friendly first-run wizard walks you through choosing which contexts should keep your Mac awake. You can change anything later from Settings.
 
-Pick from five coffee tones — espresso, caramel, mocha, latte, or noir — to match your menu bar aesthetic. Choose a menu-bar icon style.
+Pick from six accent tones — espresso, caramel, mocha, latte, matcha, or noir — to match your menu bar aesthetic. Choose a menu-bar icon style.
 
 On macOS 26 Tahoe, the cup picks up the Liquid Glass treatment automatically.
 

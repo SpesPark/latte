@@ -5,11 +5,11 @@ final class CoffeeAccentTests: XCTestCase {
 
     // MARK: - Case enumeration & identity
 
-    func testFiveCasesInExpectedOrder() {
+    func testSixCasesInExpectedOrder() {
         XCTAssertEqual(
             CoffeeAccent.allCases,
-            [.espresso, .caramel, .mocha, .latte, .noir],
-            "Picker order is part of the user-facing contract — keep it stable."
+            [.espresso, .caramel, .mocha, .latte, .matcha, .noir],
+            "Picker order is part of the user-facing contract — keep it stable. Matcha sits between .latte and .noir per S30 design (green pivot before monochrome)."
         )
     }
 
@@ -42,6 +42,7 @@ final class CoffeeAccentTests: XCTestCase {
         XCTAssertEqual(CoffeeAccent.caramel.rawValue, "caramel")
         XCTAssertEqual(CoffeeAccent.mocha.rawValue, "mocha")
         XCTAssertEqual(CoffeeAccent.latte.rawValue, "latte")
+        XCTAssertEqual(CoffeeAccent.matcha.rawValue, "matcha")
         XCTAssertEqual(CoffeeAccent.noir.rawValue, "noir")
     }
 
@@ -65,6 +66,7 @@ final class CoffeeAccentTests: XCTestCase {
 
     func testDecodeKnownReturnsThatCase() {
         XCTAssertEqual(CoffeeAccent.decode("caramel"), .caramel)
+        XCTAssertEqual(CoffeeAccent.decode("matcha"), .matcha)
         XCTAssertEqual(CoffeeAccent.decode("noir"), .noir)
     }
 

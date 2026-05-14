@@ -61,7 +61,7 @@ Build location after S7 test run: `~/Library/Developer/Xcode/DerivedData/Latte-*
 
 #### Coffee tone customization
 
-- [ ] Settings → General → Appearance → switch between 5 presets (espresso, caramel, mocha, latte, noir).
+- [ ] Settings → General → Appearance → switch between 6 presets (espresso, caramel, mocha, latte, matcha, noir).
 - [ ] Inline Preview cup updates color **immediately** (live binding).
 - [ ] Menu-bar icon and main cup re-tint **without restart** (within ≤1 frame).
 - [ ] Choosing a preset persists across quit + relaunch.

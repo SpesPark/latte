@@ -1,10 +1,12 @@
 import AppKit
 import SwiftUI
 
-/// Five hand-picked coffee-themed accent tones the user can choose from in
-/// Settings. Each case bundles light/dark sRGB pairs so the brand color
-/// stays consistent regardless of the user's system tint, with appearance
-/// changes resolved per-frame.
+/// Six hand-picked accent tones the user can choose from in Settings —
+/// five coffee-inspired (espresso → caramel → mocha → latte → noir) plus
+/// one `matcha` green pivot added in S30 by owner request. Each case
+/// bundles light/dark sRGB pairs so the brand color stays consistent
+/// regardless of the user's system tint, with appearance changes resolved
+/// per-frame.
 ///
 /// The colors live in code (not the asset catalog) because:
 /// 1. `Color.accentColor` on macOS follows the user's system tint and would
@@ -17,6 +19,7 @@ public enum CoffeeAccent: String, CaseIterable, Sendable, Identifiable {
     case caramel
     case mocha
     case latte
+    case matcha
     case noir
 
     public var id: String { rawValue }
@@ -31,6 +34,7 @@ public enum CoffeeAccent: String, CaseIterable, Sendable, Identifiable {
         case .caramel:  return "Caramel"
         case .mocha:    return "Mocha"
         case .latte:    return "Latte"
+        case .matcha:   return "Matcha"
         case .noir:     return "Noir"
         }
     }
@@ -42,6 +46,7 @@ public enum CoffeeAccent: String, CaseIterable, Sendable, Identifiable {
         case .caramel:  return "Warm amber"
         case .mocha:    return "Mid-tone brown"
         case .latte:    return "Light beige"
+        case .matcha:   return "Green tea"
         case .noir:     return "Monochrome"
         }
     }
@@ -77,6 +82,15 @@ public enum CoffeeAccent: String, CaseIterable, Sendable, Identifiable {
         case .latte: return ColorPair(
             light: (0.78, 0.62, 0.40),
             dark:  (0.92, 0.80, 0.60)
+        )
+        case .matcha: return ColorPair(
+            // Light: medium matcha green, lower R and B than the cup fill
+            // (0.86, 0.80, 0.72) so it reads as green-on-tan, not muddy.
+            // Dark: brighter saturated green against the near-white cup
+            // body (0.95, 0.95, 0.97). Verified perceptibly distinct from
+            // every other accent's hue ring.
+            light: (0.46, 0.62, 0.32),
+            dark:  (0.62, 0.78, 0.45)
         )
         case .noir: return ColorPair(
             light: (0.32, 0.32, 0.32),
