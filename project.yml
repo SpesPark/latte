@@ -6,22 +6,24 @@ options:
   createIntermediateGroups: true
   defaultConfig: Debug
   developmentLanguage: en
-
-# S31 — i18n P1. Listed regions reach App Store via CFBundleLocalizations
-# auto-derived from these on build. xcstrings file at Resources/Localizable.xcstrings
-# is the single source of truth for all 11 languages.
-knownRegions:
-  - en
-  - ko
-  - ja
-  - zh-Hans
-  - zh-Hant
-  - es
-  - de
-  - fr
-  - pt-BR
-  - it
-  - ru
+  # S31 — i18n P1. Listed regions reach App Store via CFBundleLocalizations
+  # auto-derived from these on build. xcstrings file at Resources/Localizable.xcstrings
+  # is the single source of truth for all 11 languages.
+  # S33 fix: must live inside `options:` block — xcodegen 2.45.4 silently ignores
+  # top-level `knownRegions:`. Pre-fix the generated pbxproj only had `Base, en`
+  # so .lproj/Localizable.strings for the other 10 langs were stripped at build.
+  knownRegions:
+    - en
+    - ko
+    - ja
+    - zh-Hans
+    - zh-Hant
+    - es
+    - de
+    - fr
+    - pt-BR
+    - it
+    - ru
 
 settings:
   base:
@@ -42,9 +44,9 @@ targets:
     platform: macOS
     sources:
       - path: Sources
-    resources:
-      - path: Resources/Assets.xcassets
-      - path: Resources/Localizable.xcstrings
+      - path: Resources
+        excludes:
+          - "Info.plist"
     settings:
       base:
         INFOPLIST_FILE: Resources/Info.plist
