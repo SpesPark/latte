@@ -1,16 +1,27 @@
 import XCTest
 @testable import Latte
 
+/// Tests assert that the formatter returns the locale-resolved version
+/// of the expected catalog key — NOT a hardcoded English string. This
+/// keeps the tests stable across CI/owner machines with different
+/// system languages (S33 fix: ko-locale Macs were failing because the
+/// previous assertions hardcoded "Awake" etc.; the formatter correctly
+/// returned "깨어 있음" on those hosts).
+///
+/// Pattern: `XCTAssertEqual(formatter.x(), String(localized: "Key"))`
+/// — the right-hand side resolves the same key through the same
+/// mechanism the formatter uses, so both sides shift together when
+/// the host changes locale.
 final class AssertionStatusFormatterTests: XCTestCase {
 
     // MARK: - stateLabel
 
     func testStateLabelAwake() {
-        XCTAssertEqual(AssertionStatusFormatter.stateLabel(isAwake: true), "Awake")
+        XCTAssertEqual(AssertionStatusFormatter.stateLabel(isAwake: true), String(localized: "Awake"))
     }
 
     func testStateLabelAsleep() {
-        XCTAssertEqual(AssertionStatusFormatter.stateLabel(isAwake: false), "Asleep")
+        XCTAssertEqual(AssertionStatusFormatter.stateLabel(isAwake: false), String(localized: "Asleep"))
     }
 
     // MARK: - modeLabel
@@ -23,14 +34,14 @@ final class AssertionStatusFormatterTests: XCTestCase {
     func testModeLabelDisplayPlusSystemWhenAwakeAndAllowDisplayOff() {
         XCTAssertEqual(
             AssertionStatusFormatter.modeLabel(isAwake: true, allowDisplaySleep: false),
-            "System + display awake"
+            String(localized: "System + display awake")
         )
     }
 
     func testModeLabelSystemOnlyWhenAwakeAndAllowDisplayOn() {
         XCTAssertEqual(
             AssertionStatusFormatter.modeLabel(isAwake: true, allowDisplaySleep: true),
-            "System awake (display may sleep)"
+            String(localized: "System awake (display may sleep)")
         )
     }
 
@@ -39,11 +50,13 @@ final class AssertionStatusFormatterTests: XCTestCase {
     func testReasonLabelUser() {
         XCTAssertEqual(
             AssertionStatusFormatter.reasonLabel(.user),
-            "Manually activated"
+            String(localized: "Manually activated")
         )
     }
 
     func testReasonLabelTriggerWithVoteReason() {
+        // triggerReason is a runtime-supplied string (e.g. event title)
+        // and is intentionally NOT localized — it's passed through verbatim.
         XCTAssertEqual(
             AssertionStatusFormatter.reasonLabel(
                 .trigger(id: "calendar"),
@@ -56,23 +69,23 @@ final class AssertionStatusFormatterTests: XCTestCase {
     func testReasonLabelTriggerWithoutVoteReasonFallsBackToGeneric() {
         XCTAssertEqual(
             AssertionStatusFormatter.reasonLabel(.trigger(id: "calendar")),
-            "Trigger active"
+            String(localized: "Trigger active")
         )
     }
 
     func testReasonLabelTriggerWithEmptyVoteReasonFallsBackToGeneric() {
         XCTAssertEqual(
             AssertionStatusFormatter.reasonLabel(.trigger(id: "calendar"), triggerReason: ""),
-            "Trigger active"
+            String(localized: "Trigger active")
         )
     }
 
     func testReasonLabelLaunch() {
-        XCTAssertEqual(AssertionStatusFormatter.reasonLabel(.launch), "Activated at launch")
+        XCTAssertEqual(AssertionStatusFormatter.reasonLabel(.launch), String(localized: "Activated at launch"))
     }
 
     func testReasonLabelNone() {
-        XCTAssertEqual(AssertionStatusFormatter.reasonLabel(.none), "Idle")
+        XCTAssertEqual(AssertionStatusFormatter.reasonLabel(.none), String(localized: "Idle"))
     }
 
     // MARK: - powerLabel
@@ -86,14 +99,14 @@ final class AssertionStatusFormatterTests: XCTestCase {
     func testPowerLabelOnAC() {
         XCTAssertEqual(
             AssertionStatusFormatter.powerLabel(isOnAC: true, requireACForAwake: true),
-            "On AC power"
+            String(localized: "On AC power")
         )
     }
 
     func testPowerLabelOnBattery() {
         XCTAssertEqual(
             AssertionStatusFormatter.powerLabel(isOnAC: false, requireACForAwake: true),
-            "On battery — Latte is suspended"
+            String(localized: "On battery — Latte is suspended")
         )
     }
 }
