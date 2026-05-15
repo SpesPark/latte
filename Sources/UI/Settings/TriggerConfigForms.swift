@@ -417,7 +417,9 @@ struct CalendarTriggerConfigForm: View {
                             onToggle: { toggle(calendar.id) }
                         )
                     }
-                    Text(filterDescription)
+                    Text(selectedCalendarIDs.isEmpty
+                         ? "Empty selection = watch every granted calendar."
+                         : "Latte only fires for events in the calendars checked above.")
                         .font(Theme.Fonts.caption)
                         .foregroundStyle(.secondary)
                         .padding(.top, Theme.Spacing.xs)
@@ -457,13 +459,6 @@ struct CalendarTriggerConfigForm: View {
 
             Spacer()
         }
-    }
-
-    private var filterDescription: String {
-        if selectedCalendarIDs.isEmpty {
-            return "Empty selection = watch every granted calendar."
-        }
-        return "Latte only fires for events in the calendars checked above."
     }
 
     private func toggle(_ id: String) {
@@ -798,7 +793,12 @@ struct ExternalDisplayTriggerConfigForm: View {
                 .foregroundStyle(.secondary)
         } else {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Currently: \(count) external \(count == 1 ? "display" : "displays")")
+                // Two separate localized strings (instead of one with a
+                // ternary inside the interpolation) so each language can
+                // pick its own pluralisation form cleanly.
+                Text(count == 1
+                     ? "Currently: 1 external display"
+                     : "Currently: \(count) external displays")
                     .font(Theme.Fonts.caption)
                     .foregroundStyle(.secondary)
                 if let name = trigger.firstExternalDisplayName {

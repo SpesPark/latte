@@ -143,6 +143,148 @@
         }
       }
     },
+    "%lld min": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld분"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld分"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 分钟"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 分鐘"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Min"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld мин"
+          }
+        }
+      }
+    },
+    "%lld selected": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld selected"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld개 선택됨"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld個選択中"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已选 %lld 个"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已選 %lld 個"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld seleccionados"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld ausgewählt"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld sélectionnés"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld selecionados"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld selezionati"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выбрано %lld"
+          }
+        }
+      }
+    },
     "1 hour": {
       "extractionState": "manual",
       "localizations": {
@@ -615,6 +757,77 @@
         }
       }
     },
+    "Add current network: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add current network: %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현재 네트워크 추가: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在のネットワークを追加: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加当前网络: %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新增目前網路: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir red actual: %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktuelles Netzwerk hinzufügen: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter le réseau actuel : %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionar rede atual: %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi rete attuale: %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавить текущую сеть: %@"
+          }
+        }
+      }
+    },
     "Add from running apps": {
       "extractionState": "manual",
       "localizations": {
@@ -871,6 +1084,77 @@
           "stringUnit": {
             "state": "translated",
             "value": "Дополнительно — добавить по Bundle ID"
+          }
+        }
+      }
+    },
+    "All calendars": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All calendars"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 캘린더"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのカレンダー"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有日历"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有行事曆"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todos los calendarios"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Kalender"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tous les calendriers"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todos os calendários"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutti i calendari"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Все календари"
           }
         }
       }
@@ -1800,6 +2084,77 @@
         }
       }
     },
+    "Crosses midnight — runs from start time on the selected day(s) until the end time the next morning.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crosses midnight — runs from start time on the selected day(s) until the end time the next morning."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자정을 지남 — 선택한 요일의 시작 시간부터 다음 날 아침 종료 시간까지 실행됩니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "深夜をまたぐ — 選択した日の開始時刻から翌朝の終了時刻まで実行されます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跨越午夜 — 从所选日期的开始时间运行到第二天早晨的结束时间。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跨越午夜 — 從所選日期的開始時間執行到隔天早上的結束時間。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cruza la medianoche: se ejecuta desde la hora de inicio del día seleccionado hasta la hora de fin de la mañana siguiente."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Überquert Mitternacht — läuft von der Startzeit am ausgewählten Tag bis zur Endzeit am nächsten Morgen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traverse minuit — s'exécute de l'heure de début du ou des jours sélectionnés jusqu'à l'heure de fin du lendemain matin."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cruza a meia-noite — executa do horário de início no(s) dia(s) selecionado(s) até o horário de fim da manhã seguinte."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attraversa la mezzanotte — viene eseguito dall'ora di inizio nel/i giorno/i selezionato/i fino all'ora di fine del mattino successivo."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пересекает полночь — выполняется от времени начала в выбранный день(дни) до времени окончания на следующее утро."
+          }
+        }
+      }
+    },
     "Currently active": {
       "comment": "ActivityTab — section showing live trigger state",
       "extractionState": "manual",
@@ -1928,6 +2283,219 @@
           "stringUnit": {
             "state": "translated",
             "value": "Сейчас работает от батареи — Latte не удерживает активность."
+          }
+        }
+      }
+    },
+    "Currently: %lld external displays": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Currently: %lld external displays"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현재: 외부 디스플레이 %lld개"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在: 外部ディスプレイ%lld台"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前: %lld 台外部显示器"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前: %lld 台外接顯示器"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actualmente: %lld pantallas externas"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Derzeit: %lld externe Displays"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actuellement : %lld écrans externes"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atualmente: %lld monitores externos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attualmente: %lld display esterni"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сейчас: %lld внешних дисплеев"
+          }
+        }
+      }
+    },
+    "Currently: 1 external display": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Currently: 1 external display"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현재: 외부 디스플레이 1개"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在: 外部ディスプレイ1台"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前: 1 台外部显示器"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前: 1 台外接顯示器"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actualmente: 1 pantalla externa"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Derzeit: 1 externes Display"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actuellement : 1 écran externe"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atualmente: 1 monitor externo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attualmente: 1 display esterno"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сейчас: 1 внешний дисплей"
+          }
+        }
+      }
+    },
+    "Currently: no external display": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Currently: no external display"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현재: 외부 디스플레이 없음"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在: 外部ディスプレイなし"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前: 无外部显示器"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前: 無外接顯示器"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actualmente: sin pantalla externa"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Derzeit: kein externes Display"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actuellement : aucun écran externe"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atualmente: nenhum monitor externo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attualmente: nessun display esterno"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сейчас: внешний дисплей не подключён"
           }
         }
       }
@@ -2398,6 +2966,77 @@
         }
       }
     },
+    "Display: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Display: %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "디스플레이: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ディスプレイ: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示器: %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "顯示器: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pantalla: %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Display: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Écran : %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monitor: %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Display: %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Дисплей: %@"
+          }
+        }
+      }
+    },
     "During scheduled meetings on your calendars.": {
       "comment": "Onboarding trigger card description — Calendar trigger",
       "extractionState": "manual",
@@ -2591,6 +3230,219 @@
           "stringUnit": {
             "state": "translated",
             "value": "Изменить…"
+          }
+        }
+      }
+    },
+    "Empty list under inverse mode is treated as a no-op (the trigger never fires).": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empty list under inverse mode is treated as a no-op (the trigger never fires)."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "역모드에서 빈 목록은 동작 없음으로 처리됩니다(트리거가 절대 발동하지 않습니다)."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "反転モードで空のリストは何もしないものとして扱われます(トリガーは発動しません)。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "反向模式下空列表视为不执行任何操作(触发器永远不会触发)。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "反向模式下空清單視為不執行任何操作(觸發器永遠不會觸發)。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una lista vacía en modo inverso se trata como inactiva (el activador no se dispara)."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine leere Liste im Umkehrmodus wird als untätig behandelt (der Auslöser wird nie aktiv)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une liste vide en mode inversé est considérée comme inactive (le déclencheur ne se déclenche jamais)."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lista vazia no modo inverso é tratada como inativa (o gatilho nunca dispara)."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un elenco vuoto in modalità inversa viene trattato come inattivo (il trigger non si attiva mai)."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пустой список в инверсном режиме интерпретируется как бездействие (триггер никогда не срабатывает)."
+          }
+        }
+      }
+    },
+    "Empty selection = watch every granted calendar.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empty selection = watch every granted calendar."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빈 선택 = 권한이 부여된 모든 캘린더 감시."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択なし = アクセス権のあるすべてのカレンダーを監視。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择为空 = 监视所有已授权的日历。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇為空 = 監看所有已授權的行事曆。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selección vacía = vigilar todos los calendarios concedidos."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leere Auswahl = jeden gewährten Kalender überwachen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sélection vide = surveiller tous les calendriers autorisés."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seleção vazia = monitorar todos os calendários concedidos."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selezione vuota = monitora ogni calendario concesso."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пустой выбор = отслеживать все разрешённые календари."
+          }
+        }
+      }
+    },
+    "Empty selection means Latte watches every calendar you've granted access to.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empty selection means Latte watches every calendar you've granted access to."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "선택을 비우면 Latte는 액세스 권한을 부여한 모든 캘린더를 감시합니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択を空にすると、Latteはアクセス権を付与したすべてのカレンダーを監視します。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择为空表示 Latte 监视你已授权访问的所有日历。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇為空表示 Latte 監看您已授權存取的所有行事曆。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selección vacía significa que Latte vigila todos los calendarios a los que has dado acceso."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leere Auswahl bedeutet, dass Latte jeden Kalender überwacht, auf den du Zugriff gewährt hast."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une sélection vide signifie que Latte surveille tous les calendriers auxquels vous avez accordé l'accès."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seleção vazia significa que o Latte monitora todos os calendários aos quais você concedeu acesso."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selezione vuota significa che Latte monitora tutti i calendari a cui hai concesso l'accesso."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пустой выбор означает, что Latte отслеживает все календари, к которым вы предоставили доступ."
           }
         }
       }
@@ -3735,6 +4587,432 @@
         }
       }
     },
+    "Latte only fires for events in the calendars checked above.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte only fires for events in the calendars checked above."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte는 위에서 체크한 캘린더의 이벤트에 대해서만 발동합니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latteは上でチェックしたカレンダーのイベントに対してのみ発動します。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte 仅对上面勾选的日历中的事件触发。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte 僅對上方勾選的行事曆中的事件觸發。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte solo se activa con eventos en los calendarios marcados arriba."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte wird nur bei Ereignissen in den oben angekreuzten Kalendern aktiv."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte ne se déclenche que pour les événements dans les calendriers cochés ci-dessus."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Latte só dispara para eventos nos calendários marcados acima."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte si attiva solo per gli eventi nei calendari selezionati sopra."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte срабатывает только для событий в отмеченных выше календарях."
+          }
+        }
+      }
+    },
+    "Latte stays awake during these recurring time windows. Useful for working hours, scheduled batch jobs, or any “keep awake from X to Y” routine.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte stays awake during these recurring time windows. Useful for working hours, scheduled batch jobs, or any “keep awake from X to Y” routine."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이러한 반복 시간대 동안 Latte는 깨어 있습니다. 업무 시간, 예약된 일괄 작업 또는 모든 “X부터 Y까지 깨어 있기” 루틴에 유용합니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "これらの繰り返し時間帯にLatteは起動を維持します。勤務時間、スケジュールされたバッチ処理、あるいは“XからYまで起動を維持”という定型作業に便利です。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在这些循环时间段内,Latte 将保持唤醒。适用于工作时间、计划批处理任务,或任何“从 X 到 Y 保持唤醒”的常规需求。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在這些循環時段內,Latte 將保持喚醒。適用於工作時段、排定的批次任務,或任何“從 X 到 Y 保持喚醒”的常規需求。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte permanece activo durante estas franjas horarias recurrentes. Útil para horarios laborales, trabajos por lotes programados o cualquier rutina de tipo “mantener activo de X a Y”."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte bleibt während dieser wiederkehrenden Zeitfenster wach. Nützlich für Arbeitszeiten, geplante Batch-Jobs oder jede „wach halten von X bis Y“-Routine."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte reste actif pendant ces plages horaires récurrentes. Utile pour les heures de travail, les tâches planifiées par lots ou toute routine de type « rester actif de X à Y »."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Latte permanece acordado durante essas janelas recorrentes. Útil para horário de trabalho, jobs em lote agendados ou qualquer rotina do tipo “manter ativo de X a Y”."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte resta attivo durante queste finestre orarie ricorrenti. Utile per l'orario di lavoro, processi batch pianificati o qualsiasi routine del tipo “resta attivo da X a Y”."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte остаётся активным в течение этих повторяющихся временных окон. Подходит для рабочего времени, запланированных пакетных задач или любой схемы вроде “не засыпать с X до Y”."
+          }
+        }
+      }
+    },
+    "Latte stays awake whenever an external display is connected. Useful when working at a desk with a monitor — even if your MacBook lid is closed.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte stays awake whenever an external display is connected. Useful when working at a desk with a monitor — even if your MacBook lid is closed."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "외부 디스플레이가 연결되어 있으면 Latte가 깨어 있습니다. 모니터가 있는 책상에서 작업할 때 유용합니다 — MacBook 덮개가 닫혀 있어도 작동합니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外部ディスプレイが接続されている間、Latteは起動を維持します。MacBookのフタを閉じていても、モニター付きのデスクで作業するときに便利です。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只要连接了外部显示器,Latte 就会保持唤醒。在带显示器的办公桌前工作时非常有用 — 即使 MacBook 盖子合上也可以。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只要連接了外接顯示器,Latte 就會保持喚醒。在有顯示器的辦公桌前工作時非常有用 — 即使 MacBook 蓋子闔上也可以。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte permanece activo siempre que haya una pantalla externa conectada. Útil para trabajar en un escritorio con monitor, incluso con la tapa del MacBook cerrada."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte bleibt wach, solange ein externes Display angeschlossen ist. Nützlich beim Arbeiten am Schreibtisch mit einem Monitor — auch bei geschlossenem MacBook-Deckel."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte reste actif tant qu'un écran externe est connecté. Pratique pour travailler à un bureau avec un moniteur — même quand le capot du MacBook est fermé."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Latte permanece acordado sempre que um monitor externo estiver conectado. Útil quando você trabalha em uma mesa com monitor — mesmo com a tampa do MacBook fechada."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte resta attivo finché è collegato un display esterno. Utile quando lavori a una scrivania con un monitor — anche con il coperchio del MacBook chiuso."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte остаётся активным, пока подключён внешний дисплей. Удобно при работе за столом с монитором — даже при закрытой крышке MacBook."
+          }
+        }
+      }
+    },
+    "Latte stays awake whenever any Focus filter is active. macOS does not expose individual Focus identifiers to third-party apps in a stable way, so per-Focus selection is deferred until Apple opens that API.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte stays awake whenever any Focus filter is active. macOS does not expose individual Focus identifiers to third-party apps in a stable way, so per-Focus selection is deferred until Apple opens that API."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Focus 필터가 활성화되어 있을 때는 항상 Latte가 깨어 있습니다. macOS는 제3자 앱에 개별 Focus 식별자를 안정적으로 노출하지 않으므로, 개별 Focus 선택은 Apple이 API를 공개할 때까지 보류됩니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "いずれかの集中モードフィルタがアクティブな場合、Latteは起動を維持します。macOSは個別の集中モード識別子をサードパーティアプリに安定的に公開しないため、集中モード別の選択はAppleがそのAPIを公開するまで保留されます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只要任何专注模式过滤器处于活动状态,Latte 就会保持唤醒。macOS 不会以稳定的方式向第三方应用程序公开各个专注模式标识符,因此按专注模式选择将推迟到 Apple 开放该 API 之后。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只要任何專注模式過濾器處於活躍狀態,Latte 就會保持喚醒。macOS 不會以穩定的方式向第三方應用程式公開各個專注模式識別碼,因此按專注模式選擇將延後到 Apple 開放該 API 之後。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte permanece activo siempre que algún filtro de Concentración esté activo. macOS no expone identificadores individuales de Concentración a apps de terceros de forma estable, por lo que la selección por Concentración se aplaza hasta que Apple abra esa API."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte bleibt wach, solange ein Fokusfilter aktiv ist. macOS gibt einzelne Fokus-Kennungen nicht stabil an Drittanbieter-Apps weiter, daher wird die Fokus-spezifische Auswahl zurückgestellt, bis Apple diese API öffnet."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte reste actif tant qu'un filtre Concentration est actif. macOS n'expose pas les identifiants de Concentration individuels aux apps tierces de manière stable, donc la sélection par Concentration est reportée jusqu'à ce qu'Apple ouvre cette API."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Latte permanece acordado sempre que algum filtro de Foco estiver ativo. O macOS não expõe identificadores de Foco individuais a apps de terceiros de forma estável, então a seleção por Foco fica adiada até que a Apple abra essa API."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte resta attivo finché un filtro Full Immersion è attivo. macOS non espone gli identificatori Full Immersion individuali alle app di terze parti in modo stabile, quindi la selezione per Full Immersion è rimandata finché Apple non aprirà tale API."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte остаётся активным, пока активен любой фильтр Фокусирования. macOS не предоставляет идентификаторы отдельных Фокусирований сторонним приложениям стабильным образом, поэтому выбор по Фокусированию откладывается до момента, когда Apple откроет соответствующий API."
+          }
+        }
+      }
+    },
+    "Latte stays awake while any of these apps are running. Add the apps that must keep your Mac active — video meetings, presentations, long-running tools.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte stays awake while any of these apps are running. Add the apps that must keep your Mac active — video meetings, presentations, long-running tools."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 앱 중 하나라도 실행 중이면 Latte가 깨어 있습니다. Mac을 활성 상태로 유지해야 하는 앱(화상 회의, 프레젠테이션, 오래 실행되는 도구)을 추가하세요."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "これらのアプリのいずれかが実行中の間、Latteは起動を維持します。ビデオ会議、プレゼンテーション、長時間実行ツールなど、Macを起動したままにしておく必要があるアプリを追加してください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只要其中任何一个应用程序正在运行,Latte 就会保持唤醒。添加需要让 Mac 保持活动状态的应用程序 — 视频会议、演示、长时间运行的工具。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只要這些應用程式中的任何一個正在執行,Latte 就會保持喚醒。新增需要讓 Mac 保持活動狀態的應用程式 — 視訊會議、簡報、長時間執行的工具。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte permanece activo mientras cualquiera de estas apps esté en ejecución. Añade las apps que deben mantener tu Mac activo: videollamadas, presentaciones, herramientas de larga ejecución."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte bleibt wach, solange eine dieser Apps läuft. Füge die Apps hinzu, die deinen Mac aktiv halten müssen — Videokonferenzen, Präsentationen, lang laufende Werkzeuge."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte reste actif tant que l'une de ces apps est en cours d'exécution. Ajoutez les apps qui doivent garder votre Mac actif — visioconférences, présentations, outils longue durée."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Latte permanece acordado enquanto qualquer um desses apps estiver em execução. Adicione os apps que devem manter seu Mac ativo — videochamadas, apresentações, ferramentas de longa duração."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte resta attivo mentre una qualsiasi di queste app è in esecuzione. Aggiungi le app che devono mantenere attivo il Mac — videoconferenze, presentazioni, strumenti a lunga esecuzione."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte остаётся активным, пока выполняется любое из этих приложений. Добавьте приложения, которые должны поддерживать Mac в активном состоянии — видеовстречи, презентации, долго работающие инструменты."
+          }
+        }
+      }
+    },
+    "Latte watches every calendar you've granted access to. Re-open this tab once Calendar permission is granted to pick specific calendars.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte watches every calendar you've granted access to. Re-open this tab once Calendar permission is granted to pick specific calendars."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte는 액세스 권한을 부여한 모든 캘린더를 감시합니다. 특정 캘린더를 선택하려면 캘린더 권한을 부여한 후 이 탭을 다시 여세요."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latteはアクセス権を付与したすべてのカレンダーを監視します。特定のカレンダーを選ぶには、カレンダー権限を付与した後にこのタブを再度開いてください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte 会监视你已授权访问的所有日历。授予日历权限后,重新打开此选项卡以选择特定日历。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte 會監看您已授權存取的所有行事曆。授予行事曆權限後,重新開啟此分頁以選擇特定行事曆。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte vigila todos los calendarios a los que has dado acceso. Vuelve a abrir esta pestaña una vez concedido el permiso de Calendario para elegir calendarios específicos."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte überwacht jeden Kalender, auf den du Zugriff gewährt hast. Öffne diesen Tab erneut, sobald die Kalenderberechtigung erteilt wurde, um bestimmte Kalender auszuwählen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte surveille tous les calendriers auxquels vous avez accordé l'accès. Rouvrez cet onglet une fois l'autorisation Calendrier accordée pour choisir des calendriers spécifiques."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Latte monitora todos os calendários aos quais você concedeu acesso. Reabra esta aba após conceder a permissão de Calendário para escolher calendários específicos."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte monitora tutti i calendari a cui hai concesso l'accesso. Riapri questa scheda dopo aver concesso il permesso Calendario per scegliere calendari specifici."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte отслеживает все календари, к которым вы предоставили доступ. Снова откройте эту вкладку после предоставления разрешения Календаря, чтобы выбрать конкретные календари."
+          }
+        }
+      }
+    },
     "Latte will keep your Mac awake based on: %@.": {
       "comment": "Onboarding wizard — Done step summary listing enabled triggers (%@ = comma-joined trigger names)",
       "extractionState": "manual",
@@ -4730,6 +6008,77 @@
         }
       }
     },
+    "No apps configured yet. Use “Add from running apps” below to add the apps you want Latte to keep awake — or use “Advanced” for an app that isn’t running right now.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No apps configured yet. Use “Add from running apps” below to add the apps you want Latte to keep awake — or use “Advanced” for an app that isn’t running right now."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 설정된 앱이 없습니다. 아래 “실행 중인 앱에서 추가”를 사용하여 Latte가 깨워둘 앱을 추가하거나, 지금 실행되지 않는 앱은 “고급”을 사용하세요."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "まだ設定済みのアプリはありません。下の“実行中のアプリから追加”を使ってLatteで起動を維持したいアプリを追加するか、現在実行されていないアプリの場合は“詳細”を使ってください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚未配置任何应用程序。使用下面的“从运行中的应用程序添加”来添加你希望 Latte 保持唤醒的应用程序 — 或者对当前未运行的应用程序使用“高级”。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚未設定任何應用程式。使用下方的“從執行中的應用程式新增”來新增您希望 Latte 保持喚醒的應用程式 — 或對目前未執行的應用程式使用“進階”。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aún no hay apps configuradas. Usa “Añadir desde apps en ejecución” abajo para añadir las apps que quieres que Latte mantenga activas, o usa “Avanzado” para una app que no esté ejecutándose ahora."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Apps konfiguriert. Verwende unten „Aus laufenden Apps hinzufügen“, um Apps hinzuzufügen, die Latte wach halten soll — oder „Erweitert“ für eine App, die gerade nicht läuft."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune app configurée pour le moment. Utilisez « Ajouter depuis les apps en cours » ci-dessous pour ajouter les apps que vous voulez que Latte garde actives — ou utilisez « Avancé » pour une app qui ne s'exécute pas en ce moment."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhum app configurado ainda. Use “Adicionar a partir de apps em execução” abaixo para adicionar os apps que você quer que o Latte mantenha acordados — ou use “Avançado” para um app que não está em execução agora."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna app configurata. Usa “Aggiungi dalle app in esecuzione” qui sotto per aggiungere le app che vuoi che Latte mantenga attive — oppure usa “Avanzato” per un'app che non è in esecuzione in questo momento."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Приложения ещё не настроены. Используйте “Добавить из запущенных приложений” ниже, чтобы добавить приложения, которые Latte должен поддерживать активными — или “Расширенные” для приложения, которое сейчас не запущено."
+          }
+        }
+      }
+    },
     "No filter — any external display awakes Latte.": {
       "extractionState": "manual",
       "localizations": {
@@ -4795,6 +6144,77 @@
         }
       }
     },
+    "No networks configured. The trigger will never fire.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No networks configured. The trigger will never fire."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정된 네트워크가 없습니다. 트리거가 발동하지 않습니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ネットワークが設定されていません。トリガーは発動しません。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未配置任何网络。触发器将不会触发。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未設定任何網路。觸發器將不會觸發。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No hay redes configuradas. El activador no se disparará."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Netzwerke konfiguriert. Der Auslöser wird nicht aktiv."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun réseau configuré. Le déclencheur ne se déclenchera pas."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhuma rede configurada. O gatilho não disparará."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna rete configurata. Il trigger non si attiverà."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сети не настроены. Триггер не сработает."
+          }
+        }
+      }
+    },
     "No new running apps to add.": {
       "extractionState": "manual",
       "localizations": {
@@ -4856,6 +6276,77 @@
           "stringUnit": {
             "state": "translated",
             "value": "Нет запущенных приложений для добавления."
+          }
+        }
+      }
+    },
+    "No schedules configured. Add one below — e.g. “Mon–Fri, 09:00–18:00” for working hours.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No schedules configured. Add one below — e.g. “Mon–Fri, 09:00–18:00” for working hours."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정된 일정이 없습니다. 아래에서 하나 추가하세요 — 예: 업무 시간의 경우 “월–금, 09:00–18:00”."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スケジュールが設定されていません。下に追加してください — 例: 勤務時間の場合は“月–金、09:00–18:00”。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未配置任何计划。在下方添加一个 — 例如,工作时间为“周一–周五, 09:00–18:00”。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未設定任何排程。在下方新增一個 — 例如,工作時段為“週一–週五, 09:00–18:00”。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No hay horarios configurados. Añade uno abajo — p. ej. “Lun–Vie, 09:00–18:00” para horario laboral."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Zeitpläne konfiguriert. Füge unten einen hinzu — z. B. „Mo–Fr, 09:00–18:00“ für Arbeitszeiten."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun horaire configuré. Ajoutez-en un ci-dessous — par ex. « Lun–Ven, 09:00–18:00 » pour les heures de travail."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhum agendamento configurado. Adicione um abaixo — ex.: “Seg–Sex, 09:00–18:00” para horário de trabalho."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna pianificazione configurata. Aggiungine una qui sotto — es. “Lun–Ven, 09:00–18:00” per l'orario di lavoro."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Расписания не настроены. Добавьте одно ниже — например, “Пн–Пт, 09:00–18:00” для рабочего времени."
           }
         }
       }
@@ -6056,6 +7547,77 @@
         }
       }
     },
+    "Remove %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 제거"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@を削除"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除 %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除 %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quitar %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ entfernen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remover %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovi %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удалить %@"
+          }
+        }
+      }
+    },
     "Remove schedule": {
       "extractionState": "manual",
       "localizations": {
@@ -6918,6 +8480,77 @@
           "stringUnit": {
             "state": "translated",
             "value": "Статус"
+          }
+        }
+      }
+    },
+    "Stay awake after event": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stay awake after event"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이벤트 후에도 깨어 있기"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "イベント後も起動を維持"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "事件后保持唤醒"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "事件後保持喚醒"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permanecer activo después del evento"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach Ereignis wach bleiben"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rester actif après l'événement"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permanecer acordado após o evento"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resta attivo dopo l'evento"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Оставаться активным после события"
           }
         }
       }
@@ -7794,6 +9427,77 @@
         }
       }
     },
+    "Type a bundle identifier (e.g. us.zoom.xos) to watch an app that isn't currently running.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type a bundle identifier (e.g. us.zoom.xos) to watch an app that isn't currently running."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현재 실행되지 않는 앱을 감시하려면 번들 식별자(예: us.zoom.xos)를 입력하세요."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在実行されていないアプリを監視するには、バンドル識別子(例: us.zoom.xos)を入力します。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "输入 bundle 标识符(例如 us.zoom.xos)以监控当前未运行的应用程序。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "輸入 bundle 識別碼(例如 us.zoom.xos)以監看目前未執行的應用程式。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escribe un identificador de paquete (p. ej. us.zoom.xos) para vigilar una app que no se esté ejecutando."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib eine Bundle-Kennung ein (z. B. us.zoom.xos), um eine App zu beobachten, die gerade nicht läuft."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saisissez un identifiant de paquet (par ex. us.zoom.xos) pour surveiller une app qui ne s'exécute pas actuellement."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digite um identificador de pacote (ex.: us.zoom.xos) para monitorar um app que não está em execução."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digita un identificatore di bundle (es. us.zoom.xos) per monitorare un'app non in esecuzione."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Введите идентификатор пакета (например, us.zoom.xos), чтобы отслеживать неработающее в данный момент приложение."
+          }
+        }
+      }
+    },
     "Until": {
       "comment": "GeneralTab — Status section, 'until X' caption",
       "extractionState": "manual",
@@ -8063,6 +9767,77 @@
           "stringUnit": {
             "state": "translated",
             "value": "Использовать все календари"
+          }
+        }
+      }
+    },
+    "Wake before event": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wake before event"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이벤트 전에 깨우기"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "イベント前に起動"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "事件前唤醒"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "事件前喚醒"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activar antes del evento"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vor Ereignis aktivieren"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réveiller avant l'événement"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acordar antes do evento"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attiva prima dell'evento"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Разбудить перед событием"
           }
         }
       }
