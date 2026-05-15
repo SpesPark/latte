@@ -786,6 +786,72 @@
         }
       }
     },
+    "Apply": {
+      "comment": "Onboarding wizard — Apply footer button (pickTriggers step)",
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "적용"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "適用"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "套用"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aplicar"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anwenden"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appliquer"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aplicar"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Applica"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Применить"
+          }
+        }
+      }
+    },
     "Asleep": {
       "comment": "AssertionStatusFormatter — stateLabel when isAwake=false",
       "extractionState": "manual",
@@ -914,6 +980,72 @@
           "stringUnit": {
             "state": "translated",
             "value": "Активен"
+          }
+        }
+      }
+    },
+    "Back": {
+      "comment": "Onboarding wizard — Back footer button (also re-usable across other surfaces)",
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "뒤로"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "戻る"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "返回"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "返回"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atrás"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zurück"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retour"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voltar"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indietro"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Назад"
           }
         }
       }
@@ -1115,6 +1247,72 @@
         }
       }
     },
+    "Choose your language": {
+      "comment": "Onboarding wizard — Language step title",
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "언어 선택"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "言語を選択"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择您的语言"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇您的語言"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elige tu idioma"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprache wählen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisissez votre langue"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha seu idioma"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli la tua lingua"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выберите язык"
+          }
+        }
+      }
+    },
     "Coffee tone": {
       "comment": "GeneralTab — Appearance section, picker label",
       "extractionState": "manual",
@@ -1177,6 +1375,72 @@
           "stringUnit": {
             "state": "translated",
             "value": "Кофейный оттенок"
+          }
+        }
+      }
+    },
+    "Continue": {
+      "comment": "Onboarding wizard — Continue footer button",
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "계속"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "続ける"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "继续"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "繼續"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continuar"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weiter"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continuer"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continuar"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continua"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Продолжить"
           }
         }
       }
@@ -1708,6 +1972,72 @@
         }
       }
     },
+    "During scheduled meetings on your calendars.": {
+      "comment": "Onboarding trigger card description — Calendar trigger",
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "캘린더에 예정된 회의 동안."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カレンダーで予定された会議の間。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在日历上预定的会议期间。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在行事曆上預定的會議期間。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durante las reuniones programadas en tus calendarios."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Während geplanter Termine in deinen Kalendern."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pendant les réunions planifiées dans vos calendriers."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durante reuniões agendadas nos seus calendários."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durante le riunioni pianificate nei tuoi calendari."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Во время запланированных встреч в календарях."
+          }
+        }
+      }
+    },
     "Edit preset": {
       "comment": "RecurringQuickPresetEditor — title when editing existing preset",
       "extractionState": "manual",
@@ -2032,6 +2362,72 @@
           "stringUnit": {
             "state": "translated",
             "value": "Исключить события на весь день"
+          }
+        }
+      }
+    },
+    "Find Latte in the menu bar. Settings live behind ⌘, — adjust triggers, appearance, and Launch at Login any time.": {
+      "comment": "Onboarding wizard — Done step caption with command-comma shortcut",
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "메뉴 막대에서 Latte를 찾을 수 있습니다. ⌘, 단축키로 설정을 열어 트리거, 외관, 로그인 시 실행을 언제든 조정하세요."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メニューバーにLatteがあります。⌘, で設定を開いて、トリガー、外観、ログイン時に開くをいつでも調整できます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在菜单栏中找到 Latte。按 ⌘, 打开设置，随时调整触发条件、外观和登录时启动。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在選單列中找到 Latte。按 ⌘, 打開設定，隨時調整觸發條件、外觀和登入時啟動。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encuentra Latte en la barra de menús. Los Ajustes están en ⌘, — puedes ajustar disparadores, apariencia y Abrir al iniciar sesión en cualquier momento."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte findest du in der Menüleiste. Die Einstellungen erreichst du mit ⌘, — passe Auslöser, Erscheinungsbild und „Beim Anmelden öffnen“ jederzeit an."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retrouvez Latte dans la barre des menus. Les Réglages s'ouvrent avec ⌘, — ajustez les déclencheurs, l'apparence et Ouvrir au démarrage à tout moment."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encontre o Latte na barra de menus. Os Ajustes ficam em ⌘, — ajuste gatilhos, aparência e Abrir ao iniciar sessão quando quiser."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trovi Latte nella barra dei menu. Le Impostazioni si aprono con ⌘, — regola trigger, aspetto e Apri all'accesso in qualsiasi momento."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte находится в строке меню. Откройте настройки сочетанием ⌘, — изменяйте триггеры, оформление и «Открывать при входе» в любой момент."
           }
         }
       }
@@ -2625,6 +3021,204 @@
           "stringUnit": {
             "state": "translated",
             "value": "За последние 24 часа"
+          }
+        }
+      }
+    },
+    "Latte will keep your Mac awake based on: %@.": {
+      "comment": "Onboarding wizard — Done step summary listing enabled triggers (%@ = comma-joined trigger names)",
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte는 다음 조건에 따라 Mac을 깨어 있게 유지합니다: %@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latteは次の条件に基づいてMacを起動状態に保ちます: %@。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte 将根据以下条件保持 Mac 唤醒：%@。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte 將根據以下條件保持 Mac 喚醒：%@。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte mantendrá tu Mac despierto según: %@."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte hält deinen Mac wach auf Basis von: %@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte gardera votre Mac éveillé selon : %@."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Latte manterá seu Mac acordado com base em: %@."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte manterrà il Mac attivo in base a: %@."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte будет удерживать Mac от сна в зависимости от: %@."
+          }
+        }
+      }
+    },
+    "Latte will restart in this language on next launch. You can change this any time in Settings.": {
+      "comment": "Onboarding wizard — Language step caption",
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다음 실행 시 Latte가 이 언어로 시작됩니다. 설정에서 언제든 변경할 수 있습니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次回起動時にLatteはこの言語で起動します。設定からいつでも変更できます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下次启动时 Latte 将以此语言运行。您可以随时在设置中更改。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下次啟動時 Latte 將以此語言運行。您可以隨時在設定中更改。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte se reiniciará en este idioma en el próximo arranque. Puedes cambiarlo en cualquier momento en Ajustes."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte startet beim nächsten Start in dieser Sprache. Du kannst dies jederzeit in den Einstellungen ändern."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte redémarrera dans cette langue au prochain lancement. Vous pouvez la modifier à tout moment dans les Réglages."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Latte reiniciará neste idioma na próxima abertura. Você pode alterá-lo a qualquer momento nos Ajustes."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte si riavvierà in questa lingua al prossimo avvio. Puoi cambiarla in qualsiasi momento nelle Impostazioni."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte перезапустится на этом языке при следующем запуске. Это можно изменить в любое время в Настройках."
+          }
+        }
+      }
+    },
+    "Latte will start in manual mode. You can enable triggers any time from Settings → Triggers.": {
+      "comment": "Onboarding wizard — Done step summary when no triggers picked (manual mode fallback)",
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte는 수동 모드로 시작합니다. 설정 → 트리거에서 언제든 트리거를 활성화할 수 있습니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latteは手動モードで起動します。設定 → トリガーからいつでもトリガーを有効化できます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte 将以手动模式启动。您可以随时在设置 → 触发条件中启用触发器。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte 將以手動模式啟動。您可以隨時在設定 → 觸發條件中啟用觸發器。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte se iniciará en modo manual. Puedes activar disparadores en cualquier momento desde Ajustes → Disparadores."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte startet im manuellen Modus. Du kannst Auslöser jederzeit unter Einstellungen → Auslöser aktivieren."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte démarrera en mode manuel. Vous pouvez activer des déclencheurs à tout moment depuis Réglages → Déclencheurs."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Latte iniciará em modo manual. Você pode ativar gatilhos a qualquer momento em Ajustes → Gatilhos."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte si avvierà in modalità manuale. Puoi attivare i trigger in qualsiasi momento da Impostazioni → Trigger."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte запустится в ручном режиме. Триггеры можно включить в любое время в Настройках → Триггеры."
           }
         }
       }
@@ -3223,6 +3817,72 @@
         }
       }
     },
+    "Never let your Mac sleep at the wrong moment.": {
+      "comment": "Onboarding wizard — Welcome step subhead (the wedge)",
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac이 중요한 순간에 잠들지 않게 하세요."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "肝心なときにMacがスリープしないように。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "别再让 Mac 在关键时刻进入睡眠。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "別再讓 Mac 在關鍵時刻進入睡眠。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Que tu Mac no se duerma en el peor momento."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lass deinen Mac nie im falschen Moment einschlafen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Évitez que votre Mac s'endorme au mauvais moment."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não deixe seu Mac dormir na hora errada."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non lasciare che il tuo Mac vada in stop nel momento sbagliato."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не дайте Mac уснуть в неподходящий момент."
+          }
+        }
+      }
+    },
     "New custom preset": {
       "comment": "RecurringQuickPresetEditor — title when adding new",
       "extractionState": "manual",
@@ -3617,6 +4277,72 @@
         }
       }
     },
+    "On a recurring time schedule (e.g. weekday working hours).": {
+      "comment": "Onboarding trigger card description — Schedule trigger",
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "반복되는 시간 일정에 따라 (예: 평일 근무 시간)."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "繰り返しの時間スケジュールに従って（例：平日の勤務時間）。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按重复的时间安排（例如工作日工作时间）。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按重複的時間安排（例如工作日工作時間）。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Según un horario recurrente (p. ej. horario laboral de días de semana)."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach einem wiederkehrenden Zeitplan (z. B. Arbeitszeit an Wochentagen)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selon un horaire récurrent (par exemple les heures de travail en semaine)."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Em um horário recorrente (por exemplo, horário comercial em dias úteis)."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In base a una pianificazione ricorrente (es. orario lavorativo nei giorni feriali)."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "По повторяющемуся расписанию (например, рабочие часы в будни)."
+          }
+        }
+      }
+    },
     "On battery — Latte is suspended": {
       "comment": "AssertionStatusFormatter — powerLabel when isOnAC=false + requireACForAwake=true",
       "extractionState": "manual",
@@ -3815,6 +4541,204 @@
         }
       }
     },
+    "Only on networks you trust (or never on networks you avoid).": {
+      "comment": "Onboarding trigger card description — Wi-Fi trigger",
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "신뢰하는 네트워크에서만 (또는 피하는 네트워크에서는 절대 안 함)."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "信頼するネットワークでのみ（または避けるネットワークでは絶対に動作しない）。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅在您信任的网络上（或在您要避开的网络上从不）。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "僅在您信任的網路上（或在您要避開的網路上從不）。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo en redes en las que confías (o nunca en redes que evitas)."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur in Netzwerken, denen du vertraust (oder nie in Netzwerken, die du meidest)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uniquement sur les réseaux en lesquels vous avez confiance (ou jamais sur ceux à éviter)."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apenas em redes em que você confia (ou nunca em redes que evita)."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo su reti di cui ti fidi (o mai su reti che eviti)."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Только в доверенных сетях (или никогда в нежелательных)."
+          }
+        }
+      }
+    },
+    "Open Latte": {
+      "comment": "Onboarding wizard — Open Latte footer button (done step, finalize)",
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte 열기"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latteを開く"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开 Latte"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打開 Latte"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir Latte"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte öffnen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir Latte"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir o Latte"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri Latte"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Открыть Latte"
+          }
+        }
+      }
+    },
+    "Other caffeine apps make you remember to toggle them. Latte watches your context — calendar, running apps, Wi-Fi, Focus mode — and decides for you.": {
+      "comment": "Onboarding wizard — Welcome step body paragraph (positioning vs competitors)",
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 카페인 앱은 매번 직접 켜고 꺼야 합니다. Latte는 캘린더, 실행 중인 앱, Wi-Fi, 집중 모드 같은 상황을 보고 자동으로 판단합니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "他のカフェインアプリは自分で切り替える必要があります。Latteはカレンダー、起動中のアプリ、Wi-Fi、集中モードなどの状況を見て自動で判断します。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他防睡眠应用需要您手动开关。Latte 会观察日历、运行中的应用、Wi-Fi、专注模式等情境，自动为您判断。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他防睡眠應用需要您手動開關。Latte 會觀察行事曆、運行中的應用、Wi-Fi、專注模式等情境，自動為您判斷。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otras apps de cafeína te obligan a recordar activarlas. Latte observa tu contexto — calendario, apps en ejecución, Wi-Fi, modo Concentración — y decide por ti."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Andere Caffeine-Apps musst du jedes Mal manuell umschalten. Latte beobachtet deinen Kontext — Kalender, laufende Apps, Wi-Fi, Fokus — und entscheidet für dich."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les autres apps de caféine vous obligent à les activer manuellement. Latte observe votre contexte — calendrier, apps actives, Wi-Fi, mode Concentration — et décide pour vous."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Outros apps de cafeína obrigam você a lembrar de ativá-los. O Latte observa seu contexto — calendário, apps em execução, Wi-Fi, modo Foco — e decide por você."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le altre app caffeina ti obbligano a ricordarti di attivarle. Latte osserva il tuo contesto — calendario, app in esecuzione, Wi-Fi, Full Immersion — e decide per te."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Другие caffeine-приложения требуют, чтобы вы помнили включить их. Latte отслеживает контекст — календарь, запущенные приложения, Wi-Fi, режим фокусирования — и решает за вас."
+          }
+        }
+      }
+    },
     "Permission denied. Grant access in System Settings → Privacy & Security.": {
       "extractionState": "manual",
       "localizations": {
@@ -3941,6 +4865,138 @@
           "stringUnit": {
             "state": "translated",
             "value": "Разрешение запрашивается при первом срабатывании триггера."
+          }
+        }
+      }
+    },
+    "Pick what should keep your Mac awake": {
+      "comment": "Onboarding wizard — pickTriggers step title",
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac을 깨어 있게 할 조건을 선택하세요"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Macを起動状態に保つ条件を選択"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择让 Mac 保持唤醒的条件"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇讓 Mac 保持喚醒的條件"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elige qué debe mantener tu Mac despierto"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle, was deinen Mac wach halten soll"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisissez ce qui doit garder votre Mac éveillé"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha o que deve manter seu Mac acordado"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli cosa deve mantenere il Mac attivo"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выберите, что должно удерживать Mac от сна"
+          }
+        }
+      }
+    },
+    "Pick which contexts should keep your Mac awake. You can change anything later from Settings.": {
+      "comment": "Onboarding wizard — Welcome step body second paragraph",
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac을 깨어 있게 할 상황을 선택하세요. 모든 항목은 나중에 설정에서 변경할 수 있습니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Macを起動状態に保つ条件を選んでください。あとから設定でいつでも変更できます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择应该让 Mac 保持唤醒的情境。所有选项之后都可以在设置中调整。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇應該讓 Mac 保持喚醒的情境。所有選項之後都可以在設定中調整。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elige qué contextos deben mantener tu Mac despierto. Puedes cambiar cualquier cosa más tarde en Ajustes."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle, welche Kontexte deinen Mac wach halten sollen. Du kannst alles später in den Einstellungen ändern."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisissez les contextes qui doivent garder votre Mac éveillé. Vous pouvez tout modifier plus tard dans les Réglages."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha quais contextos devem manter seu Mac acordado. Você pode alterar qualquer coisa depois nos Ajustes."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli quali contesti devono mantenere il Mac attivo. Puoi modificare tutto in seguito dalle Impostazioni."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выберите, какие условия должны удерживать Mac от сна. Всё можно изменить позже в Настройках."
           }
         }
       }
@@ -4537,6 +5593,72 @@
         }
       }
     },
+    "Skip": {
+      "comment": "Onboarding wizard — Skip footer button",
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "건너뛰기"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スキップ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跳过"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "略過"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Omitir"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Überspringen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignorer"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pular"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salta"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пропустить"
+          }
+        }
+      }
+    },
     "Sleep when on battery": {
       "comment": "GeneralTab — Toggle label, battery-aware mode",
       "extractionState": "manual",
@@ -4863,6 +5985,72 @@
           "stringUnit": {
             "state": "translated",
             "value": "Система активна (дисплей может уснуть)"
+          }
+        }
+      }
+    },
+    "Tap a card to enable. You can pick more than one.": {
+      "comment": "Onboarding wizard — pickTriggers step caption",
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드를 탭하여 활성화하세요. 여러 개 선택할 수 있습니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カードをタップして有効化します。複数選択できます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点按卡片以启用。可以选择多个。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "點按卡片以啟用。可以選擇多個。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toca una tarjeta para activarla. Puedes elegir más de una."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippe auf eine Karte zum Aktivieren. Du kannst mehrere auswählen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Touchez une carte pour l'activer. Vous pouvez en choisir plusieurs."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toque em um cartão para ativar. Você pode escolher mais de um."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tocca una carta per attivarla. Puoi sceglierne più di una."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нажмите на карточку, чтобы включить. Можно выбрать несколько."
           }
         }
       }
@@ -5587,6 +6775,270 @@
           "stringUnit": {
             "state": "translated",
             "value": "Отслеживаемые календари"
+          }
+        }
+      }
+    },
+    "Welcome to Latte": {
+      "comment": "Onboarding wizard — Welcome step title",
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte에 오신 것을 환영합니다"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latteへようこそ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "欢迎使用 Latte"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "歡迎使用 Latte"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Te damos la bienvenida a Latte"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Willkommen bei Latte"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bienvenue dans Latte"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Boas-vindas ao Latte"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ti diamo il benvenuto in Latte"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добро пожаловать в Latte"
+          }
+        }
+      }
+    },
+    "While Zoom, Teams, or any app you choose is running.": {
+      "comment": "Onboarding trigger card description — App trigger",
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoom, Teams 등 원하는 앱이 실행 중일 때."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoom、Teamsなど選んだアプリが起動中。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当 Zoom、Teams 或您选择的任何应用正在运行时。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "當 Zoom、Teams 或您選擇的任何應用正在運行時。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mientras Zoom, Teams o cualquier app que elijas esté en ejecución."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Während Zoom, Teams oder eine andere App deiner Wahl läuft."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lorsque Zoom, Teams ou toute autre app de votre choix est en cours d'exécution."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enquanto Zoom, Teams ou qualquer app de sua escolha estiver em execução."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mentre Zoom, Teams o qualsiasi app a tua scelta è in esecuzione."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пока запущены Zoom, Teams или любое выбранное вами приложение."
+          }
+        }
+      }
+    },
+    "While any macOS Focus mode is active.": {
+      "comment": "Onboarding trigger card description — Focus trigger (deferred V2-03b)",
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 집중 모드가 활성화되어 있을 때."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOSの集中モードが有効な間。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当任何 macOS 专注模式处于活动状态时。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "當任何 macOS 專注模式處於活動狀態時。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mientras esté activo cualquier modo Concentración de macOS."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Während ein beliebiger macOS-Fokus aktiv ist."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lorsqu'un mode Concentration macOS est actif."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enquanto qualquer modo Foco do macOS estiver ativo."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mentre è attiva una Full Immersion di macOS."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пока активен любой режим фокусирования macOS."
+          }
+        }
+      }
+    },
+    "You're all set": {
+      "comment": "Onboarding wizard — Done step title",
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 준비가 끝났습니다"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "準備完了"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部就绪"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部就緒"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todo listo"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles bereit"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous êtes prêt"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tudo pronto"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutto pronto"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Всё готово"
           }
         }
       }

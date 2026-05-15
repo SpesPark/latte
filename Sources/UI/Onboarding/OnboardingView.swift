@@ -174,13 +174,13 @@ public struct OnboardingView: View {
 
     private var doneSummary: String {
         if pendingEnables.isEmpty {
-            return "Latte will start in manual mode. You can enable triggers any time from Settings → Triggers."
+            return String(localized: "Latte will start in manual mode. You can enable triggers any time from Settings → Triggers.")
         }
         let names = coordinator.triggers
             .filter { pendingEnables.contains($0.id) }
             .map(\.displayName)
             .joined(separator: ", ")
-        return "Latte will keep your Mac awake based on: \(names)."
+        return String(localized: "Latte will keep your Mac awake based on: \(names).")
     }
 
     // MARK: - Footer (Skip / Back / Continue)
@@ -281,15 +281,15 @@ public struct OnboardingView: View {
     private func description(for triggerID: String) -> String {
         switch triggerID {
         case "calendar":
-            return "During scheduled meetings on your calendars."
+            return String(localized: "During scheduled meetings on your calendars.")
         case "app":
-            return "While Zoom, Teams, or any app you choose is running."
+            return String(localized: "While Zoom, Teams, or any app you choose is running.")
         case "wifi":
-            return "Only on networks you trust (or never on networks you avoid)."
+            return String(localized: "Only on networks you trust (or never on networks you avoid).")
         case "focus":
-            return "While any macOS Focus mode is active."
+            return String(localized: "While any macOS Focus mode is active.")
         case "schedule":
-            return "On a recurring time schedule (e.g. weekday working hours)."
+            return String(localized: "On a recurring time schedule (e.g. weekday working hours).")
         default:
             return ""
         }
