@@ -8,64 +8,71 @@
 
 | Field | Value |
 |---|---|
-| **Session #** | **S32** — i18n cluster close-out (Phases D + E + H + ko refinements) (2026-05-15, same-day continuation of S31). Owner direction at S32 start: "권장대로 진행" = full Option A loop in one session — push S31 to origin, do live ko review together (Option B from S31 owner-side queue), execute Phase H bulk LLM translation immediately after ko approval, wrap. S32 lands Phases D (Onboarding LanguageStep), E (Settings Language Picker), H (9 languages × 86 keys = 774 translations) + 3 ko refinements (`Enable` 사용 → 활성화, `Reset` 기본값 → 초기화, `Watched calendars` 감시 중인 → 관찰 중인) + extended `LocalizationCatalogTests` to assert 11-language coverage. v1.x i18n track now **fully landed**; only Phase I (P2 surface — MenuBar + Onboarding body + status notifications) remains for S33+. |
-| **Theme** | "i18n cluster ships in a single session by riding the trust anchor pattern: owner reviews ko (the developer's own language, ~20 min), corrections feed back into the catalog, and only THEN does the LLM-batch fan out across 9 derived languages. The cost asymmetry is the whole point — translation errors in ko propagate as silent quality regressions across 9 languages, so spending 20 minutes to lock the anchor saves a 10× downstream debt. The Onboarding LanguageStep + Settings Picker land in the same cluster because they're the user-visible counterpart that makes the infrastructure discoverable — without a Picker, a Korean user with English macOS never sees the ko translations. Lesson: i18n is a 4-layer stack (infra → anchor lang → derived langs → UI surface), and shipping all 4 in one cluster is more efficient than the textbook 'translate first, UI later' since the UI is a 1-day delta and the QA loop is the same for all layers." |
-| **Status** | ✅ **3 source commits** in S32 cluster: `95e4a6c` (Phase D + E) + `1284c9e` (Phase H + ko refinements) + this docs wrap. **Tests 594 → 607** (+13: +12 LanguagePreferenceTests, +1 testEveryEntryCoversAllPhaseHLanguages) in 10.5s. **Smoke 22/22** GREEN. **Working tree clean** after wrap. **xcstrings**: 86 keys × 11 languages = **all 940 cells populated** (en source + 10 translated languages). Catalog file size 22KB → 79KB. **Onboarding flow** now: `language → welcome → pickTriggers → done`. **Settings → General** gains Language section with Picker + "Restart Latte to apply." caption. |
-| **Tail commits** | `95e4a6c` (S32 D+E) → `1284c9e` (S32 H + ko) → this S32 docs wrap. Preceded by S31 chain (`6c6f955` → `7842b60` → `e1a56a7`) and S30 chain (`afa1980` → `3a30e61` → `ad4cab6`). Origin/main synced. |
+| **Session #** | **S33** — community PR groundwork + Phase I Chunk 1 (Onboarding body i18n) (2026-05-15, same-day continuation of S32). Owner direction at S33 start: "3,4,5 autonomous 작업 위주로 진행하고 싶어. 철저하게 차곡차곡 쌓아가서 검증할 때 오류를 최소화하는 게 목적이야. 추천하는대로 작업 시작할거고, 작업 완료한 후 컨텍스트 얼마나 남았는지 확인해서 넉넉하면 추가로 작업 이어서 진행해주고…". Recommendation: chunk Phase I into 4 verifiable units, start with README + community PR groundwork (lowest risk). S33 lands Step 1 (community PR groundwork) + Phase I Chunk 1 (Onboarding body); Chunks 2-4 deferred to S34 due to macOS Pseudo Terminal Setup Error blocking xcodebuild test runner — "차곡차곡 검증" principle gates further code commits when verification is impossible. |
+| **Theme** | "Verification-gated continuation: when the macOS PTY infrastructure breaks mid-session, the right move under '차곡차곡 검증' is to (a) stop accumulating untestable code, (b) honor what build *can* verify (xcodebuild build + build-for-testing both passed), and (c) pivot to non-test-dependent productive work (docs, ROADMAP rows, memory wrap) that uses remaining context safely. Phase I as a 4-chunk plan turned out to be the right shape: Chunk 1 (Onboarding) is self-contained, mechanically verified at the build+JSON level, and leaves Chunks 2-4 cleanly resumable after reboot. The TRANSLATIONS.md contributor-PR contract from Step 1 doubles as a long-term safety net: even if some of the 220 Phase I Chunk 1 cells have subtle translation errors, the community-PR pathway exists. Lesson: in i18n work, the LLM-draft + community-refine contract scales further than waiting for a 'perfect' first cut; ship machine-assisted with honest disclaimer, raise quality continuously." |
+| **Status** | ✅ **2 commits** in S33: `da56770` (community PR groundwork — README + TRANSLATIONS.md + translation_improvement issue template + config.yml drift fix + 586→607 test count drift fix; 4 files, +180/-4) + `13c7ad4` (Phase I Chunk 1 — 22 keys × 10 langs = 220 cells in xcstrings + 2 helper-function `String(localized:)` wraps in OnboardingView.swift; 2 files, +1695/-243). **Build verified** (`xcodebuild build` SUCCESS + `xcodebuild build-for-testing` SUCCESS). **Tests/smoke NOT run** due to persistent macOS Pseudo Terminal Setup Error blocking `xcodebuild test` runner (CoreSimulator 1051.50/1051.54 framework drift; survives `simctl shutdown all` + DerivedData clear; reboot expected to clear). Test count 607 → 607 *expected* (no test added; existing `testEveryEntryCoversAllPhaseHLanguages` enforces 10-lang coverage of new keys via gap-report). **xcstrings**: 86 → 108 keys; 940 → 1188 cells (en source + 10 translated). Working tree clean after wrap. |
+| **Tail commits** | `da56770` (Step 1 community PR groundwork) → `13c7ad4` (Phase I Chunk 1) → this S33 docs wrap (ROADMAP rows S30-S33 appended + SESSION_HANDOFF overwrite + memory update). Preceded by S32 chain (`71b55a4` → `1284c9e` → `95e4a6c`), S31 chain (`7842b60` → `6c6f955` → `e1a56a7`), S30 chain (`afa1980` → `3a30e61` → `ad4cab6`). |
 
 ### What landed this session
 
-| Phase | Work | Files | Tests Δ |
+| Step | Work | Files | Commit |
 |---|---|---|---|
-| **D — Onboarding LanguageStep** | New `.language` step prepended to wizard (welcome demoted to second). 11 native-name buttons in 2-column `LazyVGrid`, pre-selects user's current system language (`LanguagePreference.current()` → first-tap-continue UX for non-English users). Selection writes AppleLanguages immediately via `LanguagePreference.apply(_:)` — visible on next launch. Initial step state changed from `.welcome` to `.language`; Step.previous for `.language` returns self (no Back button on first step). `LanguageOnboardingButton` private subview with selected-state checkmark + accent border. | `Sources/UI/Onboarding/OnboardingView.swift` | +0 (UI behaviour covered by LanguagePreference unit tests) |
-| **E — Settings Language Picker** | New Section between Appearance and Status. `Picker(selection: $selectedLanguage)` showing 11 native names (menu style), bound to `@State var selectedLanguage = LanguagePreference.current()`. `.onChange` writes through. Section footer: "Restart Latte to apply." | `Sources/UI/Settings/GeneralTab.swift` | +0 |
-| **Core helper** | `LanguagePreference` — public enum namespace: `Option { code, nativeName }`, `supported: [Option]` (11, ko first, en second, then geographic/script proximity), `current(in:)` reads AppleLanguages with prefix-folding (ko-KR → ko, pt-PT → pt-BR), `apply(_:to:)` writes only if code is in supported list, `resolve(rawLanguages:)` pure overload for testability. | `Sources/Core/LanguagePreference.swift` (NEW) | +12 LanguagePreferenceTests |
-| **ko refinements** | 3 owner-approved fixes: `Enable` 사용 → 활성화, `Reset` 기본값 → 초기화, `Watched calendars` 감시 중인 → 관찰 중인. (Other 83 ko translations confirmed during review.) | `Resources/Localizable.xcstrings` | 0 |
-| **H — Bulk translations** | 86 keys × 9 languages (ja, zh-Hans, zh-Hant, es, de, fr, pt-BR, it, ru) = 774 new translation cells. Apple platform terminology follows official Apple localizations (System Settings → Privacy & Security per language; ja "システム設定 → プライバシーとセキュリティ", de "Systemeinstellungen → Datenschutz & Sicherheit", etc.). Brand names (Latte, Mac, Wi-Fi, SF Symbols, Esc) preserved untranslated. Copyright string translated everywhere except ja (Apple convention keeps "All rights reserved" English in JP locale). | `Resources/Localizable.xcstrings` | 0 |
-| **F — Test contract extended** | `testEveryEntryCoversAllPhaseHLanguages` — builds `gaps: [Lang: [Key]]` and asserts empty; surfaces drift per-language if a new key lands without translations. Doc comment updated to reflect Phase H landed (was "9 other languages NOT asserted; community PR welcome"). | `Tests/LocalizationCatalogTests.swift` | +1 (594 → 607 in cluster, after also adding +12 LanguagePreferenceTests) |
+| **Step 1 — Community PR groundwork** | `TRANSLATIONS.md` (NEW) — 11-language quality bar table; two contribution paths (issue template / direct PR); terminology/tone guidance; test coverage notes; "machine-assisted, awaiting native review" stance. `.github/ISSUE_TEMPLATE/translation_improvement.md` (NEW) — low-friction i18n feedback path. README — new Internationalization section linking to TRANSLATIONS.md; test count drift 586 → 607; status line points to live Pages URL; Documents table row added. `config.yml` — drift fix `bj-park.github.io` → `spespark.github.io` (carryover from S29 username decision). | `TRANSLATIONS.md`, `.github/ISSUE_TEMPLATE/translation_improvement.md`, `README.md`, `.github/ISSUE_TEMPLATE/config.yml` | `da56770` |
+| **Step 2 — Phase I Chunk 1: Onboarding body** | 22 new xcstrings keys × 10 langs = 220 cells. Categories: Language step (2 keys: title + restart caption), Welcome step (4 keys: title + subhead + 2 body paragraphs), pickTriggers step (2 keys: title + caption), Done step (2 keys: title + ⌘, caption), Footer buttons (5 keys: Skip / Back / Continue / Apply / Open Latte), doneSummary helpers (2 keys with `String(localized:)` wrap including `%@`-format key for `\(names)` interpolation), Trigger card descriptions (5 keys, `String(localized:)` wrap: calendar / app / wifi / focus / schedule). Swift edits minimal: 2 helper functions in `OnboardingView.swift` wrap returns with `String(localized:)`; SwiftUI view literals auto-localized via LocalizedStringKey (no code change, catalog-only). | `Resources/Localizable.xcstrings`, `Sources/UI/Onboarding/OnboardingView.swift` | `13c7ad4` |
+| **Step 3 — ROADMAP rows S30→S33** | Backlog of 4 ROADMAP version rows appended (S30 matcha cluster, S31 i18n P1 anchor, S32 i18n cluster close-out, S33 community PR + Phase I Chunk 1). | `ROADMAP.md` | this docs wrap |
+| **Step 4 — SESSION_HANDOFF wrap** | (this file). Full overwrite per project convention. Documents PTY blocker + recovery path + S34 entry points. | `docs/SESSION_HANDOFF.md` | this docs wrap |
+| **Step 5 — Memory wrap** | `project_latte_v1_9.md` extended with S33 entry; `MEMORY.md` index line updated. | `~/.claude/projects/.../memory/{MEMORY.md, project_latte_v1_9.md}` | (outside repo) |
 
 ### Patterns reinforced this session
 
-- **`UserDefaults(suiteName:)` chains through `NSGlobalDomain` for system-defined keys** — system keys like `AppleLanguages` are not isolated by a fresh suite domain; they fall through to the host machine's system value. **How to apply**: when unit-testing a helper that reads a system-defined UserDefault, split the API into (a) a `current(in defaults:)` form that walks UserDefaults and (b) a pure `resolve(rawValues:)` form that operates on already-extracted values. Tests use the pure form so they don't depend on the test host's macOS language setting. Without this, the test passes on en-US machines and silently fails on the owner's ko-KR machine (or vice versa).
-- **Region-tagged language code fall-through (`ko-KR → ko`, `pt-PT → pt-BR`, `zh-HK → zh-Hans`)** — macOS often stores AppleLanguages as region-tagged variants depending on where the user picked their language in System Settings. The catalog uses bare BCP-47 codes (or single-variant tags like `pt-BR`). Resolver must fold region tags to the closest supported code by matching language prefix on either side of the `-`. **How to apply**: for any "current locale → supported list" lookup, always do exact match first, then prefix-prefix match (both sides, since the system value and your catalog code may each carry a different region suffix). Return source language ("en") as final fallback.
-- **Step enum prepend pattern for onboarding flow** — adding a new first step to an existing wizard requires: (a) `enum Step` case prepended, (b) `@State step` initial value changed to new case, (c) `previous` returns self for new first case (no Back button), (d) `advance()` switch case added for new step → existing first, (e) footer Back-button guard `step != .newFirst && step != .oldFirst`. Surgical, ~10 LoC of state plumbing in addition to the new step's content view. **How to apply**: this same pattern works for *any* wizard step insertion (not just first); update Step.previous + Step's neighbours in `advance()` only.
-- **Bulk LLM translation as a hand-writable Python script with a dict literal** — for P1 ship of N keys × M languages, writing the translations as a `T = {key: {lang: value, ...}, ...}` Python dict in a single throwaway script (then JSON-merging back into xcstrings) is faster + more reviewable than per-cell tool calls. 774-cell dict ≈ 700 lines of source, 30-60 min owner-pair to draft + review. Script enforces invariants (every key in catalog has T entry, every T entry has all 9 langs) before writing. **How to apply**: when bulk-translating, never round-trip per-cell through the editor — write one script with all translations in a dict, validate completeness, write file once.
-- **Per-language gap-report test pattern** — instead of asserting "all langs present for all keys" as a binary, build a `gaps: [Lang: [Key]]` dict and fail with the structured diff. When the test fails on a new key, the message tells you exactly which languages are missing it — no need to re-run with different log levels or instrument the test. **How to apply**: for any multi-dimensional coverage assertion (matrix invariants), accumulate gaps into a dict keyed by the missing dimension's identity, then assert empty. Failure message is actionable as-is.
+- **TRANSLATIONS.md as community-PR contract** — when shipping machine-assisted translations across N languages, the contributor-PR pathway must be *explicit and ergonomic* before the shipped translations have a quality problem. Components: (a) per-language quality-bar table ("hand-reviewed" vs "machine-assisted, awaiting native review"); (b) two contribution paths (issue template for non-Git users + direct PR for Git users); (c) what-to-look-for guidance (Apple terminology, brand names untranslated, tone, length); (d) test contract documented so contributors know which guardrails their PR must pass. **How to apply**: any feature that ships "good-enough draft + community refinement" needs the contributor side of the contract written *before* the draft ships; otherwise users hit imperfections and have no idea how to feed back.
+- **`String(localized:)` `\(arg)` interpolation auto-folds to `%@`-format key** — when wrapping `"Latte will keep your Mac awake based on: \(names)."` in `String(localized:)`, Swift converts the `\(names)` to a `%@` placeholder, and the catalog key reads `"Latte will keep your Mac awake based on: %@."` (literal `%@`). Runtime substitutes `names` at format time. Translators see `%@` in the catalog editor; they must preserve the placeholder. **How to apply**: when designing a string with run-time interpolation, write it once in source with `\(arg)` and let Swift derive the format key; explicitly document `%@` to translators in TRANSLATIONS.md (currently implicit — TODO refine if community confusion surfaces).
+- **PTY blocker discovery: testmanagerd is process-singleton across all xcodebuild test invocations on the machine** — parallel `swift-test` in another project (in this case `MacSuiteUI`) holds testmanagerd's PTY allocation; even after the other test exits, the CoreSimulator framework-version drift (Xcode update mid-session?) can leave PTY allocation in `ENXIO` ("Device not configured") state. `xcrun simctl shutdown all` repairs the CoreSimulator daemon's version mismatch but does NOT unblock PTY allocation in xcodebuild's test launcher. Reboot is the reliable fix. **How to apply**: when `Pseudo Terminal Setup Error` blocks `xcodebuild test`, (a) check for parallel xcodebuild/swift-test in other projects, (b) try `xcrun simctl shutdown all`, (c) if still blocked, do not chase further fixes — verify what build *can* (xcodebuild build + build-for-testing both succeed at compile level), commit explicitly noting "tests blocked by PTY; expected to pass after reboot", and pivot to non-test-dependent work.
+- **Owner principle as session-gate: when verification breaks, stop adding untestable code** — the "차곡차곡 쌓아가서 검증할 때 오류를 최소화" principle isn't merely a coding rule, it's a session-flow rule. When `xcodebuild test` can't run, further i18n Chunks (each with 200+ translation cells) accumulate without test verification, growing bisect surface. Pivot: commit verified work, mark explicitly "tests pending PTY recovery", switch to test-free productive work (docs, ROADMAP, memory, SESSION_HANDOFF) which still advances project value but at zero verification risk. **How to apply**: when the user's principle gates further work, name the gate explicitly to the user and propose a test-free alternative; don't silently lower the bar.
+- **README/test-count drift accumulates silently across sessions** — README claimed `586/586 tests passing` from S20-era; S33 fix bumps to 607. Drift is invisible until a doc-update session triggers a re-read. Similar drift: `bj-park.github.io` → `spespark.github.io` (URL changed in S29, fix landed S33). **How to apply**: every docs-touching session should grep README + top-level docs for stale references to test count, URLs, version numbers, and other quantities that change session-to-session. A periodic `scripts/check_doc_drift.sh` would automate this — backlog candidate.
 
 ### What was checked but not changed
 
-- 607/607 tests + smoke 22/22 — confirmed green after each S32 commit.
-- 86-key ko translation pass — 83 of 86 confirmed accurate; only 3 refined.
-- New onboarding/settings UI strings (4: "Choose your language", restart caption, "Language" header, footer) intentionally NOT yet wrapped in `String(localized:)` — keeps owner's catalog review noise-free; can be folded in alongside Phase I.
-- `.environment(\.locale, ...)` propagation **not added** — verified that `String(localized:)` lookups consult Bundle.main resolved at launch, not the SwiftUI environment locale. Live in-app language switching would require Bundle reload (risky) or app relaunch. Restart-required UX is the honest path.
-- Apple Dev Program S8.5 / ASC S9 — unchanged from S31. Day 13 of Apple wait.
+- `xcodebuild build` — SUCCESS (Latte.app builds, all Swift compiles cleanly with Chunk 1 edits)
+- `xcodebuild build-for-testing` — SUCCESS (test target compiles, no XCTAssert/Testing-framework errors)
+- Catalog JSON — valid (Python json.load succeeds); 108 keys × 10 langs = 1080 non-en cells; ko ≠ en for every new key (sampled).
+- Catalog alphabetical key ordering — preserved through merge (Python dict insertion-order + final `sorted(strings.keys())`).
+- OnboardingView.swift Chunk 1 edits — read-reviewed; both helper wraps are minimal (literal-return → `String(localized: literal)`), no logic changes.
+- Apple Dev Program S8.5 / ASC S9 — unchanged from S32. Day 14 of Apple wait at this writing.
 
-### What was deferred to a later session
+### What was deferred to a later session (S34+)
 
-- **Phase I — P2 surface expansion** (S33+) — localize MenuBar (HeaderView, DurationPickerRow, CustomDurationRow, RecurringQuickPresetRow, MenuBarRoot) + Onboarding wizard body strings (welcome/pickTriggers/done step copy currently English literals) + status notifications + remaining ActivityTab strings + remaining TriggerConfigForms strings. Onboarding/Settings i18n-specific new strings (4) bundled into Phase I.
-- **README disclaimer + GitHub issue template for translation PRs** — community-PR flow for 9 LLM-derived languages. Should land before public v1.0 ship; can be deferred until S8.5/S9 unblock to align with release timing.
+- **Phase I Chunk 2 — MenuBar surface** (HeaderView + DurationPickerRow + CustomDurationRow + RecurringQuickPresetRow + MenuBarRoot popover) — owner-visible per-popover-action localization. ~30-40 keys × 10 langs.
+- **Phase I Chunk 3 — Settings remaining literals** (TriggerConfigForms — CalendarTriggerForm/AppTriggerForm/WiFiTriggerForm/ScheduleTriggerForm/ExternalDisplayTriggerForm + ActivityTab remaining strings) — ~30-50 keys × 10 langs.
+- **Phase I Chunk 4 — Status notifications + Onboarding/Settings new strings from S32** — bundle the 4 strings S32 left unwrapped (`Choose your language` is now in S33 Chunk 1, but the Settings Language header + restart caption still are not in the catalog if SwiftUI's auto-LocalizedStringKey lookup hasn't yet been exercised). ~10-20 keys × 10 langs.
+- **Owner: post-reboot smoke test** — run `latte-resume.sh` then `xcodebuild test ... -only-testing:LatteTests/LocalizationCatalogTests` and the smoke harness on this branch to verify Chunk 1 lands green. If catalog tests fail with per-language gap report, fix forward; do not revert.
 - **Apple Dev Program S8.5 / ASC S9** — owner-blocked, unchanged.
 
-The v1.x autonomous-coding backlog after S32:
-- **Owner-blocked (Apple-side wait)**: S8.5 (Apple Dev Program review), S9 (depends on S8.5).
-- **No owner action needed**: i18n cluster fully closed. ko anchor approved, 9 derived langs populated, UI surface (Onboarding + Settings) landed, test coverage extends to 11 langs.
-- **Single autonomous candidates**: Phase I (S33), README + issue template (S33+), v2-backlog non-i18n items (cross-project rebuild-gate lift-and-shift, smoke scenario symmetric extension, C-3 iCloud sync, B1.2 deferred, V2-06 deferred, optional matcha smoke scenario).
+The v1.x autonomous-coding backlog after S33:
+- **Owner-blocked (Apple-side wait)**: S8.5 (Day 14 of Apple wait), S9 (depends on S8.5).
+- **Owner-blocked (environment)**: post-reboot test verification of S33 Chunk 1 commits.
+- **No owner action needed once tests verify**: Phase I Chunks 2-4 (test-gated; will resume once test runner works).
+- **Single autonomous candidates after reboot**: Phase I Chunks 2-4 (S34+); v2-backlog non-i18n items (cross-project rebuild-gate lift-and-shift, smoke scenario symmetric extension, C-3 iCloud sync, B1.2 deferred, V2-06 deferred, optional matcha smoke scenario).
 
 ---
 
 ## Next-session entry points (priority order)
 
-**1. (BLOCKER, owner-side)** **S8.5 Apple Developer Program** — Day 13 of Apple wait. Action: check email + portal. If still pending past Day 14, call Developer Support.
+**1. (NEW — environment unblock)** **Post-reboot test verification of S33 commits** — owner reboots Mac (PTY recovery), then runs `latte-resume.sh` + `xcodebuild test -scheme Latte -destination 'platform=macOS,arch=arm64'`. Expected: 607/607 PASS (no new test added, existing `testEveryEntryCoversAllPhaseHLanguages` covers Chunk 1's 22 new keys via gap-report). If failures surface: fix forward — do not revert. Then run smoke harness 22/22.
 
-**2. (BLOCKER, owner-side)** **S9 App Store Connect metadata** — depends on S8.5.
+**2. (BLOCKER, owner-side)** **S8.5 Apple Developer Program** — Day 14 of Apple wait. Action: check email + portal. If still pending past Day 14-15, call Developer Support. 1-2 days typical wait but variance exists.
 
-**3. (NEW)** **Phase I — P2 surface expansion** (S33 candidate). Adds `String(localized:)` wrap to remaining UI surface (~80 call sites across MenuBar + Onboarding body + ActivityTab + TriggerConfigForms). Each call adds a key to xcstrings + 11 translations. Estimated effort: 1-2 sessions depending on appetite for review pauses.
+**3. (BLOCKER, owner-side)** **S9 App Store Connect metadata** — depends on S8.5.
 
-**4. (NEW)** **README disclaimer + community translation PR template** — short doc work. Adds "machine-assisted translations; community PRs welcome" note + GitHub issue template for "Help improve translations". ~30 min, no code change.
+**4. (NEW — gated on #1)** **Phase I Chunk 2 — MenuBar surface** (S34 candidate after PTY recovers). Adds `String(localized:)` wrap + catalog keys for MenuBar popover. ~30-40 keys × 10 langs. Estimated effort: 1 session.
 
-**5.** Other deferred items unchanged: cross-project rebuild-gate lift-and-shift, smoke scenario symmetric extension, C-3 iCloud sync, B1.2 deferred, V2-06 deferred, optional matcha smoke scenario.
+**5. (NEW — gated on #1)** **Phase I Chunk 3 — Settings remaining + ActivityTab** (S34/35 candidate). ~30-50 keys.
 
-S32 closes the i18n P1 + P2-anchor + bulk-translation trio in one cluster. v1.x version unchanged at v1.9 (matcha + i18n are pre-launch additions, all part of v1.0 launch state since v1.0 hasn't shipped). Owner-blocked queue narrows to S8.5 Apple + S9 ASC only.
+**6. (NEW — gated on #1)** **Phase I Chunk 4 — Status notifications + onboarding/settings strings missed by S32** (S35+ candidate). ~10-20 keys.
+
+**7.** Other deferred items unchanged: cross-project rebuild-gate lift-and-shift, smoke scenario symmetric extension, C-3 iCloud sync, B1.2 deferred, V2-06 deferred, optional matcha smoke scenario.
+
+S33 lands the community-PR contract (TRANSLATIONS.md + issue template) + Phase I Chunk 1 (Onboarding body, 22 keys × 10 langs). Phase I Chunks 2-4 deferred pending PTY recovery (owner reboots Mac). v1.x version unchanged at v1.9. Owner-blocked queue narrows to S8.5 Apple + S9 ASC + post-reboot test verification only.
 
 ---
 
@@ -80,20 +87,27 @@ latte             # if zsh alias from S31 is installed
 bash ~/Documents/Claude/Projects/Latte/scripts/latte-resume.sh
 ```
 
-To run tests / smoke after the resume check:
+To verify S33 Chunk 1 after reboot:
 
 ```bash
-# Tests (~10s, expect 607 PASS)
+# Tests (~10s, expect 607 PASS — same count as S32; new keys covered by existing test)
 xcodebuild test -scheme Latte -destination 'platform=macOS,arch=arm64' 2>&1 | grep "Executed"
+
+# Specifically: catalog tests (~2s, expect 8 PASS)
+xcodebuild test -scheme Latte -destination 'platform=macOS,arch=arm64' \
+  -only-testing:LatteTests/LocalizationCatalogTests 2>&1 | grep "Executed"
 
 # Smoke harness (~6-7min, expect 22/22 PASS, SERIAL with xcodebuild)
 ~/dev/smoke-harness/run.sh --project .
 
-# Start Claude Code in this directory
-claude
+# If PTY error persists after reboot:
+xcrun simctl shutdown all
+sudo killall -9 testmanagerd   # owner sudo required
+rm -rf ~/Library/Developer/Xcode/DerivedData/Latte-*
+# Then retry xcodebuild test
 ```
 
-**Manual fallback** (if the script is missing):
+**Manual fallback** (if script is missing):
 
 ```bash
 cd ~/Documents/Claude/Projects/Latte
@@ -105,10 +119,14 @@ curl -s -o /dev/null -w "Pages /: %{http_code}\n" https://spespark.github.io/lat
 python3 -c "import json; d = json.load(open('Resources/Localizable.xcstrings')); print(f'{len(d[\"strings\"])} keys × 11 langs')"
 ```
 
-**Expect**: 86 keys × 11 languages all populated (en source + 10 translated); 607/607 tests PASS; smoke 22/22 PASS.
+**Expect**: 108 keys × 11 languages all populated (en source + 10 translated); 607/607 tests PASS (post-reboot); smoke 22/22 PASS.
 
-**S32 NEW useful**:
-- `python3 -c "import json; d = json.load(open('Resources/Localizable.xcstrings')); langs = sorted({l for k in d['strings'].values() for l in k.get('localizations', {})}); print('11-lang coverage:', langs)"` — verify 11-language fan-out
+**S33 NEW useful**:
+- `python3 -c "import json; d = json.load(open('Resources/Localizable.xcstrings')); print(f'keys: {len(d[\"strings\"])}'); print(f'cells: {sum(len(v.get(\"localizations\",{})) for v in d[\"strings\"].values())}')"` — verify 108 × 10 = 1080 non-en cells
+- `git show 13c7ad4 -- Resources/Localizable.xcstrings | head -100` — review Chunk 1 catalog additions
+- TRANSLATIONS.md viewable at https://github.com/SpesPark/latte/blob/main/TRANSLATIONS.md (once pushed)
+
+**S32 carryover useful**:
 - `xcodebuild test ... -only-testing:LatteTests/LocalizationCatalogTests` — fast 8-test catalog verification (~2s)
 - `xcodebuild test ... -only-testing:LatteTests/LanguagePreferenceTests` — 12-test runtime-helper verification
 
@@ -117,37 +135,40 @@ python3 -c "import json; d = json.load(open('Resources/Localizable.xcstrings'));
 ## How to resume
 
 1. Read this file first.
-2. `ROADMAP.md` row 31 (S31), row 30 (S30), row 29 (S29). (Row 32 / S32 to be appended on next docs pass.)
-3. Memory: `~/.claude/projects/.../memory/MEMORY.md` → drill into `project_latte_v1_9.md` for S20→S32 section.
+2. `ROADMAP.md` rows 1.30 / 1.31 / 1.32 / 1.33 (S30-S33). Row 1.29 (S29) for the S8d Pages unlock context.
+3. Memory: `~/.claude/projects/.../memory/MEMORY.md` → drill into `project_latte_v1_9.md` for S20→S33 section.
 4. **Don't** re-read S1-S11 memory entries — consolidated during S13.
 
 ---
 
-## Owner-side pending (S32 update)
+## Owner-side pending (S33 update)
 
 | # | What | Why blocked | Effort |
 |---|---|---|---|
-| ~~ko review~~ | ~~Review xcstrings ko~~ | ✅ DONE in S32 — 3 refinements applied | — |
-| S8.5 | Apple Developer Program — applied 2026-05-02 | Awaiting Apple review (Day 13). Owner should check email + portal | 1-2 days (typical) |
+| **NEW** | macOS reboot to clear PTY blocker | xcodebuild test fails with `Pseudo Terminal Setup Error` (Errno 6, ENXIO). CoreSimulator framework-version drift; survives simctl shutdown + DerivedData clear. Reboot is reliable fix. | 5 min |
+| **NEW** | Verify S33 Chunk 1 tests after reboot | Catalog tests should pass on first run; if not, gap-report message identifies which language is missing which key. | 1 min once reboot done |
+| S8.5 | Apple Developer Program — applied 2026-05-02 | Awaiting Apple review (Day 14). Owner should check email + portal | 1-2 days (typical, but Day 14 is past typical) |
 | S9 | App Store Connect 메타 입력 + screenshots upload + binary submission | S8.5 의존 | varies (1-3 sessions once S8.5 unblocks) |
-| Phase I | P2 surface expansion (MenuBar + remaining UI) | Can start S33 — no owner direction needed | 1-2 sessions |
-| Community PR | README + GitHub issue template for translation refinement | Optional; can defer until S8.5 unblocks | 30 min |
+| Phase I Chunks 2-4 | MenuBar + Settings remaining + status notifications | Gated on #1 (need tests to verify Chunks land green) | 2-3 sessions |
+| Community PR | TRANSLATIONS.md + issue template | ✅ DONE in S33 (commit `da56770`) | — |
 
 ---
 
-## v1.9 owner-visible behavior reference (post-S32)
+## v1.9 owner-visible behavior reference (post-S33)
 
-S32 lands the **first user-visible i18n change**: Onboarding wizard now opens with a language selection step (11 native-name buttons), and Settings → General gains a Language section with a Picker + "Restart Latte to apply." caption. Selecting a non-English language writes `AppleLanguages` UserDefault; the chosen language takes effect on next app launch (Bundle.main locale is resolved at startup).
+S33 lands no new owner-visible behavior beyond S32's i18n surface (Onboarding LanguageStep + Settings Language Picker). What S33 *adds invisibly*:
 
-ko macOS users now see fully Korean Settings UI on launch. Users picking ja/zh-Hans/zh-Hant/es/de/fr/pt-BR/it/ru via the Picker see machine-assisted translations of the same surface (P1 = Settings strings + accent names + assertion-status strings; P2 surface remains English pending Phase I).
+- **Onboarding body strings are now in the catalog**: Korean macOS users now see the Onboarding wizard body (Welcome / Pick triggers / Done step copy + buttons + trigger descriptions) in fully Korean text on next launch — the bundle's LocalizedStringKey resolves them automatically. Users picking other languages see machine-assisted translations of the same surface. Without S33 Chunk 1, the wizard body was English regardless of language pick.
+- **TRANSLATIONS.md** is now visible on GitHub (after push) for non-developer contributors to find the i18n issue template.
 
-Carryover from S31 (unchanged for users — i18n infra was invisible until S32):
-- 86 keys × 11 languages in `Resources/Localizable.xcstrings`.
+Carryover from S32 (unchanged):
+- Onboarding wizard now opens with a language selection step (11 native-name buttons), and Settings → General gains a Language section with a Picker + "Restart Latte to apply." caption.
+- ko macOS users see fully Korean Settings UI on launch.
 
-Carryover from S30:
+Carryover from S30 (unchanged):
 - Settings → General → Appearance → Coffee tone now 6 options (espresso, caramel, mocha, latte, **matcha**, noir).
 
-Carryover from earlier sessions — unchanged: Activity tab fixes (S25/S24); Recurring Quick presets active marker (S23); "Until X" wall-clock caption (S23); ⌘Q/⌘, popover passthrough (S26/S27); v1.0~v1.8 owner-visible feature set; S22 fixes.
+Carryover from earlier sessions — unchanged.
 
 ---
 
@@ -159,4 +180,4 @@ Unchanged. `AwakeManager.toggle()` already implements correct semantic.
 
 ## Smoke harness + GitHub repo / Pages infrastructure reference
 
-Unchanged from S29/S30/S31. Pages live at https://spespark.github.io/latte/ + /privacy.html.
+Unchanged from S29/S30/S31/S32. Pages live at https://spespark.github.io/latte/ + /privacy.html.
