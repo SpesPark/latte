@@ -2,7 +2,7 @@
 
 A macOS menu-bar utility that keeps your Mac awake **automatically based on context** — calendar events, app activity, Wi-Fi networks, external displays, and time-of-day schedules. Solves the "Mac slept mid-Zoom-call" problem that incumbents (Amphetamine, Caffeinated) leave unaddressed.
 
-> **Status**: v1.9 code-side ship-ready. 586/586 tests passing, 22/22 smoke scenarios PASS. App Store prep (Pages deploy + ASC submission) is the only remaining work — see [ROADMAP.md](ROADMAP.md).
+> **Status**: v1.9 code-side ship-ready. 607/607 tests passing, 22/22 smoke scenarios PASS. App Store prep (ASC submission) is the only remaining work — see [ROADMAP.md](ROADMAP.md). Pages live at https://spespark.github.io/latte/.
 
 ## What it does
 
@@ -29,7 +29,23 @@ Focus-mode trigger remains deferred — Apple requires a Communication Notificat
 - **Swift 6** + **SwiftUI** (`MenuBarExtra(.window)` macOS 13+, builds with Xcode 26+)
 - **Min OS**: macOS 13 Ventura
 - **Project generation**: [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`project.yml` → `.xcodeproj`)
-- **Tests**: XCTest, 586 cases covering FSM transitions, trigger lifecycle, URL parsing, settings, activity logging, key-chord handling, and integration paths
+- **Tests**: XCTest, 607 cases covering FSM transitions, trigger lifecycle, URL parsing, settings, activity logging, key-chord handling, localization catalog coverage, language preference resolution, and integration paths
+- **Languages**: 11 (en source + ko hand-reviewed + 9 machine-assisted; see [TRANSLATIONS.md](TRANSLATIONS.md))
+
+## Internationalization
+
+Latte ships in 11 languages: `en` (source), `ko` (hand-reviewed),
+`ja` / `zh-Hans` / `zh-Hant` / `es` / `de` / `fr` / `pt-BR` / `it` / `ru`
+(machine-assisted; community PRs welcome).
+
+- Pick your language on first launch (Onboarding wizard → Language step)
+  or anytime via **Settings → General → Language** (restart required).
+- All 940 translation cells (86 keys × 11 languages) are populated;
+  `LocalizationCatalogTests` enforces complete coverage on every build.
+- See [TRANSLATIONS.md](TRANSLATIONS.md) for the contributor guide.
+  If your language is on the list and something reads off, please
+  open a [Translation improvement issue](.github/ISSUE_TEMPLATE/translation_improvement.md)
+  or a PR — both are appreciated.
 
 ## URL scheme
 
@@ -82,6 +98,7 @@ See [docs/store/screenshot-guide.md](docs/store/screenshot-guide.md) for marketi
 | Document | Purpose |
 |---|---|
 | [ROADMAP.md](ROADMAP.md) | Multi-session execution plan + milestone gates |
+| [TRANSLATIONS.md](TRANSLATIONS.md) | Contributor guide for the 11-language catalog |
 | [docs/SESSION_HANDOFF.md](docs/SESSION_HANDOFF.md) | Where to pick up next session |
 | [docs/design/01-PRD.md](docs/design/01-PRD.md) | Product requirements, target user, KPIs, scope, risks |
 | [docs/design/02-architecture.md](docs/design/02-architecture.md) | Module structure, concurrency, contracts, dependency policy |
@@ -113,7 +130,7 @@ Latte/
 │       └── Theme/
 ├── Resources/                 ← Info.plist + Assets.xcassets
 ├── Configuration/             ← Latte.entitlements
-├── Tests/                     ← 586 XCTest cases
+├── Tests/                     ← 607 XCTest cases
 ├── scripts/                   ← deploy_pages.sh / validate_pages.sh
 ├── .smoke/                    ← smoke-harness config + 22 scenarios
 └── docs/
