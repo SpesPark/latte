@@ -6,7 +6,7 @@
 # submission blocks if the privacy URL is unreachable.
 #
 # Usage:
-#   scripts/validate_pages.sh https://bj-park.github.io/latte/
+#   scripts/validate_pages.sh https://spespark.github.io/latte/
 #   scripts/validate_pages.sh        # auto-derive from gh-pages worktree origin
 #
 # Checks per URL:
@@ -43,7 +43,7 @@ fi
 
 if [[ -z "$BASE_URL" ]]; then
   echo "[validate] usage: $0 <base-url>" >&2
-  echo "[validate] e.g.  $0 https://bj-park.github.io/latte/" >&2
+  echo "[validate] e.g.  $0 https://spespark.github.io/latte/" >&2
   exit 1
 fi
 
