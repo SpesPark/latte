@@ -793,12 +793,10 @@ struct ExternalDisplayTriggerConfigForm: View {
                 .foregroundStyle(.secondary)
         } else {
             VStack(alignment: .leading, spacing: 2) {
-                // Two separate localized strings (instead of one with a
-                // ternary inside the interpolation) so each language can
-                // pick its own pluralisation form cleanly.
-                Text(count == 1
-                     ? "Currently: 1 external display"
-                     : "Currently: \(count) external displays")
+                // Single key with xcstrings plural variations — Swift
+                // inflates 1 → "Currently: 1 external display" via the `one`
+                // form, 2+ → the `other` form. ko/ja/zh use `other` only.
+                Text("Currently: \(count) external displays")
                     .font(Theme.Fonts.caption)
                     .foregroundStyle(.secondary)
                 if let name = trigger.firstExternalDisplayName {

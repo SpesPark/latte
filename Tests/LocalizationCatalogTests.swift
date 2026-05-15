@@ -39,6 +39,32 @@ final class LocalizationCatalogTests: XCTestCase {
         return json
     }
 
+    /// Pulls the localized string value out of a per-language entry.
+    /// xcstrings supports two shapes: a flat `stringUnit.value` for simple
+    /// keys, and a `variations.plural.{one,few,many,other,…}` map for
+    /// plural-aware keys. Returns the first non-empty value found —
+    /// preferring `other` (always present per CLDR) and falling back to
+    /// other forms — so coverage tests treat both shapes uniformly.
+    private func extractValue(from langEntry: [String: Any]) -> String? {
+        if let stringUnit = langEntry["stringUnit"] as? [String: Any],
+           let value = stringUnit["value"] as? String,
+           !value.isEmpty {
+            return value
+        }
+        if let variations = langEntry["variations"] as? [String: Any],
+           let plural = variations["plural"] as? [String: Any] {
+            for form in ["other", "one", "few", "many", "two", "zero"] {
+                if let formEntry = plural[form] as? [String: Any],
+                   let stringUnit = formEntry["stringUnit"] as? [String: Any],
+                   let value = stringUnit["value"] as? String,
+                   !value.isEmpty {
+                    return value
+                }
+            }
+        }
+        return nil
+    }
+
     // MARK: - Structure invariants
 
     func testCatalogHasSourceLanguageEn() throws {
@@ -82,9 +108,7 @@ final class LocalizationCatalogTests: XCTestCase {
             for lang in targets {
                 guard
                     let langEntry = localizations[lang] as? [String: Any],
-                    let stringUnit = langEntry["stringUnit"] as? [String: Any],
-                    let value = stringUnit["value"] as? String,
-                    !value.isEmpty
+                    extractValue(from: langEntry) != nil
                 else {
                     gaps[lang, default: []].append(key)
                     continue
@@ -113,9 +137,7 @@ final class LocalizationCatalogTests: XCTestCase {
                 let entryDict = entry as? [String: Any],
                 let localizations = entryDict["localizations"] as? [String: Any],
                 let koEntry = localizations["ko"] as? [String: Any],
-                let stringUnit = koEntry["stringUnit"] as? [String: Any],
-                let value = stringUnit["value"] as? String,
-                !value.isEmpty
+                extractValue(from: koEntry) != nil
             else {
                 missingKo.append(key)
                 continue
@@ -141,8 +163,7 @@ final class LocalizationCatalogTests: XCTestCase {
                 let entryDict = entry as? [String: Any],
                 let localizations = entryDict["localizations"] as? [String: Any],
                 let koEntry = localizations["ko"] as? [String: Any],
-                let stringUnit = koEntry["stringUnit"] as? [String: Any],
-                let value = stringUnit["value"] as? String
+                let value = extractValue(from: koEntry)
             else { continue }
             if value == key && !allowedIdentical.contains(key) {
                 suspiciousKeys.append(key)

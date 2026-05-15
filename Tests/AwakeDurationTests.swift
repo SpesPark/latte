@@ -33,7 +33,7 @@ final class AwakeDurationTests: XCTestCase {
         )
         XCTAssertEqual(
             AwakeDuration.hours(1).label,
-            String(localized: "1 hour")
+            String(localized: "\(1) hours")
         )
         XCTAssertEqual(
             AwakeDuration.hours(2).label,
