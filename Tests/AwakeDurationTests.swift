@@ -24,10 +24,25 @@ final class AwakeDurationTests: XCTestCase {
     }
 
     func testLabels() {
-        XCTAssertEqual(AwakeDuration.minutes(5).label, "5 minutes")
-        XCTAssertEqual(AwakeDuration.hours(1).label, "1 hour")
-        XCTAssertEqual(AwakeDuration.hours(2).label, "2 hours")
-        XCTAssertEqual(AwakeDuration.indefinite.label, "Indefinitely")
+        // Compare against `String(localized:)` so the assertion is locale-
+        // agnostic — S33 lesson: ko-locale host fails when test asserts en
+        // literals. Both sides resolve through the same catalog lookup.
+        XCTAssertEqual(
+            AwakeDuration.minutes(5).label,
+            String(localized: "\(5) minutes")
+        )
+        XCTAssertEqual(
+            AwakeDuration.hours(1).label,
+            String(localized: "1 hour")
+        )
+        XCTAssertEqual(
+            AwakeDuration.hours(2).label,
+            String(localized: "\(2) hours")
+        )
+        XCTAssertEqual(
+            AwakeDuration.indefinite.label,
+            String(localized: "Indefinitely")
+        )
     }
 
     func testPresetsMatchPRD() {

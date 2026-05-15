@@ -32,8 +32,8 @@ public struct HeaderView: View {
     }
 
     private var statusTitle: String {
-        if manager.isAwake { return "Latte is awake" }
-        return "Latte is off"
+        if manager.isAwake { return String(localized: "Latte is awake") }
+        return String(localized: "Latte is off")
     }
 
     private var statusSubtitle: String {
@@ -52,17 +52,18 @@ public struct HeaderView: View {
         case .user:
             if manager.isAwake {
                 if let endsAt = manager.endsAt {
-                    return "Until \(Self.timeFormatter.string(from: endsAt))"
+                    let time = Self.timeFormatter.string(from: endsAt)
+                    return String(localized: "Until \(time)")
                 }
-                return "Until you turn off"
+                return String(localized: "Until you turn off")
             }
-            return "Tap the cup to wake your Mac"
+            return String(localized: "Tap the cup to wake your Mac")
         case .trigger(let id):
-            return "Awake — \(id)"
+            return String(localized: "Awake — \(id)")
         case .launch:
-            return "Activated on launch"
+            return String(localized: "Activated at launch")
         case .none:
-            return "Tap the cup to wake your Mac"
+            return String(localized: "Tap the cup to wake your Mac")
         }
     }
 

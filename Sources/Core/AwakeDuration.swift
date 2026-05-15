@@ -15,9 +15,16 @@ public enum AwakeDuration: Equatable, Hashable, Sendable {
 
     public var label: String {
         switch self {
-        case .minutes(let m): return "\(m) minutes"
-        case .hours(let h): return h == 1 ? "1 hour" : "\(h) hours"
-        case .indefinite: return "Indefinitely"
+        case .minutes(let m):
+            return m == 1
+                ? String(localized: "1 minute")
+                : String(localized: "\(m) minutes")
+        case .hours(let h):
+            return h == 1
+                ? String(localized: "1 hour")
+                : String(localized: "\(h) hours")
+        case .indefinite:
+            return String(localized: "Indefinitely")
         }
     }
 
