@@ -69,6 +69,49 @@ If you'd like to edit the catalog directly:
 - **Length** — UI strings are constrained by layout. Roughly matching
   the source string length avoids truncation in tight menu rows.
 
+### Plural-aware keys
+
+A small number of keys are **plural-aware** — they encode different forms
+for different counts. In the catalog they look like this:
+
+```json
+"%lld minutes": {
+  "localizations": {
+    "ru": {
+      "variations": {
+        "plural": {
+          "one":   { "stringUnit": { "state": "translated", "value": "%lld минута" } },
+          "other": { "stringUnit": { "state": "translated", "value": "%lld минут" } }
+        }
+      }
+    }
+  }
+}
+```
+
+The current plural keys are `%lld minutes`, `%lld hours`, and
+`Currently: %lld external displays`. They were migrated from flat pairs
+in S35; the structural groundwork is in place but only `one` + `other`
+are filled in for languages that need more forms.
+
+If your language has more than two plural forms (Russian, Polish,
+Arabic, Czech, etc. — see [CLDR plural rules](https://cldr.unicode.org/index/cldr-spec/plural-rules)),
+**we welcome PRs that add the missing forms.** The Apple-standard form
+keys are `zero`, `one`, `two`, `few`, `many`, `other` — only include
+the forms your language actually needs (CLDR specifies which forms
+apply per language). For example, Russian:
+
+```json
+"one":   { "stringUnit": { "state": "translated", "value": "%lld минута" } },
+"few":   { "stringUnit": { "state": "translated", "value": "%lld минуты" } },
+"many":  { "stringUnit": { "state": "translated", "value": "%lld минут" } },
+"other": { "stringUnit": { "state": "translated", "value": "%lld минут" } }
+```
+
+Languages without grammatical plural distinction (Korean, Japanese,
+Simplified Chinese, Traditional Chinese) use **only** `other` — that is
+correct as shipped and does not need expansion.
+
 ## How translations are tested
 
 `Tests/LocalizationCatalogTests.swift` runs on every build:
