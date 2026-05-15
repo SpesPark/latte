@@ -4339,6 +4339,77 @@
         }
       }
     },
+    "Globally toggle Latte awake/asleep with %@. Click the recorder below to assign a different chord.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Globally toggle Latte awake/asleep with %@. Click the recorder below to assign a different chord."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@(으)로 Latte의 awake/asleep을 전역 토글합니다. 다른 단축키를 지정하려면 아래 레코더를 클릭하세요."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@でLatteのawake/asleepをグローバルに切り替えます。別のコードを割り当てるには下のレコーダーをクリックします。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用 %@ 全局切换 Latte 的 awake/asleep。点按下方录制器以指定其他组合键。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用 %@ 全域切換 Latte 的 awake/asleep。點按下方錄製器以指定其他組合鍵。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alterna globalmente Latte entre activo/dormido con %@. Haz clic en el registrador de abajo para asignar otra combinación."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schalte Latte global mit %@ zwischen wach/schlafend um. Klicke unten auf den Rekorder, um eine andere Tastenkombination zuzuweisen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Basculer globalement Latte entre actif/dormant avec %@. Cliquez sur l'enregistreur ci-dessous pour attribuer une autre combinaison."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alterne globalmente o Latte entre acordado/dormindo com %@. Clique no gravador abaixo para atribuir outra combinação."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alterna globalmente Latte tra attivo/sospeso con %@. Fai clic sul registratore qui sotto per assegnare un'altra combinazione."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Глобально переключайте Latte между awake/asleep по %@. Нажмите на регистратор ниже, чтобы назначить другое сочетание."
+          }
+        }
+      }
+    },
     "Green tea": {
       "comment": "CoffeeAccent.shortDescription — .matcha (S30)",
       "extractionState": "manual",
@@ -4876,6 +4947,77 @@
         }
       }
     },
+    "Language": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Language"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "언어"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "言語"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "语言"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "語言"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Idioma"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprache"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Langue"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Idioma"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lingua"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Язык"
+          }
+        }
+      }
+    },
     "Last %lld days": {
       "extractionState": "manual",
       "localizations": {
@@ -5009,6 +5151,77 @@
           "stringUnit": {
             "state": "translated",
             "value": "За последние 24 часа"
+          }
+        }
+      }
+    },
+    "Latte Settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte Settings"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte 설정"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte 設定"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte 设置"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte 設定"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajustes de Latte"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte-Einstellungen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réglages de Latte"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajustes do Latte"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impostazioni Latte"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Настройки Latte"
           }
         }
       }
@@ -5222,6 +5435,77 @@
           "stringUnit": {
             "state": "translated",
             "value": "Latte срабатывает только для событий в отмеченных выше календарях."
+          }
+        }
+      }
+    },
+    "Latte starts automatically when you sign in to your Mac. Recommended for set-and-forget use.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte starts automatically when you sign in to your Mac. Recommended for set-and-forget use."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac에 로그인하면 Latte가 자동으로 시작됩니다. 한 번 설정하고 잊기 위한 사용에 권장됩니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Macにサインインすると、Latteが自動的に起動します。一度設定したら任せたい使い方におすすめです。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "登录 Mac 时 Latte 自动启动。推荐用于设置后即忘的场景。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "登入 Mac 時 Latte 自動啟動。建議用於設定後即忘的情境。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte se inicia automáticamente al iniciar sesión en tu Mac. Recomendado para un uso de configurar y olvidar."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte startet automatisch, wenn du dich an deinem Mac anmeldest. Empfohlen für „Einrichten und vergessen“-Nutzung."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte démarre automatiquement lorsque vous vous connectez à votre Mac. Recommandé pour une utilisation « régler une fois et oublier »."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Latte inicia automaticamente quando você faz login no seu Mac. Recomendado para uso do tipo configurar e esquecer."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte si avvia automaticamente quando accedi al Mac. Consigliato per un uso “imposta e dimentica”."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte запускается автоматически при входе в Mac. Рекомендуется для режима «настроил и забыл»."
           }
         }
       }
@@ -7983,6 +8267,77 @@
         }
       }
     },
+    "Power": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Power"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전원"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "電源"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "电源"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "電源"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Energía"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stromversorgung"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alimentation"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Energia"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alimentazione"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Питание"
+          }
+        }
+      }
+    },
     "Press the new shortcut. Esc cancels.": {
       "comment": "ShortcutRecorderField — recording state hint",
       "extractionState": "manual",
@@ -8182,6 +8537,77 @@
           "stringUnit": {
             "state": "translated",
             "value": "Выйти"
+          }
+        }
+      }
+    },
+    "Reason": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reason"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이유"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "理由"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "原因"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "原因"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Motivo"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grund"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Raison"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Motivo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Motivo"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Причина"
           }
         }
       }
@@ -8450,6 +8876,77 @@
           "stringUnit": {
             "state": "translated",
             "value": "Сбросить к значениям по умолчанию"
+          }
+        }
+      }
+    },
+    "Restart Latte to apply.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restart Latte to apply."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "적용하려면 Latte를 다시 시작하세요."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "適用するにはLatteを再起動してください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重启 Latte 以应用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新啟動 Latte 以套用。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reinicia Latte para aplicar."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte neu starten, um zu übernehmen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redémarrez Latte pour appliquer."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reinicie o Latte para aplicar."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riavvia Latte per applicare."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перезапустите Latte, чтобы применить."
           }
         }
       }
@@ -9726,6 +10223,77 @@
         }
       }
     },
+    "Toggle Latte with %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toggle Latte with %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@(으)로 Latte 토글"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@でLatteを切り替え"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用 %@ 切换 Latte"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用 %@ 切換 Latte"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alternar Latte con %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte mit %@ umschalten"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Basculer Latte avec %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alternar Latte com %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attiva/disattiva Latte con %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Переключать Latte по %@"
+          }
+        }
+      }
+    },
     "Trigger active": {
       "comment": "AssertionStatusFormatter — reasonLabel for .trigger with no specific reason",
       "extractionState": "manual",
@@ -10410,6 +10978,77 @@
         }
       }
     },
+    "Version %@ (%@)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version %@ (%@)"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "버전 %@ (%@)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バージョン %@ (%@)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "版本 %@ (%@)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "版本 %@ (%@)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versión %@ (%@)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version %@ (%@)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version %@ (%@)"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versão %@ (%@)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versione %@ (%@)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Версия %@ (%@)"
+          }
+        }
+      }
+    },
     "Wake before event": {
       "extractionState": "manual",
       "localizations": {
@@ -10675,6 +11314,219 @@
           "stringUnit": {
             "state": "translated",
             "value": "Добро пожаловать в Latte"
+          }
+        }
+      }
+    },
+    "When Latte starts, immediately hold an indefinite awake assertion. Useful for desktops or always-on workstations. Onboarding always takes precedence on first launch.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When Latte starts, immediately hold an indefinite awake assertion. Useful for desktops or always-on workstations. Onboarding always takes precedence on first launch."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte 시작 시 즉시 무제한 awake 상태를 유지합니다. 데스크톱이나 상시 가동 워크스테이션에 유용합니다. 첫 실행 시에는 항상 온보딩이 우선합니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte起動時に即座に無期限のawakeアサーションを保持します。デスクトップや常時稼働のワークステーションに便利です。初回起動時は常にオンボーディングが優先されます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte 启动时立即保持不限时的唤醒断言。适用于桌面或常开工作站。首次启动时始终以引导为优先。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte 啟動時立即保持不限時的喚醒斷言。適用於桌上型電腦或常開工作站。首次啟動時始終以導引為優先。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuando Latte se inicia, mantiene de inmediato una aserción de actividad indefinida. Útil para escritorios o estaciones siempre encendidas. La incorporación siempre tiene prioridad en el primer arranque."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wenn Latte startet, hält es sofort eine unbegrenzte Wach-Assertion. Nützlich für Desktops oder dauerhaft eingeschaltete Arbeitsplätze. Beim ersten Start hat das Onboarding immer Vorrang."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quand Latte démarre, il maintient immédiatement une assertion d'éveil indéfinie. Utile pour les ordinateurs de bureau ou les stations toujours actives. L'intégration est toujours prioritaire au premier lancement."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quando o Latte inicia, mantém imediatamente uma asserção de atividade indefinida. Útil para desktops ou estações sempre ativas. A integração tem prioridade no primeiro início."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All'avvio, Latte mantiene immediatamente un'asserzione di attività indefinita. Utile per desktop o postazioni sempre attive. L'onboarding ha sempre la precedenza al primo avvio."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "При запуске Latte немедленно удерживает бессрочное awake-утверждение. Полезно для настольных ПК или всегда работающих рабочих станций. При первом запуске приоритет всегда у онбординга."
+          }
+        }
+      }
+    },
+    "When enabled, Latte never holds an awake assertion while the Mac is on battery — saves battery on laptops without disabling the app.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When enabled, Latte never holds an awake assertion while the Mac is on battery — saves battery on laptops without disabling the app."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "활성화하면 Mac이 배터리로 작동하는 동안에는 Latte가 awake 상태를 유지하지 않습니다 — 앱을 비활성화하지 않고도 노트북 배터리를 절약합니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有効にすると、Macがバッテリー駆動の間はLatteがawakeアサーションを保持しません — アプリを無効化せずにノートのバッテリーを節約します。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "启用后,Mac 使用电池时 Latte 永远不会保持唤醒断言 — 在不禁用应用的情况下为笔记本节省电池。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "啟用後,Mac 使用電池時 Latte 永遠不會保持喚醒斷言 — 在不停用應用程式的情況下為筆電節省電量。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuando está activado, Latte nunca mantiene una aserción de actividad mientras el Mac está con batería: ahorra batería en portátiles sin desactivar la app."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wenn aktiviert, hält Latte nie eine Wach-Assertion, während der Mac im Akkubetrieb ist — spart Akku bei Notebooks, ohne die App zu deaktivieren."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lorsqu'activé, Latte ne maintient jamais d'assertion d'éveil tant que le Mac est sur batterie — économise la batterie sur portables sans désactiver l'app."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quando ativado, o Latte nunca mantém uma asserção de atividade enquanto o Mac estiver na bateria — economiza bateria em notebooks sem desativar o app."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se attivato, Latte non mantiene mai un'asserzione di attività mentre il Mac è a batteria — risparmia batteria sui portatili senza disattivare l'app."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Если включено, Latte никогда не удерживает awake-утверждение, пока Mac работает от батареи — экономит заряд на ноутбуках без отключения приложения."
+          }
+        }
+      }
+    },
+    "When enabled, the system stays awake but the display may sleep.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When enabled, the system stays awake but the display may sleep."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "활성화하면 시스템은 깨어 있지만 디스플레이는 절전 모드로 들어갈 수 있습니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有効にすると、システムは起動を維持しますがディスプレイはスリープする可能性があります。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "启用后,系统保持唤醒,但显示器可能进入睡眠。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "啟用後,系統保持喚醒,但顯示器可能進入睡眠。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuando está activado, el sistema permanece activo pero la pantalla puede entrar en reposo."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wenn aktiviert, bleibt das System wach, das Display kann jedoch schlafen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lorsqu'activé, le système reste actif mais l'écran peut s'endormir."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quando ativado, o sistema permanece acordado, mas a tela pode entrar em repouso."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se attivato, il sistema resta attivo ma il display può andare in stop."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Если включено, система остаётся активной, но дисплей может уйти в спящий режим."
           }
         }
       }

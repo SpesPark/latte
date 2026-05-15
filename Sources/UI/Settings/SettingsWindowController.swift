@@ -60,7 +60,7 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         let host = NSHostingController(rootView: root)
 
         let newWindow = NSWindow(contentViewController: host)
-        newWindow.title = "Latte Settings"
+        newWindow.title = String(localized: "Latte Settings")
         newWindow.styleMask = [.titled, .closable, .miniaturizable, .resizable]
         newWindow.isReleasedWhenClosed = false
         newWindow.setContentSize(NSSize(
