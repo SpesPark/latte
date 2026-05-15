@@ -241,13 +241,13 @@ struct RetentionPicker: View {
 
     static func label(for preset: Int) -> String {
         switch preset {
-        case 1: return "1 day"
-        case 7: return "1 week"
-        case 14: return "2 weeks"
-        case 30: return "1 month"
-        case 60: return "2 months"
-        case 90: return "3 months"
-        default: return "\(preset) days"
+        case 1: return String(localized: "1 day")
+        case 7: return String(localized: "1 week")
+        case 14: return String(localized: "2 weeks")
+        case 30: return String(localized: "1 month")
+        case 60: return String(localized: "2 months")
+        case 90: return String(localized: "3 months")
+        default: return String(localized: "\(preset) days")
         }
     }
 }
