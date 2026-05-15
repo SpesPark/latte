@@ -10,8 +10,35 @@
 |---|---|
 | **Session #** | **S33** — community PR groundwork + Phase I Chunk 1 (Onboarding body i18n) (2026-05-15, same-day continuation of S32). Owner direction at S33 start: "3,4,5 autonomous 작업 위주로 진행하고 싶어. 철저하게 차곡차곡 쌓아가서 검증할 때 오류를 최소화하는 게 목적이야. 추천하는대로 작업 시작할거고, 작업 완료한 후 컨텍스트 얼마나 남았는지 확인해서 넉넉하면 추가로 작업 이어서 진행해주고…". Recommendation: chunk Phase I into 4 verifiable units, start with README + community PR groundwork (lowest risk). S33 lands Step 1 (community PR groundwork) + Phase I Chunk 1 (Onboarding body); Chunks 2-4 deferred to S34 due to macOS Pseudo Terminal Setup Error blocking xcodebuild test runner — "차곡차곡 검증" principle gates further code commits when verification is impossible. |
 | **Theme** | "Verification-gated continuation: when the macOS PTY infrastructure breaks mid-session, the right move under '차곡차곡 검증' is to (a) stop accumulating untestable code, (b) honor what build *can* verify (xcodebuild build + build-for-testing both passed), and (c) pivot to non-test-dependent productive work (docs, ROADMAP rows, memory wrap) that uses remaining context safely. Phase I as a 4-chunk plan turned out to be the right shape: Chunk 1 (Onboarding) is self-contained, mechanically verified at the build+JSON level, and leaves Chunks 2-4 cleanly resumable after reboot. The TRANSLATIONS.md contributor-PR contract from Step 1 doubles as a long-term safety net: even if some of the 220 Phase I Chunk 1 cells have subtle translation errors, the community-PR pathway exists. Lesson: in i18n work, the LLM-draft + community-refine contract scales further than waiting for a 'perfect' first cut; ship machine-assisted with honest disclaimer, raise quality continuously." |
-| **Status** | ✅ **2 commits** in S33: `da56770` (community PR groundwork — README + TRANSLATIONS.md + translation_improvement issue template + config.yml drift fix + 586→607 test count drift fix; 4 files, +180/-4) + `13c7ad4` (Phase I Chunk 1 — 22 keys × 10 langs = 220 cells in xcstrings + 2 helper-function `String(localized:)` wraps in OnboardingView.swift; 2 files, +1695/-243). **Build verified** (`xcodebuild build` SUCCESS + `xcodebuild build-for-testing` SUCCESS). **Tests/smoke NOT run** due to persistent macOS Pseudo Terminal Setup Error blocking `xcodebuild test` runner (CoreSimulator 1051.50/1051.54 framework drift; survives `simctl shutdown all` + DerivedData clear; reboot expected to clear). Test count 607 → 607 *expected* (no test added; existing `testEveryEntryCoversAllPhaseHLanguages` enforces 10-lang coverage of new keys via gap-report). **xcstrings**: 86 → 108 keys; 940 → 1188 cells (en source + 10 translated). Working tree clean after wrap. |
-| **Tail commits** | `da56770` (Step 1 community PR groundwork) → `13c7ad4` (Phase I Chunk 1) → this S33 docs wrap (ROADMAP rows S30-S33 appended + SESSION_HANDOFF overwrite + memory update). Preceded by S32 chain (`71b55a4` → `1284c9e` → `95e4a6c`), S31 chain (`7842b60` → `6c6f955` → `e1a56a7`), S30 chain (`afa1980` → `3a30e61` → `ad4cab6`). |
+| **Status** | ✅ **5 commits** in S33: `da56770` (community PR groundwork) + `13c7ad4` (Phase I Chunk 1) + `6b7967a` (S33 docs wrap, pre-reboot) + **`d74ce74` (P0 build bug fix — post-reboot discovery)** + **`9bdaee2` (test fragility fix)**. **Tests 607/607 PASS** in 8.6s (post-reboot, ko locale). **Smoke 22/22 PASS**. **Bundle 6.8MB → 9.3MB** with 11 .lproj directories + actual Korean translations shipping (verified: ko `Awake` → `깨어 있음`). xcstrings 86 → 108 keys × 11 langs = 1188 cells, all bundled. **Origin/main synced**, working tree clean. |
+| **Tail commits** | `da56770` → `13c7ad4` → `6b7967a` (pre-reboot S33 wrap) → `d74ce74` (P0 build fix) → `9bdaee2` (test fixes) → this docs re-wrap. Preceded by S32 chain. |
+
+### POST-REBOOT P0 DISCOVERY — xcstrings + Assets never shipped (THE CRITICAL FINDING)
+
+Owner asked "앱 설치할 때 필요한 총 크기가 얼마나 돼?" after reboot-verification (607/607 + smoke 22/22 had just passed). Inspecting the Release `Latte.app` bundle:
+- **0 `.lproj` directories** — translations missing from all S31~S33 work
+- **No `Assets.car`** — compiled asset catalog missing (app icon was fallback, accent colors missing)
+- **No `PBXResourcesBuildPhase`** in generated pbxproj
+
+**Root cause**: `xcodegen 2.45.4` silently ignored the `resources:` block in `project.yml`. Generated pbxproj had only `Sources` build phase; Resources phase was never created. All Localizable.xcstrings content (1188 cells across S31~S33) was excluded from the bundle.
+
+**Impact**: ko/ja/zh-Hans/etc users saw English-only UI despite the entire i18n cluster. App icon fell back to macOS placeholder. **All S31~S33 i18n work was invisible to end users** until this fix.
+
+**Fix path** (`d74ce74`):
+- Removed `resources:` block from `project.yml`.
+- Added `Resources/` to `sources:` with `Info.plist` excluded.
+- xcodegen 2.45.4 then scans Resources/ as a source path, auto-detects `.xcassets` / `.xcstrings` types, generates PBXResourcesBuildPhase, **and** auto-derives knownRegions from the xcstrings catalog (11 languages).
+
+**Test fallout** (`9bdaee2`): with i18n actually working post-fix, 15 tests in `AssertionStatusFormatterTests` + 1 in `LocalizationCatalogTests` failed on ko-locale host — they asserted English literals. Fixed by changing assertions to `String(localized: "Key")` (locale-agnostic — both sides resolve through same mechanism).
+
+**Verification chain**:
+- `xcodebuild build -configuration Release`: SUCCESS, bundle 6.8MB → 9.3MB
+- `find Latte.app -name "*.lproj"`: 11 directories (en + 10)
+- `plutil -convert xml1 ko.lproj/Localizable.strings | grep "깨어 있음"`: present
+- `xcodebuild test`: 607/607 PASS in 8.6s
+- `~/dev/smoke-harness/run.sh --project .`: 22/22 PASS
+
+**Lesson**: tests passing + smoke passing + JSON catalog validating does NOT prove i18n reaches end users. The smoke harness captures screenshots but never explicitly asserted language. The "차곡차곡 검증" principle revealed its limit: bundle-level inspection should be part of the verification ladder for any project that ships resources. Add a post-build assertion to smoke-harness or a CI check: `find Latte.app/Contents/Resources -name "*.lproj" | wc -l == 11`.
 
 ### What landed this session
 
