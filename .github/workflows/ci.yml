@@ -61,3 +61,18 @@ jobs:
           name: test-results
           path: TestResults.xcresult
           retention-days: 7
+
+  doc-drift:
+    # Static checks for README/URL/catalog drift. Catches the S33 class of bug
+    # (README claiming an outdated test count while reality was higher; a stale
+    # Pages username carrying over for 4 sessions until manually fixed in S33).
+    # Runs on Ubuntu — no Xcode needed, just bash + python3 + awk.
+    name: Doc drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check doc drift (strict)
+        run: scripts/check_doc_drift.sh --strict
