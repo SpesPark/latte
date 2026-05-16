@@ -81,7 +81,9 @@ for different counts. In the catalog they look like this:
       "variations": {
         "plural": {
           "one":   { "stringUnit": { "state": "translated", "value": "%lld минута" } },
-          "other": { "stringUnit": { "state": "translated", "value": "%lld минут" } }
+          "few":   { "stringUnit": { "state": "translated", "value": "%lld минуты" } },
+          "many":  { "stringUnit": { "state": "translated", "value": "%lld минут" } },
+          "other": { "stringUnit": { "state": "translated", "value": "%lld минуты" } }
         }
       }
     }
@@ -91,22 +93,31 @@ for different counts. In the catalog they look like this:
 
 The current plural keys are `%lld minutes`, `%lld hours`, and
 `Currently: %lld external displays`. They were migrated from flat pairs
-in S35; the structural groundwork is in place but only `one` + `other`
-are filled in for languages that need more forms.
+in S35. **Russian (`ru`) is now fully populated with the complete CLDR
+four-form set (`one`/`few`/`many`/`other`)** — it serves as the worked
+reference for any other multi-form language. Every form keeps the
+`%lld` placeholder so counts like 21/31/101 (also Russian `one`) render
+the number correctly; the earlier two-form baseline hard-coded "1" in
+the `one` slot and was CLDR-incorrect for those values.
 
-If your language has more than two plural forms (Russian, Polish,
-Arabic, Czech, etc. — see [CLDR plural rules](https://cldr.unicode.org/index/cldr-spec/plural-rules)),
-**we welcome PRs that add the missing forms.** The Apple-standard form
-keys are `zero`, `one`, `two`, `few`, `many`, `other` — only include
-the forms your language actually needs (CLDR specifies which forms
-apply per language). For example, Russian:
+If your language has more than two plural forms (Polish, Arabic,
+Czech, etc. — see [CLDR plural rules](https://cldr.unicode.org/index/cldr-spec/plural-rules)),
+**we welcome PRs that add the missing forms** (these languages are not
+yet in the shipped 11-locale set, so adding them also means adding the
+locale to `project.yml` `knownRegions`). The Apple-standard form keys
+are `zero`, `one`, `two`, `few`, `many`, `other` — only include the
+forms your language actually needs (CLDR specifies which forms apply
+per language). Russian, shipped, looks like this:
 
 ```json
 "one":   { "stringUnit": { "state": "translated", "value": "%lld минута" } },
 "few":   { "stringUnit": { "state": "translated", "value": "%lld минуты" } },
 "many":  { "stringUnit": { "state": "translated", "value": "%lld минут" } },
-"other": { "stringUnit": { "state": "translated", "value": "%lld минут" } }
+"other": { "stringUnit": { "state": "translated", "value": "%lld минуты" } }
 ```
+
+(`other` carries the decimal form — e.g. "1,5 минуты" — since `%lld`
+integers never reach it but Apple requires the form to exist.)
 
 Languages without grammatical plural distinction (Korean, Japanese,
 Simplified Chinese, Traditional Chinese) use **only** `other` — that is

@@ -2638,16 +2638,28 @@
         "ru": {
           "variations": {
             "plural": {
-              "other": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Сейчас: %lld внешний дисплей"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Сейчас: %lld внешних дисплея"
+                }
+              },
+              "many": {
                 "stringUnit": {
                   "state": "translated",
                   "value": "Сейчас: %lld внешних дисплеев"
                 }
               },
-              "one": {
+              "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Сейчас: 1 внешний дисплей"
+                  "value": "Сейчас: %lld внешних дисплея"
                 }
               }
             }
@@ -11757,16 +11769,28 @@
         "ru": {
           "variations": {
             "plural": {
-              "other": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld минута"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld минуты"
+                }
+              },
+              "many": {
                 "stringUnit": {
                   "state": "translated",
                   "value": "%lld минут"
                 }
               },
-              "one": {
+              "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "1 минута"
+                  "value": "%lld минуты"
                 }
               }
             }
@@ -11936,16 +11960,28 @@
         "ru": {
           "variations": {
             "plural": {
-              "other": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld час"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld часа"
+                }
+              },
+              "many": {
                 "stringUnit": {
                   "state": "translated",
                   "value": "%lld часов"
                 }
               },
-              "one": {
+              "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "1 час"
+                  "value": "%lld часа"
                 }
               }
             }
