@@ -4,17 +4,74 @@
 
 ---
 
-**Last session:** S37 (2026-05-18) — iCloud-sync joint-design RFC + inherited-baseline & catalog verification
-**v1.x release line:** v1.9 (unchanged since S20 — S37 is docs/design only)
-**Branch:** `claude/focused-hamilton-417bfc` — ahead of `origin/main` by S36 (`2fa0668`, `4309cd3`) **+** all S37 docs/RFC commits (`9598eba` RFC, `35104b8` precision, then docs-wrap commits). Push = owner action; just push the **branch tip**. *(Exact count is deliberately not frozen here — a number written into a doc is invalidated by the very commit that writes it, the recursion S36 hit with S35's "4 commits ready". Authoritative: `git rev-list --count origin/main..HEAD`.)* **This one branch supersedes the standalone `claude/suspicious-kowalevski-4ffca8`** (now a 2-commit prefix — push *this* branch, the S36 work rides along; the old S36-only branch can be ignored/deleted).
-**Test count:** 611/611 PASS (unchanged — S37 touched no code)
-**Smoke:** 23 scenarios (not re-run — gated by harness; design-only session changes no UI)
+**Last session:** S38 (2026-05-18) — §13 SettingsKey doc-tidy + RFC §12 owner decisions locked (Phase 1 unblocked)
+**v1.x release line:** v1.9 (unchanged since S20 — S38 is docs/design only)
+**Branch:** `claude/focused-hamilton-417bfc` — ahead of `origin/main` by S36 + S37 + S38 docs commits. Push = owner action; push the **branch tip**. *(Exact count deliberately not frozen — a number written into a doc is invalidated by the commit that writes it, the recursion S36 hit. Authoritative: `git rev-list --count origin/main..HEAD`.)* **This one branch supersedes the standalone `claude/suspicious-kowalevski-4ffca8`** (S36-only prefix — push *this* branch, S36 rides along; old branch ignorable/deletable).
+**Test count:** 611/611 PASS (unchanged — S38 touched no code)
+**Smoke:** 23 scenarios (not re-run — design-only session changes no UI)
 **Doc-drift:** clean
-**Catalog:** 172 keys × 11 languages, ru 4 CLDR forms — **verified, not modified**
+**Catalog:** 172 keys × 11 languages, ru 4 CLDR forms — unchanged (not touched in S38)
 
 ---
 
-## Last session
+## Last session (S38)
+
+S38 ran the two ADP-independent items the S37 handoff had identified — the
+"§13 doc-tidy (zero gate)" and the "§12 owner decisions (owner-gated, not
+Apple-gated)" — back to back, owner present. Both docs-only; 611 unchanged.
+
+**What landed (2 commits on `claude/focused-hamilton-417bfc`, push = owner action):**
+
+- **`2b276bf`** — `docs(design): sync 04-data-model §5 SettingsKey snapshot
+  with source (24 → 34 cases)`. The §5 enum snapshot predated **10** shipped
+  keys (RFC §13 estimated "~7"; actual: coffeeAccent, hasSeededAppDefaults,
+  externalDisplay{Enabled,Whitelist}, keyboardShortcutEnabled, shortcutChord,
+  activityRetentionDays, activityChartColors, recurringQuickPresets,
+  didSeedBuiltinPresets). Now exact parity with
+  `Sources/Core/SettingsStore.swift` (34 cases incl. `, Sendable`) **plus a
+  new authoritative-source pointer** so the snapshot is explicitly a curated
+  reader-aid and `SettingsKey.allCases` is the single source of truth — the
+  drift-proofing the RFC's own §10/§13 principle implied. Closes the doc-tidy
+  RFC §13 deliberately deferred.
+- **`b61015b`** — `docs(design): record RFC §12 owner decisions — Phase 1
+  unblocked`. Owner answered the three code-gating questions:
+  **Q1 = B-2** (activity log → CloudKit custom-zone append-only union merge;
+  Phase 3 in scope), **Q2 = approved** (§5.1 privacy sign-off; "No Data
+  Collected" preserved), **Q5 = v2.0 = Phase 1+2, Phase 3 = v2.1**. §12
+  rewritten as a decision log (Q3 resolved-by-Q5; **Q4 container-id remains
+  open + explicitly non-gating**). RFC header/intro/§11-Phase-0/§14 +
+  07-spec §1 + 09-c3 §14 cross-refs all flipped from "owner decision
+  pending" → "decisions locked 2026-05-18". RFC bumped 0.1 → 0.2.
+
+**Gate effect — the important carry-over:** iCloud-sync **Phase 1 is now an
+actionable autonomous session** (no longer owner-decision-gated). Phase 1 =
+`CloudSyncEngine` protocol seam + `MockCloudSyncEngine` + entitlement file +
+`cloudKitDatabase` wiring **behind the compile-time kill-switch — ships dark,
+zero behaviour change**, 100% pure-unit-testable per RFC §10. It does **not**
+need the Apple Developer Program (entitlement file only; container stubbable
+until S8.5). Phase ≥ 2 (live CloudKit) stays S8.5-gated.
+
+**Patterns reinforced this session — S38 NEW (2):**
+
+a. **A "separate doc-tidy, not gating" deferral in an RFC is itself a
+   zero-gate autonomous unit — do it, don't just re-defer.** RFC §13's
+   explicitly-scoped, non-gating drift is exactly the kind of small, real,
+   prerequisite-free work that survives the "don't invent work" filter
+   *because the RFC already identified it*. Fixing a stale inlined snapshot:
+   add an authoritative-source pointer so it can't silently re-drift, don't
+   just refresh the copy.
+b. **"Owner-decision-gated" ≠ "blocked" when the owner is in the session.**
+   The S37 handoff filed §12 under the same queue as the Apple blocks; they
+   are categorically different — §12 needed 3 answers obtainable *now*, and
+   answering them converted the single largest remaining autonomous item
+   (iCloud Phase 1) from blocked to actionable. Always separate
+   owner-*decision* gates from owner-*Apple* gates when triaging the queue.
+
+Cumulative NEW S20→S38 ≈ 57.
+
+---
+
+## Prior session (S37)
 
 S37 was an autonomous session opened on top of S36. Goal: progress the
 genuinely autonomous backlog with maximal verification safety. Outcome: the
@@ -123,26 +180,28 @@ so S37 stops here deliberately, not prematurely.
 
 ## Next-session entry points (priority order)
 
-**1. (BLOCKER, owner-side)** **S8.5 Apple Developer Program** — check email +
-portal; if past ~Day 16 of the wait, call Developer Support. Gates S9 *and*
-iCloud-sync Phase ≥ 2.
+**1. (AUTONOMOUS, large — now actionable)** **iCloud-sync Phase 1.** §12 is
+decided (S38), so this is unblocked and needs **no Apple prerequisite**.
+Scope (RFC §11 row 1): `CloudSyncEngine` protocol + `MockCloudSyncEngine` +
+entitlement file + `cloudKitDatabase` wiring **behind the compile-time
+kill-switch — ships dark, zero behaviour change**. Verify: full unit suite
+green + app behaviour identical with sync off (cheapest phase to verify —
+changes nothing observable). Design contract is RFC §3/§4(B-2)/§6/§7/§10;
+Q1=B-2, Q5=v2.0[P1+2]/v2.1[P3] are locked. **Read RFC §10 + §11 before
+starting.** Q4 (container-id `iCloud.com.parkbyeongjun.latte`) is non-gating
+— inject it via the seam; literal lives in one adapter + the entitlement
+file. This is the single largest remaining autonomous deliverable.
 
-**2. (BLOCKER, owner-side)** **S9 App Store Connect metadata** — depends on
+**2. (BLOCKER, owner-side)** **S8.5 Apple Developer Program** — check email +
+portal; if past ~Day 16 of the wait, call Developer Support. Gates S9 *and*
+iCloud-sync Phase ≥ 2 (live CloudKit). Does **not** gate Phase 1 (#1).
+
+**3. (BLOCKER, owner-side)** **S9 App Store Connect metadata** — depends on
 S8.5. Includes deferred S8d screenshot picking.
 
-**3. (owner-decision, then autonomous)** **iCloud-sync RFC §12** — owner answers
-Q1 (activity-log: B-2 union-merge vs B-1 device-local), Q2 (privacy sign-off on
-SSID/bundle-id in private DB), Q5 (phase ordering). Once answered, Phase 1
-(`CloudSyncEngine` protocol seam + mock + entitlement plumbing behind the
-kill-switch — *ships dark, no behaviour change*) becomes a clean autonomous
-implementation session with a fully pure-unit-testable surface.
-
-**4. (autonomous, large)** **iCloud-sync Phase 1** — only after #3. Cheapest
-phase to verify (changes nothing observable). See RFC §11.
-
-The autonomous-OPTIONAL i18n queue is empty and now *verified* empty (S37
-catalog sweep). The remaining queue is owner-Apple-blocked or owner-decision-
-gated (#3).
+The autonomous-OPTIONAL i18n queue is empty and *verified* empty (S37 catalog
+sweep). After Phase 1 ships, Phase 2/3 are S8.5-gated. Q4 is the only open
+RFC item and is non-gating.
 
 ---
 
@@ -193,32 +252,34 @@ APP=$(ls -dt ~/Library/Developer/Xcode/DerivedData/Latte-*/Build/Products/Releas
 ## How to resume
 
 1. Read this file first.
-2. `ROADMAP.md` rows 1.31 → 1.37 (S31–S37) for the i18n + infrastructure +
-   iCloud-RFC lineage.
+2. `ROADMAP.md` rows 1.31 → 1.38 (S31–S38) for the i18n + infrastructure +
+   iCloud-RFC + decision-lock lineage.
 3. **Read [docs/design/10-c3-icloud-sync-rfc.md](design/10-c3-icloud-sync-rfc.md)**
-   before any iCloud-sync work — it is the authoritative joint design; §12 lists
-   the owner decisions that gate code.
-4. Memory: `MEMORY.md` → `project_latte_v1_9.md` S20→S37 section.
+   before any iCloud-sync work — authoritative joint design; §12 is now a
+   **decision log** (Q1/Q2/Q5 locked 2026-05-18), §10/§11 define the Phase 1
+   test surface and scope.
+4. Memory: `MEMORY.md` → `project_latte_v1_9.md` S20→S38 section.
 5. **Don't** re-read S1-S11 memory entries — consolidated during S13.
 
 ---
 
-## Owner-side pending (S37 update)
+## Owner-side pending (S38 update)
 
 | # | What | Why blocked | Effort |
 |---|---|---|---|
 | S8.5 | Apple Developer Program — applied 2026-05-02 | Apple wait. Check email + portal; if past ~Day 16, call Developer Support | 1-2 days typical |
 | S9 | App Store Connect metadata + screenshots + binary submission | S8.5 depends | 1-3 sessions once unblocked |
-| **Push branch** | **`claude/focused-hamilton-417bfc`** — S36 (`2fa0668`,`4309cd3`) + all S37 docs/RFC commits. Push the **branch tip** (it contains S36; count via `git rev-list --count origin/main..HEAD`). The standalone `claude/suspicious-kowalevski-4ffca8` is now redundant — ignore/delete it. | none — ready | seconds |
-| iCloud RFC §12 | Owner answers Q1/Q2/Q5 to unblock Phase 1 | owner decision | 1 reading + 3 answers |
-| Smoke 23 re-run | First run incl. 00- pre-flight; S37 changed no UI so no scenario delta expected | none | 7 min |
+| **Push branch** | **`claude/focused-hamilton-417bfc`** — S36 + S37 + S38 docs commits. Push the **branch tip** (count via `git rev-list --count origin/main..HEAD`). Standalone `claude/suspicious-kowalevski-4ffca8` redundant — ignore/delete. | none — ready | seconds |
+| ~~iCloud RFC §12~~ | **DONE 2026-05-18 (S38)** — Q1=B-2, Q2=approved, Q5=v2.0[P1+2]/v2.1[P3]. Phase 1 now autonomous. | — | ✅ |
+| iCloud RFC Q4 | Container-id `iCloud.com.parkbyeongjun.latte` — accept at Phase 1 kickoff (non-gating; hold only if V2-20 changes bundle prefix) | owner, non-gating | 1 answer |
+| Smoke 23 re-run | First run incl. 00- pre-flight; S37/S38 changed no UI so no scenario delta expected | none | 7 min |
 | Phase I community PRs | TRANSLATIONS.md; Russian is the worked reference | awaiting community | ongoing |
 
 ---
 
-## v1.9 owner-visible behaviour reference (post-S37)
+## v1.9 owner-visible behaviour reference (post-S38)
 
-**No owner-visible change in S37.** It is design-doc + verification only —
+**No owner-visible change in S38.** Design-doc + decision-recording only —
 zero code, zero UI, zero test delta (611 unchanged). Russian-locale plural
 correctness from S36 stands. All other surfaces unchanged from the S35/S36
 reference.
