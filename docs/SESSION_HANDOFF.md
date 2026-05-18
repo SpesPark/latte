@@ -6,7 +6,7 @@
 
 **Last session:** S37 (2026-05-18) — iCloud-sync joint-design RFC + inherited-baseline & catalog verification
 **v1.x release line:** v1.9 (unchanged since S20 — S37 is docs/design only)
-**Branch:** `claude/focused-hamilton-417bfc` — **4 commits ahead of `origin/main`** = S36 (`2fa0668`, `4309cd3`) **+** S37 (`9598eba`, `35104b8`). Push = owner action. **This one branch supersedes the standalone `claude/suspicious-kowalevski-4ffca8`** (that branch is now a 2-commit prefix of this one — push *this* branch and the S36 work rides along; the old S36-only branch can be ignored/deleted).
+**Branch:** `claude/focused-hamilton-417bfc` — **5 commits ahead of `origin/main`** = S36 (`2fa0668`, `4309cd3`) **+** S37 (`9598eba`, `35104b8`, `e3956fa` this wrap). Push = owner action. **This one branch supersedes the standalone `claude/suspicious-kowalevski-4ffca8`** (that branch is now a 2-commit prefix of this one — push *this* branch and the S36 work rides along; the old S36-only branch can be ignored/deleted).
 **Test count:** 611/611 PASS (unchanged — S37 touched no code)
 **Smoke:** 23 scenarios (not re-run — gated by harness; design-only session changes no UI)
 **Doc-drift:** clean
@@ -24,7 +24,7 @@ full verification sweep of the inherited state.
 
 ### What landed this session
 
-Two commits on `claude/focused-hamilton-417bfc` (push = owner action):
+Two substantive commits on `claude/focused-hamilton-417bfc` (plus this docs wrap `e3956fa` = 3 S37 commits total; push = owner action):
 
 - **`9598eba`** — `docs(design): C-3/B1.2/Settings iCloud sync joint-design RFC`.
   New [`docs/design/10-c3-icloud-sync-rfc.md`](design/10-c3-icloud-sync-rfc.md)
@@ -209,7 +209,7 @@ APP=$(ls -dt ~/Library/Developer/Xcode/DerivedData/Latte-*/Build/Products/Releas
 |---|---|---|---|
 | S8.5 | Apple Developer Program — applied 2026-05-02 | Apple wait. Check email + portal; if past ~Day 16, call Developer Support | 1-2 days typical |
 | S9 | App Store Connect metadata + screenshots + binary submission | S8.5 depends | 1-3 sessions once unblocked |
-| **Push branch** | **`claude/focused-hamilton-417bfc`** — **4 commits** = S36 (`2fa0668`,`4309cd3`) + S37 (`9598eba`,`35104b8`). Push **this one branch** (it contains S36). The standalone `claude/suspicious-kowalevski-4ffca8` is now redundant — ignore/delete it. | none — ready | seconds |
+| **Push branch** | **`claude/focused-hamilton-417bfc`** — **5 commits** = S36 (`2fa0668`,`4309cd3`) + S37 (`9598eba`,`35104b8`,`e3956fa`). Push **this one branch** (it contains S36). The standalone `claude/suspicious-kowalevski-4ffca8` is now redundant — ignore/delete it. | none — ready | seconds |
 | iCloud RFC §12 | Owner answers Q1/Q2/Q5 to unblock Phase 1 | owner decision | 1 reading + 3 answers |
 | Smoke 23 re-run | First run incl. 00- pre-flight; S37 changed no UI so no scenario delta expected | none | 7 min |
 | Phase I community PRs | TRANSLATIONS.md; Russian is the worked reference | awaiting community | ongoing |
