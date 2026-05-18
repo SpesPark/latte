@@ -39,6 +39,15 @@ piecemeal. The single CloudKit enablement *is* the OQ-04 v2.0 migration event,
 and it covers Settings (including the chord) and — separately — the activity
 log.**
 
+> **Not a contradiction of the non-goals list.** v2-backlog "Won't-do" line
+> *"iCloud sync of trigger settings — out of v1 scope … **Re-evaluate
+> post-v1.0 ship**"* is a re-evaluation *gate*, not a hard no. This RFC **is**
+> that re-evaluation, opened post-v1.9. PRD §7.4's *"No telemetry / analytics
+> SDK"* non-goal is **permanent and untouched** — §5 shows sync to the user's
+> own private DB introduces no developer-side data collection, so the
+> "No Data Collected" / local-first stance (PRD §7.4) is *preserved*, not
+> traded away.
+
 ---
 
 ## §2. The three sync surfaces and their *current* storage
@@ -206,8 +215,11 @@ But registration is device-physical:
 
 - **One event.** Phase 2 (§11) performs the 04-data-model §2.2 migration once,
   for everything in `SettingsKey.allCases`. `schemaVersion` 1 → 2.
-- **Fallback window.** UserDefaults retained read-only for exactly one minor
-  version post-v2.0, then deleted (04-data-model §2.2 / §60-line rationale).
+- **Fallback window.** UserDefaults retained read-only through v2.0, then
+  deleted in **v2.1** — exactly the 04-data-model §2.2 "Why not delete
+  UserDefaults immediately after migration?" rationale (re-runnable if
+  migration partially failed; removed after one minor release of stable
+  observation).
 - **Kill-switch.** A build-time/remote-absent flag that disables CloudKit and
   falls back to local SwiftData (sync off, app fully functional). Mirrors the
   project's established "ships dark, flip on when verified" discipline
