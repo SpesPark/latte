@@ -4,164 +4,224 @@
 
 ---
 
-**Last session:** S36 (2026-05-17) — Russian CLDR plurals + S35-handoff drift fixes
-**v1.x release line:** v1.9 (unchanged since S20)
-**Branch:** `claude/suspicious-kowalevski-4ffca8` — 2 commits ahead of `origin/main` (push = owner action)
-**Test count:** 611/611 PASS (S35's 610 + 1 new Russian CLDR test)
-**Smoke:** 23 scenarios (22 + 00- pre-flight; not re-run this session — gated by smoke harness; expected 23/23)
+**Last session:** S37 (2026-05-18) — iCloud-sync joint-design RFC + inherited-baseline & catalog verification
+**v1.x release line:** v1.9 (unchanged since S20 — S37 is docs/design only)
+**Branch:** `claude/focused-hamilton-417bfc` — **4 commits ahead of `origin/main`** = S36 (`2fa0668`, `4309cd3`) **+** S37 (`9598eba`, `35104b8`). Push = owner action. **This one branch supersedes the standalone `claude/suspicious-kowalevski-4ffca8`** (that branch is now a 2-commit prefix of this one — push *this* branch and the S36 work rides along; the old S36-only branch can be ignored/deleted).
+**Test count:** 611/611 PASS (unchanged — S37 touched no code)
+**Smoke:** 23 scenarios (not re-run — gated by harness; design-only session changes no UI)
 **Doc-drift:** clean
-**Catalog:** 172 keys × 11 languages (unchanged — Russian plural *form* expansion only, no key count change)
+**Catalog:** 172 keys × 11 languages, ru 4 CLDR forms — **verified, not modified**
 
 ---
 
 ## Last session
 
+S37 was an autonomous session opened on top of S36. Goal: progress the
+genuinely autonomous backlog with maximal verification safety. Outcome: the
+single remaining substantive autonomous item — the long-deferred iCloud-sync
+**joint design** — delivered as an RFC-first, **zero-code** design doc, plus a
+full verification sweep of the inherited state.
+
 ### What landed this session
 
-S36 opened as a cold-start review of S35's wrap. Two things surfaced and were fixed:
+Two commits on `claude/focused-hamilton-417bfc` (push = owner action):
 
-1. **Russian plural correctness bug (from S35).** S35's xcstrings migration shipped Russian (`ru`) for the three plural keys with only `one` + `other`, and the `one` slot hard-coded the literal "1" ("1 минута"). That is CLDR-incorrect: Russian `one` is a *modular* class (n % 10 == 1 and n % 100 != 11) — so 21, 31, 41, 101… are also `one`, but with only two forms they resolved through `other` ("%lld минут" → "21 минут"; the grammatically correct form is "21 минута").
+- **`9598eba`** — `docs(design): C-3/B1.2/Settings iCloud sync joint-design RFC`.
+  New [`docs/design/10-c3-icloud-sync-rfc.md`](design/10-c3-icloud-sync-rfc.md)
+  resolves the iCloud-sync deferral recorded in 09-c3 §14 and 07-spec §1. Core
+  design: **one CloudKit entitlement/migration event** (the OQ-04 v2.0
+  UserDefaults→SwiftData migration from 04-data-model §2.2) covering **two
+  independent sync domains** — Settings (last-writer-wins, includes the B1.2
+  chord with per-device best-effort registration + optional non-synced local
+  override) and the Activity log (recommended: CloudKit custom-zone
+  **append-only union merge**, never LWW, immutable content-addressed entries,
+  local 14-day GC on the merged set). Privacy analysis shows "No Data
+  Collected" is **preserved** (private DB only, no developer-side processing,
+  the existing S14 structured-`reasonCode` discipline already excludes all
+  PII). A `CloudSyncEngine` protocol seam mirrors the codebase's existing
+  mock pattern (`SettingsStore`/`HotKeyRegistrar`/`DisplaySource`) so
+  merge/LWW/migration/chord-fallback are 100% pure-unit-testable without
+  CloudKit; only final two-Mac confirmation is owner-gated. Ships dark behind a
+  compile-time kill-switch. Blocks on S8.5. **09-c3 §14 and 07-spec §1 now
+  cross-reference the RFC** so the joint design is discoverable from the docs
+  that deferred it.
 
-2. **SESSION_HANDOFF drift (from S35).** Two stale claims in the S35 handoff were corrected (details below).
+- **`35104b8`** — `docs(design): RFC precision pass`. Consistency audit of the
+  RFC against the docs it extends. Two precision fixes, **no design change**:
+  §8 fallback window pinned to the exact 04-data-model §2.2 wording
+  (UserDefaults read-only through v2.0, deleted in **v2.1** after one minor
+  release); §1 adds an explicit reconciliation that this RFC **is** the
+  v2-backlog "Re-evaluate post-v1.0 ship" gate firing (not a contradiction of
+  the non-goals list) and that PRD §7.4 "no telemetry / local-first" is
+  permanent and *preserved*, not traded away.
 
-Two commits on `claude/suspicious-kowalevski-4ffca8` (push left as owner action):
+### What was verified but not changed
 
-- **`2fa0668`** — `feat(i18n): Russian CLDR four-form plurals (one/few/many/other)`. The 3 plural keys (`%lld minutes`, `%lld hours`, `Currently: %lld external displays`) filled with the complete CLDR four-form set:
-  - `%lld minutes` → one `%lld минута` / few `%lld минуты` / many `%lld минут` / other `%lld минуты`
-  - `%lld hours` → one `%lld час` / few `%lld часа` / many `%lld часов` / other `%lld часа`
-  - `Currently: %lld external displays` → one `Сейчас: %lld внешний дисплей` / few `Сейчас: %lld внешних дисплея` / many `Сейчас: %lld внешних дисплеев` / other `Сейчас: %lld внешних дисплея`
-
-  Every form keeps the `%lld` placeholder so 21/31/101 render the number correctly. `other` carries the decimal-appropriate form (Russian decimals take the `few`-shaped "минуты"); `%lld` integers never route there but Apple requires the form to exist. New `testRussianPluralKeysHaveAllFourCLDRForms` in `LocalizationCatalogTests` asserts all four forms present + every form keeps `%lld` — fails on the S35 two-form/literal-1 baseline, passes here. TRANSLATIONS.md reframed: Russian is now the worked reference; Polish/Arabic/Czech remain community-PR targets (they are not yet in the shipped 11-locale `knownRegions` set, so adding them also means adding the locale).
-
-- **`docs:` commit** (this wrap) — SESSION_HANDOFF S35→S36 rewrite + ROADMAP row 1.36 + the two S35-drift fixes folded in:
-  - **Drift #1**: S35 handoff listed "Push origin/main — owner action; 4 commits ready to push" as pending. It was already merged + pushed; local `main` = `origin/main` = `9fcb9d7`. Corrected.
-  - **Drift #2**: `feedback_smoke_iteration.md §5` says the mandatory `pkill -9 -f "Latte.app"` pre-flight "is recorded in SESSION_HANDOFF 'How to resume'", but the S35 cold-start block had no such line. Added. This session re-hit the exact trap it documents (see below).
-
-### What was checked but not changed
-
-- `xcodebuild test` — **611/611 PASS** (~10s). The initial run failed `Could not launch "LatteTests"` (LaunchServices launcher error). **Not a code regression**: a leftover Release `Latte.app` instance from a prior session + `LSMultipleInstancesProhibited` blocked the test host from launching with the xctest bundle injected. `pkill -9 -f "Latte.app"` cleared it; tests then passed. This is exactly `feedback_smoke_iteration.md §5` — now also enforced in the cold-start block.
-- `scripts/check_doc_drift.sh` — clean before and after; catalog still 11 langs == `project.yml` knownRegions.
-- Catalog key count — unchanged at 172 (form expansion does not change key count).
-- `xcodebuild build` (Debug+Release) — implied green by the test build; no new Swift 6 concurrency warnings.
+- **Inherited baseline on S36 tip**: `pkill -9 -f "Latte.app"` pre-flight →
+  `xcodebuild test` **611/611 PASS** (~12s); `check_doc_drift.sh --strict`
+  clean; catalog 172 keys; ru `%lld minutes`/`%lld hours`/`Currently: %lld
+  external displays` each carry one/few/many/other. (Project regenerated via
+  `xcodegen generate` — the worktree had no `.xcodeproj`; expected for a fresh
+  worktree.)
+- **Full catalog completeness sweep**: 172 keys × 10 target locales = **1720
+  cells, zero missing/empty** (plural-aware). The 3 plural keys all carry
+  correct `variations.plural`. The inherited i18n state is complete and
+  self-consistent.
+- **LanguageStep defer-and-watch item — empirically CLOSED.** Onboarding
+  `languageStep` uses exactly 2 localized strings ("Choose your language" +
+  the restart caption); **no bullets** (the "bullet review" carry-over from S34
+  referred to the helper caption). Both have full 11-locale coverage, and
+  `LocalizationCatalogTests.testEveryEntryCoversAllPhaseHLanguages()` *already*
+  asserts the every-key × every-locale non-empty invariant (plural-aware) and
+  is in the green 611. No code/test change warranted — adding another guard
+  would duplicate an existing one.
+- **RFC↔existing-docs consistency**: every RFC cross-reference checked against
+  04-data-model §2.2 (migration steps 1-6, schemaVersion 1→2, v2.1 deletion,
+  the `grep UserDefaults` lint rule), PRD §7.4 (no-telemetry non-goal), 09-c3
+  §3/§6/§7 (decoupled JSON store, privacy exclusions, version wrapper), 07-spec
+  §1/§2 (`register(chord:)` API, S17 "J" disabled-cue), and v2-backlog
+  Won't-do line 319. **No contradictions found.**
 
 ### Patterns reinforced this session
 
-S36 NEW (3):
+S37 NEW (4):
 
-a. **CLDR `one` is not "n == 1".** Slavic `one` is a modular class (Russian: 1, 21, 31, 101…). A literal-"1" plural form is a latent i18n bug for any language where `one` is modular, not the singleton. **Always use the `%lld` placeholder in every plural form.**
+a. **RFC-first is the correct autonomous move for a "solo ship risks migration
+   churn" deferral.** When a feature was deferred *specifically* because
+   piecemeal shipping endangers a one-time schema migration, the highest-value
+   autonomous action is a design-only RFC that unifies the migration event —
+   not code. Zero code = zero regression = it *protects* the very
+   verification-safety the deferral existed to guard.
+b. **CloudKit *private* DB preserves Apple's "No Data Collected" label.** Data
+   in the user's own private CloudKit database with no developer-side
+   processing is not "developer collection" under App Store privacy semantics.
+   Load-bearing for all future sync work. The S14 structured-`reasonCode`
+   boundary already excludes PII, so it carries over for free once entries
+   leave the single device.
+c. **An append-only log must never ride a last-writer-wins sync path.** The
+   two-domain split (Settings = LWW, Activity = union-merge) is a *structural*
+   data-loss guard, not a stylistic choice — funnelling both through one
+   generic "sync the blob" mechanism silently destroys concurrent-day history.
+d. **"Re-evaluate post-X" in a Won't-do list is a gate, not a refusal.** An RFC
+   opened against such an item is the gate firing; state that explicitly in the
+   doc so a future reader doesn't misread the RFC as contradicting the
+   non-goals list.
 
-b. **`other` is the decimal-fallback form — mandatory but often dead.** For `%lld`-integer keys, in languages with full one/few/many no integer ever routes to `other`, yet Apple requires the form. Populate it with the decimal-appropriate form (Russian: the `few`-shaped "минуты"), not a copy of `many`.
+Cumulative NEW S20→S37 ≈ 55.
 
-c. **Worktree-vs-main edit-split footgun.** Absolute paths under the repo root resolve to the *main* checkout, not the active `.claude/worktrees/<name>` worktree. Mixed edits landed across two branches mid-session before this was caught. **Always target the worktree path explicitly for session work; verify with `git -C <worktree> status` before staging.** Recovery: copy edited files into the worktree, `git checkout --` the main repo back to pristine, re-verify both trees.
+### What was deferred / why the autonomous backlog is now terminal
 
-### What was deferred
-
-- **Push `claude/suspicious-kowalevski-4ffca8` (2 commits)** — owner action, per the owner-driven push workflow.
-- **Smoke 23-scenario full re-run** — owner action (~7 min). No smoke scenario asserts localised text, so the Russian form expansion is not expected to change any scenario; confirm visually.
-- **xcstrings plural: Polish / Arabic / Czech** — still community-PR territory; these locales are not in the shipped 11-locale set, so adding them is a locale-addition decision, not a translation-fill. Documented in TRANSLATIONS.md.
-- **C-3 iCloud sync RFC** — large, multi-session; needs an architecture-only planning pass before code (co-design with B1.2 chord sync per v2-backlog line 92).
-
-The v1.x autonomous-coding backlog after S36 is functionally the same as after S35: the modest i18n-polish item (Russian multi-form) is now **closed**; what remains is either owner-Apple-blocked or requires multi-session design.
+The single-session autonomous backlog is **exhausted at the RFC boundary**. The
+RFC is the *last* autonomous deliverable: its next step (Phase 1 code) requires
+the owner to answer RFC §12 (Q1 activity-log scope, Q2 privacy sign-off, Q5
+phase ordering). Everything else remaining is owner-Apple-blocked (S8.5/S9) or
+owner-decision-gated. Inventing further work to consume context would be
+net-negative churn against the "don't add work beyond what's needed" principle —
+so S37 stops here deliberately, not prematurely.
 
 ---
 
 ## Next-session entry points (priority order)
 
-**1. (BLOCKER, owner-side)** **S8.5 Apple Developer Program** — ~Day 16 of Apple wait. Action: check email + portal; if past Day 16, call Developer Support.
+**1. (BLOCKER, owner-side)** **S8.5 Apple Developer Program** — check email +
+portal; if past ~Day 16 of the wait, call Developer Support. Gates S9 *and*
+iCloud-sync Phase ≥ 2.
 
-**2. (BLOCKER, owner-side)** **S9 App Store Connect metadata** — depends on S8.5. Includes the deferred screenshot picking from S8d Pages-unlock.
+**2. (BLOCKER, owner-side)** **S9 App Store Connect metadata** — depends on
+S8.5. Includes deferred S8d screenshot picking.
 
-**3. (autonomous, large)** **C-3 iCloud sync (activity log + B1.2 chord sync co-design)** — multi-session; recommend a planning/RFC session first (architecture only, no code) before opening an implementation worktree. Schema-integration risk if shipped solo.
+**3. (owner-decision, then autonomous)** **iCloud-sync RFC §12** — owner answers
+Q1 (activity-log: B-2 union-merge vs B-1 device-local), Q2 (privacy sign-off on
+SSID/bundle-id in private DB), Q5 (phase ordering). Once answered, Phase 1
+(`CloudSyncEngine` protocol seam + mock + entitlement plumbing behind the
+kill-switch — *ships dark, no behaviour change*) becomes a clean autonomous
+implementation session with a fully pure-unit-testable surface.
 
-**4. (autonomous, OPTIONAL)** **Onboarding LanguageStep helper-text bullet review** — defer-and-watch (carries from S34). If community PRs surface specific missing strings, add them then.
+**4. (autonomous, large)** **iCloud-sync Phase 1** — only after #3. Cheapest
+phase to verify (changes nothing observable). See RFC §11.
 
-**5. (autonomous, OPTIONAL)** **Locale expansion (pl/ar/cs …)** — only if the owner wants to grow beyond 11 locales. Adding a locale = `project.yml` knownRegions + full catalog fill + CLDR plural forms. Not a backlog item until owner-directed.
-
-The single-session autonomous-OPTIONAL i18n backlog is now exhausted (Russian multi-form done). The remaining queue is owner-Apple-blocked or multi-session-design (item 3).
+The autonomous-OPTIONAL i18n queue is empty and now *verified* empty (S37
+catalog sweep). The remaining queue is owner-Apple-blocked or owner-decision-
+gated (#3).
 
 ---
 
 ## Cold-start (다음 세션 진입)
 
-S31 added a one-command cold-start ritual at [`scripts/latte-resume.sh`](../scripts/latte-resume.sh).
-
-```bash
-# One-command resume
-latte             # if zsh alias from S31 is installed
-# OR
-bash ~/Documents/Claude/Projects/Latte/scripts/latte-resume.sh
-```
-
-To verify after pulling:
+S31's one-command ritual still applies: `latte` (zsh alias) or
+`bash ~/Documents/Claude/Projects/Latte/scripts/latte-resume.sh`.
 
 ```bash
 # PRE-FLIGHT (MANDATORY before any xcodebuild test / Cmd-R) — kill stale Latte.
-# A surviving Latte.app instance + LSMultipleInstancesProhibited makes the test
-# host launch fail as "Could not launch LatteTests" (LaunchServices launcher
-# error). This is NOT a code regression — see feedback_smoke_iteration.md §5.
-# Re-hit at S36 cold-start: a leftover Release instance blocked the host until
-# pkill cleared it; tests then passed 611/611.
+# A surviving Latte.app + LSMultipleInstancesProhibited makes the test host
+# launch fail "Could not launch LatteTests" (LaunchServices) — NOT a code
+# regression. See feedback_smoke_iteration.md §5. Re-hit at S36 cold-start.
 pkill -9 -f "Latte.app" 2>/dev/null; sleep 1
 
-# IMPORTANT if working in a git worktree: edit + test the worktree path,
-# NOT the repo root. Absolute repo-root paths resolve to the main checkout.
-# Verify with: git -C <worktree-path> status
+# A FRESH WORKTREE HAS NO .xcodeproj — generate it first (xcodegen project):
+xcodegen generate
 
-# Tests (~10s, expect 611 PASS)
+# IMPORTANT in a git worktree: edit + test the worktree path, NOT the repo
+# root. Absolute repo-root paths resolve to the main checkout (S36 footgun;
+# feedback_smoke_iteration.md §7). Verify: git -C <worktree-path> status
+
+# Tests (~12s, expect 611 PASS)
 xcodebuild test -scheme Latte -destination 'platform=macOS,arch=arm64' 2>&1 | grep "Executed"
 
-# Catalog summary (expect 172 keys × 11 langs; 3 plural keys; ru has 4 CLDR forms)
+# Catalog summary (expect 172 keys; ru 3 plural keys each one/few/many/other)
 python3 -c "
 import json
-d = json.load(open('Resources/Localizable.xcstrings'))
-print(f'keys: {len(d[\"strings\"])}')
-ru = d['strings']['%lld minutes']['localizations']['ru']['variations']['plural']
-print('ru %lld minutes forms:', sorted(ru.keys()))  # expect [few, many, one, other]
+d=json.load(open('Resources/Localizable.xcstrings'))
+print('keys:',len(d['strings']))
+ru=d['strings']['%lld minutes']['localizations']['ru']['variations']['plural']
+print('ru %lld minutes forms:',sorted(ru.keys()))  # [few, many, one, other]
 "
 
-# Doc drift check
+# Doc drift
 scripts/check_doc_drift.sh
 
-# Bundle integrity pre-flight (standalone — same step the smoke harness runs first)
+# Bundle pre-flight + smoke (~7min, expect 23/23) — owner-side, GUI-gated
 APP=$(ls -dt ~/Library/Developer/Xcode/DerivedData/Latte-*/Build/Products/Release/Latte.app | head -1)
 ~/dev/smoke-harness/lib/assert_bundle_resources.sh "$APP" 11 cold-start-check
-
-# Smoke harness (~7min including the 00- scenario, expect 23/23 PASS)
 ~/dev/smoke-harness/run.sh --project .
 ```
 
-**Expect**: 172 keys × 11 languages; Russian `%lld minutes`/`%lld hours`/`Currently: %lld external displays` each carry one/few/many/other; 611/611 tests PASS; doc-drift clean; pre-flight reports `11 .lproj + Assets.car + Info.plist all present`.
+**Expect**: 611/611 PASS; doc-drift clean; 172 keys × 11 langs; ru 4 CLDR forms.
 
 ---
 
 ## How to resume
 
 1. Read this file first.
-2. `ROADMAP.md` rows 1.31 → 1.36 (S31-S36) for the i18n + infrastructure cluster lineage.
-3. Memory: `~/.claude/projects/.../memory/MEMORY.md` → drill into `project_latte_v1_9.md` for the S20→S36 section.
-4. **Don't** re-read S1-S11 memory entries — consolidated during S13.
+2. `ROADMAP.md` rows 1.31 → 1.37 (S31–S37) for the i18n + infrastructure +
+   iCloud-RFC lineage.
+3. **Read [docs/design/10-c3-icloud-sync-rfc.md](design/10-c3-icloud-sync-rfc.md)**
+   before any iCloud-sync work — it is the authoritative joint design; §12 lists
+   the owner decisions that gate code.
+4. Memory: `MEMORY.md` → `project_latte_v1_9.md` S20→S37 section.
+5. **Don't** re-read S1-S11 memory entries — consolidated during S13.
 
 ---
 
-## Owner-side pending (S36 update)
+## Owner-side pending (S37 update)
 
 | # | What | Why blocked | Effort |
 |---|---|---|---|
-| S8.5 | Apple Developer Program — applied 2026-05-02 | ~Day 16 of Apple wait. Check email + portal; if past Day 16, call Developer Support | 1-2 days typical, variance high |
-| S9 | App Store Connect metadata + screenshots + binary submission | S8.5 depends | varies (1-3 sessions once S8.5 unblocks) |
-| Push S36 branch | 2 commits on `claude/suspicious-kowalevski-4ffca8` (`2fa0668` + this docs commit) | none — ready to merge + push | seconds |
-| Smoke 23-scenario re-run | First run including the 00- pre-flight; confirm Russian form expansion changes no UI scenario (none assert localised text) | none | 7 min on quiet machine |
-| Phase I community PRs | TRANSLATIONS.md invites multi-plural-form native speakers; Russian is now the worked reference | none — awaiting community engagement | ongoing |
+| S8.5 | Apple Developer Program — applied 2026-05-02 | Apple wait. Check email + portal; if past ~Day 16, call Developer Support | 1-2 days typical |
+| S9 | App Store Connect metadata + screenshots + binary submission | S8.5 depends | 1-3 sessions once unblocked |
+| **Push branch** | **`claude/focused-hamilton-417bfc`** — **4 commits** = S36 (`2fa0668`,`4309cd3`) + S37 (`9598eba`,`35104b8`). Push **this one branch** (it contains S36). The standalone `claude/suspicious-kowalevski-4ffca8` is now redundant — ignore/delete it. | none — ready | seconds |
+| iCloud RFC §12 | Owner answers Q1/Q2/Q5 to unblock Phase 1 | owner decision | 1 reading + 3 answers |
+| Smoke 23 re-run | First run incl. 00- pre-flight; S37 changed no UI so no scenario delta expected | none | 7 min |
+| Phase I community PRs | TRANSLATIONS.md; Russian is the worked reference | awaiting community | ongoing |
 
 ---
 
-## v1.9 owner-visible behaviour reference (post-S36)
+## v1.9 owner-visible behaviour reference (post-S37)
 
-S36 is i18n-correctness only — **no new owner-visible feature**. Behavioural delta:
-
-- **Russian-locale users** now see grammatically correct plural forms for durations and the external-display caption at counts like 2, 5, 21, 31 (e.g. "21 минута" not "21 минут"). All other locales unchanged. English/Korean/etc. users see no change.
-
-All other surfaces unchanged from the S35 reference.
+**No owner-visible change in S37.** It is design-doc + verification only —
+zero code, zero UI, zero test delta (611 unchanged). Russian-locale plural
+correctness from S36 stands. All other surfaces unchanged from the S35/S36
+reference.
 
 ---
 
@@ -173,4 +233,7 @@ Unchanged. `AwakeManager.toggle()` already implements the correct semantic.
 
 ## Smoke harness + GitHub repo / Pages infrastructure reference
 
-Unchanged from S29–S35. Pages live at https://spespark.github.io/latte/ + /privacy.html. Cross-project helper `~/dev/smoke-harness/lib/assert_bundle_resources.sh` + repo scenario `.smoke/scenarios/00-bundle-integrity.sh` (S35).
+Unchanged from S29–S36. Pages live at https://spespark.github.io/latte/ +
+/privacy.html. Cross-project helper
+`~/dev/smoke-harness/lib/assert_bundle_resources.sh` + repo scenario
+`.smoke/scenarios/00-bundle-integrity.sh` (S35).
