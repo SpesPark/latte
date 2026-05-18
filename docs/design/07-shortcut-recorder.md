@@ -32,8 +32,9 @@ that chord through a small recorder UI in Settings → General.
   CloudKit + conflict resolution. **Joint design now drafted:
   [10-c3-icloud-sync-rfc.md](10-c3-icloud-sync-rfc.md)** §7 — the chord
   rides Domain A (Settings) LWW sync with per-device best-effort
-  registration + an optional non-synced local override. Owner decision
-  pending.
+  registration + an optional non-synced local override. **Owner decisions
+  locked 2026-05-18 (RFC §12): Phase 1 unblocked; chord sync lands in
+  Phase 2 (v2.0), S8.5-gated.**
 - **Visual indicator that current chord is reserved by another app** —
   macOS can't enumerate other apps' Carbon registrations; we'd ship false
   negatives. Defer.

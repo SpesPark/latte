@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| **Document version** | 0.1 (S37, 2026-05-18) — design only, **no code** |
-| **Status** | RFC — owner decision required before any Phase ≥ 1 code |
+| **Document version** | 0.2 (S38, 2026-05-18) — design only, **no code**; §12 owner decisions recorded |
+| **Status** | **Decisions locked 2026-05-18** (Q1=B-2, Q2=approved, Q5=v2.0[P1+2]/v2.1[P3] — see §12). Phase 1 (dark, no behaviour change) is now implementable. Phase ≥ 2 still blocks on S8.5. |
 | **Supersedes** | nothing; **extends** [04-data-model.md](04-data-model.md) §2 (OQ-04), [09-c3-activity-history.md](09-c3-activity-history.md) §6/§7/§14, [07-shortcut-recorder.md](07-shortcut-recorder.md) §1 |
 | **Resolves** | the "iCloud sync — joint design with B1.2, schema-integration risk if shipped solo" deferral recorded in 09-c3 §14 and 07-spec §1 |
 
@@ -11,7 +11,9 @@
 > before opening an implementation worktree. It deliberately makes **zero code
 > changes** — the deliverable is a reviewed, internally-consistent design whose
 > purpose is to make the *future* implementation session's verification
-> low-risk. Nothing here ships until the owner answers §12.
+> low-risk. **§12 Q1/Q2/Q5 were answered by the owner 2026-05-18 (S38)** —
+> Phase 1 (the dark, zero-behaviour-change seam) is now an actionable
+> autonomous session; Phase ≥ 2 remains S8.5-gated.
 
 ---
 
@@ -288,7 +290,7 @@ error" property the RFC-first approach is meant to buy.
 
 | Phase | Scope | Verifiable by | Owner/Apple gate |
 |---|---|---|---|
-| **0** | This RFC + owner answers §12 | internal-consistency review | owner decision |
+| **0** | This RFC + owner answers §12 | internal-consistency review | ✅ **DONE 2026-05-18** (Q1=B-2, Q2=approved, Q5=v2.0[P1+2]/v2.1[P3]) |
 | **1** | `CloudSyncEngine` protocol seam + `MockCloudSyncEngine` + entitlement plumbing + `cloudKitDatabase` wiring **behind the compile-time kill-switch (ships dark, no behaviour change)** | full unit suite green; app behaviour identical with sync off | S8.5 (entitlement file only; can stub container until then) |
 | **2** | Domain A: OQ-04 SwiftData migration for all `SettingsKey.allCases` + LWW resolver + chord value sync | pure migration/LWW unit tests; manual single-device upgrade smoke | S8.5 live |
 | **3** | Domain B: activity-log custom-zone union merge **(or adopt B-1 and close as non-goal)** | pure merge unit tests (commutativity/idempotency/GC) | S8.5 live |
@@ -300,23 +302,40 @@ is the cheapest to verify (it changes nothing observable).
 
 ---
 
-## §12. Open questions — owner decision required before Phase 1
+## §12. Owner decisions — DECIDED 2026-05-18 (S38)
 
-1. **Activity-log scope**: adopt **B-2** (multi-device history union, recommended)
-   or **B-1** (keep log device-local, close cross-device as a non-goal)?
-2. **Privacy questionnaire**: confirm comfort that user-config strings
-   (Wi-Fi SSIDs, app bundle IDs) syncing to the user's *own private* iCloud DB
-   keeps the "No Data Collected" label (§5.1 analysis says yes; this is an
-   owner/legal sign-off, not an engineering call).
-3. **v2.0 trigger**: is enabling iCloud sync *the* thing that defines "v2.0"
-   (i.e. the OQ-04 migration is v2.0), or does v2.0 bundle other work? Affects
-   release sequencing only, not this design.
-4. **Container id** `iCloud.com.parkbyeongjun.latte` — accept now, or hold until
-   V2-20 bundle-prefix revisit (coupling noted in §9)?
-5. **Phase ordering**: ship Phase 2 (settings, incl. chord) and Phase 3
-   (activity log) together as v2.0, or v2.0 = Phase 1+2 and Phase 3 as v2.1?
+The three code-gating questions were answered by the owner on 2026-05-18.
+Recorded verbatim so a future implementation session inherits the design
+contract without re-litigation.
 
-No code is written until 1, 2 and 5 are answered.
+1. **Activity-log scope** — **DECIDED: B-2** (multi-device history, CloudKit
+   custom-zone append-only union merge). Phase 3 is in scope. Rationale: C-3's
+   value is cross-device visibility; the union-merge is a pure function and the
+   structural data-loss guard is already designed (§4 B-2, §6, §10).
+2. **Privacy questionnaire** — **DECIDED: approved.** Owner signs off on the
+   §5.1 analysis: user-config strings (Wi-Fi SSIDs, app bundle IDs) landing
+   only in the user's *own private* iCloud DB with no developer-side processing
+   keeps the "No Data Collected" label. This is the owner/legal sign-off §5.1
+   said was required; engineering may proceed on that basis. (Phase 4 still
+   re-confirms the App Store privacy answer before public ship — §11.)
+3. **v2.0 trigger** — **RESOLVED by Q5**: the OQ-04 migration *is* v2.0
+   (v2.0 = Phase 1+2). No separate decision needed; release sequencing only.
+4. **Container id** `iCloud.com.parkbyeongjun.latte` — **OPEN, non-gating.**
+   Default proposal stands; owner accepts at Phase 1 kickoff unless V2-20
+   changes the bundle prefix first (coupling tracked in §9). Does not block
+   Phase 1 code (the seam is protocol-injected; the literal lives in one
+   adapter + the entitlement file).
+5. **Phase ordering** — **DECIDED: v2.0 = Phase 1 + Phase 2; Phase 3 = v2.1.**
+   Phase 1 ships dark (zero behaviour change). Phase 2 (Settings + B1.2 chord)
+   is the higher-value / lower-data-risk domain → clean v2.0. Phase 3
+   (activity-log union merge) is independent (§11) and gets its own bake as
+   v2.1 to bound blast radius of the append-only merge path.
+
+**Gate state:** Q1/Q2/Q5 answered → **Phase 1 is unblocked** (dark, no
+behaviour change, pure-unit-testable per §10; entitlement file only, container
+stubbable until S8.5 — §11). Phase 2/3 remain **S8.5-gated** (live CloudKit
+needs the Apple Developer Program). Q4 is the only remaining open item and is
+non-gating.
 
 ---
 
@@ -346,5 +365,7 @@ existing structured-reasonCode discipline already excludes all PII. Blocks on
 S8.5 (Apple Dev Program). Risk-bearing logic (merge/LWW/migration/chord
 fallback) is fully pure-unit-testable behind a `CloudSyncEngine` protocol seam
 following the codebase's existing mock pattern; only final two-Mac confirmation
-is owner-gated. Ships dark behind a compile-time kill-switch. **Do not write
-code until owner answers §12 Q1/Q2/Q5.**
+is owner-gated. Ships dark behind a compile-time kill-switch. **§12 Q1/Q2/Q5
+were answered 2026-05-18 (Q1=B-2, Q2=approved, Q5=v2.0[Phase 1+2]/v2.1[Phase
+3]): Phase 1 is now an actionable autonomous session; Phase ≥ 2 stays
+S8.5-gated.**
