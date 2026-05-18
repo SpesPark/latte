@@ -223,10 +223,21 @@ public struct ScheduleEntry: Codable, Sendable, Equatable, Identifiable {
 
 ## 5. `SettingsStore` extended
 
-Building on 02-architecture.md §4.3, here is the **complete** `SettingsKey` enum for v1. Adding a new key requires bumping `schemaVersion` only if the new key's default is non-trivially derived (e.g., re-keying old data); pure additions don't need a bump.
+Building on 02-architecture.md §4.3, this is the **complete** `SettingsKey`
+enum as shipped through the v1.x line (v1.0 → v1.9). Adding a new key requires
+bumping `schemaVersion` only if the new key's default is non-trivially derived
+(e.g., re-keying old data); pure additions don't need a bump.
+
+> **Authoritative source: [`Sources/Core/SettingsStore.swift`](../../Sources/Core/SettingsStore.swift).**
+> This block is a curated snapshot for design readers; `SettingsKey.allCases`
+> in that file is the single source of truth (the iCloud-sync RFC
+> [10-c3-icloud-sync-rfc.md](10-c3-icloud-sync-rfc.md) §10/§13 references
+> `allCases`, not this snapshot, so its migration stays correct regardless of
+> drift here). Per-key prose (`///` doc comments, default-resolution rationale)
+> lives in the Swift source; keep this list in sync when adding keys.
 
 ```swift
-public enum SettingsKey: String, CaseIterable {
+public enum SettingsKey: String, CaseIterable, Sendable {
     // Versioning
     case schemaVersion         = "latte.schemaVersion"
     case firstRunCompleted     = "latte.firstRunCompleted"
@@ -238,6 +249,7 @@ public enum SettingsKey: String, CaseIterable {
     case activateOnLaunch      = "latte.activateOnLaunch"
     case launchAtLogin         = "latte.launchAtLogin"
     case menuBarIconStyle      = "latte.menuBarIconStyle"
+    case coffeeAccent          = "latte.coffeeAccent"
 
     // Calendar trigger
     case calendarTriggerEnabled            = "latte.calendarTrigger.enabled"
@@ -247,8 +259,9 @@ public enum SettingsKey: String, CaseIterable {
     case calendarTriggerTrailingMinutes    = "latte.calendarTrigger.trailingMinutes"
 
     // App-presence trigger
-    case appTriggerEnabled     = "latte.appTrigger.enabled"
-    case appTriggerBundleIDs   = "latte.appTrigger.bundleIDs"
+    case appTriggerEnabled         = "latte.appTrigger.enabled"
+    case appTriggerBundleIDs       = "latte.appTrigger.bundleIDs"
+    case hasSeededAppDefaults      = "latte.appTrigger.hasSeededDefaults"
 
     // Wi-Fi trigger
     case wifiTriggerEnabled        = "latte.wifiTrigger.enabled"
@@ -259,13 +272,35 @@ public enum SettingsKey: String, CaseIterable {
     case focusTriggerEnabled   = "latte.focusTrigger.enabled"
     case focusTriggerFocusIDs  = "latte.focusTrigger.focusIDs"
 
-    // Schedule trigger (V2-05, v1.1)
+    // Schedule trigger (V2-05) — v1.1
     case scheduleTriggerEnabled = "latte.scheduleTrigger.enabled"
     case scheduleTriggerEntries = "latte.scheduleTrigger.entries"
 
-    // Battery-aware (C-1) and pause-all (C-9) — v1.1
+    // External-display trigger (V2-06) — v1.2; whitelist deferred H — v1.5
+    case externalDisplayEnabled   = "latte.externalDisplayTrigger.enabled"
+    case externalDisplayWhitelist = "latte.externalDisplayTrigger.whitelist"
+
+    // Battery-aware mode (C-1) and pause-all (C-9) — v1.1
     case requireACForAwake      = "latte.requireACForAwake"
     case triggersPaused         = "latte.triggersPaused"
+
+    // Global keyboard shortcut (B1) — v1.1
+    case keyboardShortcutEnabled = "latte.keyboardShortcut.enabled"
+
+    // Custom keyboard-shortcut chord (B1.2) — v1.2
+    case shortcutChord = "latte.keyboardShortcut.chord"
+
+    // Activity history retention (C-3 deferred F) — v1.3.1
+    case activityRetentionDays = "latte.activityHistory.retentionDays"
+
+    // Activity chart colour overrides (C-3) — v1.7
+    case activityChartColors = "latte.activityHistory.chartColors"
+
+    // Recurring quick presets (C-7) — v1.7
+    case recurringQuickPresets = "latte.quickPresets.recurring"
+
+    // Built-in seed sentinel (S19 #2 — seed-then-mutable C-7 redesign)
+    case didSeedBuiltinPresets = "latte.quickPresets.didSeedBuiltins"
 }
 ```
 
