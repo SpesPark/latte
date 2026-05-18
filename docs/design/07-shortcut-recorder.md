@@ -29,7 +29,11 @@ that chord through a small recorder UI in Settings → General.
 - **Per-action chords** — only the awake-toggle gets a recorder. Pause-all,
   snooze, etc., stay menu-driven.
 - **iCloud sync of the chord** — local-only setting. Sync would need
-  CloudKit + conflict resolution.
+  CloudKit + conflict resolution. **Joint design now drafted:
+  [10-c3-icloud-sync-rfc.md](10-c3-icloud-sync-rfc.md)** §7 — the chord
+  rides Domain A (Settings) LWW sync with per-device best-effort
+  registration + an optional non-synced local override. Owner decision
+  pending.
 - **Visual indicator that current chord is reserved by another app** —
   macOS can't enumerate other apps' Carbon registrations; we'd ship false
   negatives. Defer.

@@ -425,4 +425,7 @@ key.
 
 - **iCloud sync**: postponed for joint design with B1.2 iCloud-chord-
   sync — both touch the same Settings schema and a solo ship would
-  risk migration churn.
+  risk migration churn. **Joint design now drafted:
+  [10-c3-icloud-sync-rfc.md](10-c3-icloud-sync-rfc.md)** (RFC, owner
+  decision pending — the activity log is Domain B / append-only union
+  merge there, deliberately *not* last-writer-wins).
