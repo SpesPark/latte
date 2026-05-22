@@ -41,6 +41,31 @@ final class MockPowerSourceTests: XCTestCase {
         XCTAssertEqual(b, 1)
         oa.cancel(); ob.cancel()
     }
+
+    /// A callback that cancels its own (or a sibling's) observation during
+    /// fan-out must not mutate the observers collection mid-enumeration.
+    /// The fan-out copies the values before iterating; without that copy
+    /// this removal would be a mutate-during-iterate crash.
+    func testCancelFromWithinCallbackDoesNotCrashFanOut() {
+        let source = MockPowerSource(isOnAC: true)
+        var firstHits = 0
+        var secondHits = 0
+        var firstObs: PowerSourceObservation?
+        firstObs = source.observe { _ in
+            firstHits += 1
+            firstObs?.cancel() // remove self from `observers` mid-fan-out
+        }
+        let secondObs = source.observe { _ in secondHits += 1 }
+        defer { firstObs?.cancel(); secondObs.cancel() }
+
+        source.isOnAC = false // triggers fan-out over both observers
+
+        XCTAssertEqual(firstHits, 1)
+        XCTAssertEqual(secondHits, 1, "sibling observer must still fire despite self-cancel")
+        source.isOnAC = true
+        XCTAssertEqual(firstHits, 1, "cancelled observer must not fire again")
+        XCTAssertEqual(secondHits, 2)
+    }
 }
 
 @MainActor

@@ -114,7 +114,9 @@ public final class IOPowerSource: PowerSourceType {
 
     private func fanOut() {
         let snapshot = isOnAC
-        for callback in observers.values {
+        // Copy before iterating: a callback may cancel its observation,
+        // which removes a key from `observers` mid-enumeration.
+        for callback in Array(observers.values) {
             callback(snapshot)
         }
     }
@@ -128,7 +130,9 @@ public final class MockPowerSource: PowerSourceType {
     public var isOnAC: Bool {
         didSet {
             if isOnAC != oldValue {
-                for cb in observers.values { cb(isOnAC) }
+                // Copy before iterating: a callback may cancel its
+                // observation, mutating `observers` mid-enumeration.
+                for cb in Array(observers.values) { cb(isOnAC) }
             }
         }
     }
