@@ -86,6 +86,17 @@ else
     echo "    catalog:  $(echo $CATALOG_LANGS | tr '\n' ' ')"
 fi
 
+echo "== Core layering (02-architecture §3.2) =="
+# Core must stay UI-framework-free so it can lift into a SwiftUI-agnostic
+# layer for the OQ-04 SwiftData migration (docs/design/10 Phase 2).
+CORE_SWIFTUI=$(grep -rln 'import SwiftUI' Sources/Core/ 2>/dev/null || true)
+if [[ -n "$CORE_SWIFTUI" ]]; then
+    warn "Sources/Core imports SwiftUI — Core must stay UI-free (§3.2):"
+    echo "$CORE_SWIFTUI" | sed 's/^/    /'
+else
+    note "Sources/Core is SwiftUI-free"
+fi
+
 echo "== Summary =="
 if [[ $DRIFT -eq 0 ]]; then
     echo "  no drift detected ✓"
