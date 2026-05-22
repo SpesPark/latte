@@ -769,8 +769,17 @@ public final class AwakeManager: ObservableObject {
         }
     }
 
-    /// Installs SIGINT/SIGTERM/SIGABRT handlers that release the assertion.
-    /// Idempotent — safe to call multiple times.
+    /// Installs SIGINT/SIGTERM handlers that release the assertion on
+    /// deliberate termination. Idempotent — safe to call multiple times.
+    ///
+    /// Deliberately does NOT handle SIGABRT: that signal is raised from an
+    /// already-faulting runtime (failed assertion, abort()), where spawning
+    /// a Swift `Task` is unsafe and — worse — catching it suppresses the OS
+    /// crash report, blinding production debugging. The kernel releases the
+    /// IOPMAssertion automatically on process death, so the handler buys
+    /// nothing on the crash path. SIGINT/SIGTERM are user-driven terminations
+    /// delivered while the process is in a normal state, so the best-effort
+    /// Task-based release is acceptable there.
     public static func installSignalHandlers() {
         guard !signalHandlerInstalled else { return }
         signalHandlerInstalled = true
@@ -784,7 +793,6 @@ public final class AwakeManager: ObservableObject {
         }
         signal(SIGINT, handler)
         signal(SIGTERM, handler)
-        signal(SIGABRT, handler)
     }
 
     // MARK: Constraint enforcement (C-1, C-9)
