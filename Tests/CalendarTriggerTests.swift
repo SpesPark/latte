@@ -202,6 +202,64 @@ final class CalendarTriggerTests: XCTestCase {
         XCTAssertEqual(votes[1].wantsAwake, false)
     }
 
+    /// Two overlapping events: when the shorter one ends but the longer one
+    /// is still active, the trigger must NOT emit OFF (the assertion stays
+    /// held). This guards the `&& activeIDs.isEmpty` condition — without it,
+    /// back-to-back / overlapping meetings would release the Mac to sleep
+    /// the moment the first event ends.
+    func testOverlappingEventEndingKeepsAssertionWhenOtherActive() async {
+        let t0 = Date(timeIntervalSince1970: 1_750_000_000)
+        var nowRef = t0
+        let shortEvent = CalendarEventSnapshot(
+            id: "ev-short",
+            title: "Short",
+            startDate: t0.addingTimeInterval(-60),
+            endDate: t0.addingTimeInterval(60),
+            isAllDay: false,
+            calendarID: "cal-1"
+        )
+        let longEvent = CalendarEventSnapshot(
+            id: "ev-long",
+            title: "Long",
+            startDate: t0.addingTimeInterval(-60),
+            endDate: t0.addingTimeInterval(3600),
+            isAllDay: false,
+            calendarID: "cal-1"
+        )
+        let settings = InMemorySettingsStore()
+        settings.setBool(true, for: .calendarTriggerEnabled)
+        let source = MockCalendarSource(events: [shortEvent, longEvent])
+        let trigger = CalendarTrigger(
+            settings: settings,
+            source: source,
+            pollInterval: 60,
+            now: { nowRef }
+        )
+
+        await trigger.pollOnce() // both newly active → two ON votes
+        nowRef = t0.addingTimeInterval(1800) // short ended; long still active
+        await trigger.pollOnce() // short inactive, long active → must NOT emit OFF
+
+        // Collect everything available within the window: exactly the two ON
+        // votes from poll 1, and crucially no OFF.
+        let collect = Task { @MainActor () -> [TriggerVote] in
+            var it = trigger.voteStream.makeAsyncIterator()
+            var acc: [TriggerVote] = []
+            while let v = await it.next() {
+                acc.append(v)
+                if acc.count >= 3 { break }
+            }
+            return acc
+        }
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        collect.cancel()
+        let votes = await collect.value
+
+        XCTAssertEqual(votes.count, 2, "only the two ON votes; no OFF while an event is still active")
+        XCTAssertTrue(votes.allSatisfy { $0.wantsAwake },
+                      "an overlapping active event must suppress the OFF vote")
+    }
+
     func testDoesNothingWhenDisabled() async {
         let now = Date(timeIntervalSince1970: 1_750_000_000)
         let event = CalendarEventSnapshot(
