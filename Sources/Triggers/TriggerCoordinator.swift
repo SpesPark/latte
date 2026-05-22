@@ -194,15 +194,19 @@ public final class TriggerCoordinator: ObservableObject {
             kind: kind,
             reasonCode: reasonCode
         )
-        Task { await activityStore.append(entry) }
-        // Live-refresh signal for an open Activity tab. Posting from
-        // @MainActor synchronously (the actor task above is queued; by the
-        // time a subscriber's reload `await`s a snapshot, FIFO actor
-        // ordering guarantees the append has committed). No userInfo —
+        // Append, THEN signal. The post happens inside the task *after* the
+        // append `await` returns, so any subscriber that re-fetches the
+        // snapshot in response is guaranteed to see the committed row. (The
+        // post used to run synchronously before this task even started,
+        // relying on the consumer's debounce to mask the gap — a real
+        // ordering guarantee replaces that accidental one.) No userInfo —
         // the canonical consumer just refetches the snapshot, so emitting
         // triggerId/kind to every in-process observer would be needless
         // payload.
-        NotificationCenter.default.post(name: .activityLogDidAppend, object: self)
+        Task { [weak self] in
+            await activityStore.append(entry)
+            NotificationCenter.default.post(name: .activityLogDidAppend, object: self)
+        }
     }
 }
 

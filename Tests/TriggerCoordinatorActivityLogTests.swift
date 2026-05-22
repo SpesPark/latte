@@ -163,6 +163,39 @@ final class TriggerCoordinatorActivityLogTests: XCTestCase {
         await fulfillment(of: [exp], timeout: 1.0)
     }
 
+    /// Ordering contract: the `.activityLogDidAppend` signal must fire only
+    /// *after* the append has committed to the store, so a consumer that
+    /// re-fetches the snapshot on the signal always sees the new row. Locks
+    /// the invariant the previous "post then append" code only satisfied by
+    /// accident of the consumer's debounce.
+    func testNotificationImpliesCommittedAppend() async throws {
+        let dir = try makeTempDirectory()
+        defer { cleanup(dir) }
+        let store = ActivityLogStore(directory: dir)
+        let (coordinator, _) = makeRig(activityStore: store)
+        let trigger = MockTrigger(id: "wifi")
+        coordinator.register(trigger)
+        await coordinator.start(trigger)
+
+        let exp = expectation(description: "snapshot contains the row when the signal fires")
+        let token = NotificationCenter.default.addObserver(
+            forName: .activityLogDidAppend, object: nil, queue: nil
+        ) { _ in
+            Task {
+                let snap = await store.snapshot()
+                XCTAssertGreaterThanOrEqual(
+                    snap.count, 1,
+                    "live-refresh signal must not precede the committed append"
+                )
+                exp.fulfill()
+            }
+        }
+        defer { NotificationCenter.default.removeObserver(token) }
+
+        trigger.emit(TriggerVote(wantsAwake: true, reason: "matched"))
+        await fulfillment(of: [exp], timeout: 1.0)
+    }
+
     /// `stop` on an idle trigger has nothing to log — no notification fires.
     /// Prevents a spurious refresh on a no-op user toggle.
     func testStopWithoutActiveVoteDoesNotPostNotification() async throws {
