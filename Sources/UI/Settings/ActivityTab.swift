@@ -161,13 +161,6 @@ private struct DailyHeatmapChart: View {
     }
 }
 
-// MARK: - Export buttons (C)
-//
-// Buttons are now inlined directly into the Section in ActivityTab.body
-// (see S23 / P-issue-5 comment there). The previous `ExportButtons`
-// wrapper View was removed because Section's row tap-handling could
-// swallow events when the buttons sat inside an HStack child.
-
 // MARK: - Per-trigger filter picker (B)
 
 /// Picker selection for narrowing the Activity charts to a single trigger.
