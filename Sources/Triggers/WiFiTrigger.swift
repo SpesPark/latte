@@ -57,8 +57,19 @@ public final class CoreWLANSource: NSObject, WiFiSource, CLLocationManagerDelega
     public func requestAccess() async -> Bool {
         if permissionStatus == .granted { return true }
         if permissionStatus == .denied { return false }
+        // A request is already in flight. Starting another would overwrite
+        // `pendingPermissionContinuation`, stranding the first caller's
+        // coroutine forever (its continuation is never resumed → leak +
+        // CheckedContinuation runtime trap in debug). Report the current,
+        // not-yet-granted status to this redundant caller; the in-flight
+        // request resolves the real result for the first one.
+        guard pendingPermissionContinuation == nil else { return false }
         return await withCheckedContinuation { continuation in
             pendingPermissionContinuation = continuation
+            // NOTE: downgrading to `requestWhenInUseAuthorization()` (lower
+            // privilege, matches the usage-string copy) is desirable but
+            // needs real-device confirmation that CoreWLAN `ssid()` still
+            // resolves under When-In-Use on macOS — owner smoke-gated.
             locationManager.requestAlwaysAuthorization()
         }
     }
