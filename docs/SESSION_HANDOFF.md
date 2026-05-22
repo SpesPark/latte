@@ -4,204 +4,127 @@
 
 ---
 
-**Last session:** S38 (2026-05-18) — §13 SettingsKey doc-tidy + RFC §12 owner decisions locked (Phase 1 unblocked)
-**v1.x release line:** v1.9 (unchanged since S20 — S38 is docs/design only)
-**Branch:** `claude/focused-hamilton-417bfc` — ahead of `origin/main` by S36 + S37 + S38 docs commits. Push = owner action; push the **branch tip**. *(Exact count deliberately not frozen — a number written into a doc is invalidated by the commit that writes it, the recursion S36 hit. Authoritative: `git rev-list --count origin/main..HEAD`.)* **This one branch supersedes the standalone `claude/suspicious-kowalevski-4ffca8`** (S36-only prefix — push *this* branch, S36 rides along; old branch ignorable/deletable).
-**Test count:** 611/611 PASS (unchanged — S38 touched no code)
-**Smoke:** 23 scenarios (not re-run — design-only session changes no UI)
-**Doc-drift:** clean
-**Catalog:** 172 keys × 11 languages, ru 4 CLDR forms — unchanged (not touched in S38)
+**Last session:** S39 (2026-05-22) — whole-app audit + audit-driven stabilization (Steps 1-3 of the recommended order)
+**v1.x release line:** v1.9 (unchanged — S39 has code changes but no version bump; unreleased on the branch)
+**Branch:** `claude/focused-hamilton-417bfc` — ahead of `origin/main` by S36 + S37 + S38 + **S39** commits. Push = owner action; push the **branch tip**. *(Exact count deliberately not frozen — authoritative: `git rev-list --count origin/main..HEAD`.)* Supersedes the standalone `claude/suspicious-kowalevski-4ffca8` (S36-only prefix).
+**Test count:** 619/619 PASS (was 611 — S39 added 8: 5 AppIntents, 1 Calendar overlap, 1 PowerSource fan-out, 1 TriggerCoordinator ordering)
+**Smoke:** 23 scenarios (not re-run — UI behaviour unchanged by S39's fixes; dark/internal only)
+**Doc-drift:** clean (now also asserts `Sources/Core` is SwiftUI-free)
+**Catalog:** 172 keys × 11 languages, ru 4 CLDR forms — unchanged
 
 ---
 
-## Last session (S38)
+## Last session (S39)
 
-S38 ran the two ADP-independent items the S37 handoff had identified — the
-"§13 doc-tidy (zero gate)" and the "§12 owner decisions (owner-gated, not
-Apple-gated)" — back to back, owner present. Both docs-only; 611 unchanged.
+Owner asked for a thorough whole-app verification before opening iCloud Phase 1.
+S39 ran a **5-stream parallel audit** (code-quality, security, concurrency,
+architecture/test-gaps, compiler-warnings), **self-verified the top findings
+by direct file reads** (agent summaries are intent, not fact), then executed
+the cheap-high-value fixes with **regression-test-per-fix**. **Audit verdict:
+0 CRITICAL; the codebase is healthy.** These are the **first code changes
+since S20** (S21-S38 were i18n/docs/design).
 
-**What landed (2 commits on `claude/focused-hamilton-417bfc`, push = owner action):**
+**Step 1 — stabilization (6 commits):**
+- `d4c7007` `fix(security)` — drop unused `network.client` entitlement (no
+  network code anywhere in Sources/; it only widened the sandbox + invited an
+  App Store reviewer question against No-Data-Collected).
+- `423e331` `fix(core)` — stop trapping **SIGABRT** (it suppressed the OS crash
+  report *and* spawned a Task from an already-faulting runtime; the kernel
+  releases the IOPMAssertion on process death regardless). SIGINT/SIGTERM kept.
+- `888b2f3` `fix(triggers)` — post `.activityLogDidAppend` only **after** the
+  append `await` commits. The old comment claimed actor-FIFO ordering
+  guaranteed it; in reality the unstructured Task only worked via the
+  consumer's 300 ms debounce. + contract test.
+- `f749818` `fix(core)` — snapshot power-source observers (`Array(...)`) before
+  fan-out; a callback that cancels its observation mutated the dict
+  mid-iterate. + cancel-during-callback test.
+- `7d6297a` `fix(triggers)` — guard WiFi `requestAccess` against the
+  continuation overwrite-leak (a concurrent second call stranded the first
+  coroutine forever). **The `requestAlways→WhenInUse` downgrade is deferred**
+  (owner device-smoke gated — see pending table).
+- `5446104` `docs(activity)` — drop the dead `ExportButtons` tombstone comment.
 
-- **`2b276bf`** — `docs(design): sync 04-data-model §5 SettingsKey snapshot
-  with source (24 → 34 cases)`. The §5 enum snapshot predated **10** shipped
-  keys (RFC §13 estimated "~7"; actual: coffeeAccent, hasSeededAppDefaults,
-  externalDisplay{Enabled,Whitelist}, keyboardShortcutEnabled, shortcutChord,
-  activityRetentionDays, activityChartColors, recurringQuickPresets,
-  didSeedBuiltinPresets). Now exact parity with
-  `Sources/Core/SettingsStore.swift` (34 cases incl. `, Sendable`) **plus a
-  new authoritative-source pointer** so the snapshot is explicitly a curated
-  reader-aid and `SettingsKey.allCases` is the single source of truth — the
-  drift-proofing the RFC's own §10/§13 principle implied. Closes the doc-tidy
-  RFC §13 deliberately deferred.
-- **`b61015b`** — `docs(design): record RFC §12 owner decisions — Phase 1
-  unblocked`. Owner answered the three code-gating questions:
-  **Q1 = B-2** (activity log → CloudKit custom-zone append-only union merge;
-  Phase 3 in scope), **Q2 = approved** (§5.1 privacy sign-off; "No Data
-  Collected" preserved), **Q5 = v2.0 = Phase 1+2, Phase 3 = v2.1**. §12
-  rewritten as a decision log (Q3 resolved-by-Q5; **Q4 container-id remains
-  open + explicitly non-gating**). RFC header/intro/§11-Phase-0/§14 +
-  07-spec §1 + 09-c3 §14 cross-refs all flipped from "owner decision
-  pending" → "decisions locked 2026-05-18". RFC bumped 0.1 → 0.2.
+**Step 2 — test-gap fills (2 commits):**
+- `ecd5ba9` `test(intents)` — Toggle/Start/Stop `perform()` incl. the 1 & 1440
+  minute bounds. AppIntents (Shortcuts/Spotlight) were the only UI-independent
+  entry point and had **0 tests**.
+- `bbc4448` `test(calendar)` — overlapping-event OFF suppression: when a short
+  event ends while a longer one is still active, no OFF vote (guards the
+  `&& activeIDs.isEmpty` branch; back-to-back meetings must not sleep the Mac).
 
-**Gate effect — the important carry-over:** iCloud-sync **Phase 1 is now an
-actionable autonomous session** (no longer owner-decision-gated). Phase 1 =
-`CloudSyncEngine` protocol seam + `MockCloudSyncEngine` + entitlement file +
-`cloudKitDatabase` wiring **behind the compile-time kill-switch — ships dark,
-zero behaviour change**, 100% pure-unit-testable per RFC §10. It does **not**
-need the Apple Developer Program (entitlement file only; container stubbable
-until S8.5). Phase ≥ 2 (live CloudKit) stays S8.5-gated.
+**Step 3 — architecture prep for iCloud (2 commits):**
+- `21db227` `refactor(core)` — moved `ActivityChartPalette`'s `Color` rendering
+  out of `Sources/Core` (Core's *only* `import SwiftUI`, violating 02-arch §3.2
+  and blocking the OQ-04 SwiftData lift). Pure data/JSON stays in Core; the
+  `Color` extension + `color(for:)` move to a UI-layer file. Same module →
+  behaviour and tests unchanged.
+- `d2693e2` `ci(drift)` — guard `Sources/Core` against `import SwiftUI` in
+  `check_doc_drift.sh --strict` so the layering can't silently re-regress.
 
-**Patterns reinforced this session — S38 NEW (2):**
+**Export-claim correction (docs/memory):** git shows CSV/JSON export was added
+S15 (`86bc5b1`) and **removed S24 (`0e13546`, non-functional)**. Memory v1.3.1
++ 09-c3 changelog had recorded it as shipped; both corrected. No exporter
+exists in current code (so there is *no* path-traversal export surface — a
+security non-issue). README counts refreshed (610→619 tests, 22→23 smoke).
 
-a. **A "separate doc-tidy, not gating" deferral in an RFC is itself a
-   zero-gate autonomous unit — do it, don't just re-defer.** RFC §13's
-   explicitly-scoped, non-gating drift is exactly the kind of small, real,
-   prerequisite-free work that survives the "don't invent work" filter
-   *because the RFC already identified it*. Fixing a stale inlined snapshot:
-   add an authoritative-source pointer so it can't silently re-drift, don't
-   just refresh the copy.
-b. **"Owner-decision-gated" ≠ "blocked" when the owner is in the session.**
-   The S37 handoff filed §12 under the same queue as the Apple blocks; they
-   are categorically different — §12 needed 3 answers obtainable *now*, and
-   answering them converted the single largest remaining autonomous item
-   (iCloud Phase 1) from blocked to actionable. Always separate
-   owner-*decision* gates from owner-*Apple* gates when triaging the queue.
+**Deliberately deferred — each deserves a dedicated full-budget session
+(rushing risks regressions in delicate code):**
+- **Step 4 — Swift 6 strict-concurrency migration.** 13 build warnings ("error
+  in Swift 6 language mode"), concentrated in **nonisolated-deinit teardown**
+  (TriggerCoordinator observers, ExternalDisplayTrigger observer, AwakeManager
+  `powerObservation`) and **`@Sendable` closures capturing `@MainActor`
+  closures** (FocusTrigger:74-75, AppTrigger:193,204). This is the exact
+  concurrency code prior sessions tuned (phantom-count, FIFO) — do it as a
+  focused session, ideally by flipping `SWIFT_STRICT_CONCURRENCY`/Swift 6 mode
+  and fixing everything that surfaces, not 13 spot-patches.
+- **Step 5 — iCloud Phase 1** (the major deliverable; see entry points).
 
-Cumulative NEW S20→S38 ≈ 57.
+**S39 NEW patterns (4):**
+a. **Whole-app audit = fan out non-overlapping split-role agents, then
+   self-verify the top findings by direct read.** Re-reading caught that
+   "no export code" was a genuinely *removed* feature (not an agent oversight),
+   and downgraded a reported "HIGH silent-data-loss" to LOW once the reality
+   that `[String]` JSON-encode can't fail was confirmed.
+b. **A permission/entitlement change that can't be unit-verified is
+   owner-device-smoke-gated, not an autonomous edit.** Applied the safe WiFi
+   continuation-guard; deferred the `requestAlways→WhenInUse` downgrade because
+   CoreWLAN `ssid()` resolution under When-In-Use needs a real Mac
+   (mock/production parity).
+c. **Stop at a clean, fully-committed, fully-green boundary rather than start a
+   large risky item with too little budget to finish.** A half-done concurrency
+   refactor is worse than a clean handoff; "use context fully" ≠ "begin work
+   you can't land cleanly."
+d. **post-after-await converts an *accidental* ordering guarantee into a real
+   one** — leaning on a downstream debounce to mask an unstructured-Task race
+   is the kind of invariant a future eager consumer silently breaks.
 
----
-
-## Prior session (S37)
-
-S37 was an autonomous session opened on top of S36. Goal: progress the
-genuinely autonomous backlog with maximal verification safety. Outcome: the
-single remaining substantive autonomous item — the long-deferred iCloud-sync
-**joint design** — delivered as an RFC-first, **zero-code** design doc, plus a
-full verification sweep of the inherited state.
-
-### What landed this session
-
-Two substantive commits on `claude/focused-hamilton-417bfc` (plus this docs wrap `e3956fa` = 3 S37 commits total; push = owner action):
-
-- **`9598eba`** — `docs(design): C-3/B1.2/Settings iCloud sync joint-design RFC`.
-  New [`docs/design/10-c3-icloud-sync-rfc.md`](design/10-c3-icloud-sync-rfc.md)
-  resolves the iCloud-sync deferral recorded in 09-c3 §14 and 07-spec §1. Core
-  design: **one CloudKit entitlement/migration event** (the OQ-04 v2.0
-  UserDefaults→SwiftData migration from 04-data-model §2.2) covering **two
-  independent sync domains** — Settings (last-writer-wins, includes the B1.2
-  chord with per-device best-effort registration + optional non-synced local
-  override) and the Activity log (recommended: CloudKit custom-zone
-  **append-only union merge**, never LWW, immutable content-addressed entries,
-  local 14-day GC on the merged set). Privacy analysis shows "No Data
-  Collected" is **preserved** (private DB only, no developer-side processing,
-  the existing S14 structured-`reasonCode` discipline already excludes all
-  PII). A `CloudSyncEngine` protocol seam mirrors the codebase's existing
-  mock pattern (`SettingsStore`/`HotKeyRegistrar`/`DisplaySource`) so
-  merge/LWW/migration/chord-fallback are 100% pure-unit-testable without
-  CloudKit; only final two-Mac confirmation is owner-gated. Ships dark behind a
-  compile-time kill-switch. Blocks on S8.5. **09-c3 §14 and 07-spec §1 now
-  cross-reference the RFC** so the joint design is discoverable from the docs
-  that deferred it.
-
-- **`35104b8`** — `docs(design): RFC precision pass`. Consistency audit of the
-  RFC against the docs it extends. Two precision fixes, **no design change**:
-  §8 fallback window pinned to the exact 04-data-model §2.2 wording
-  (UserDefaults read-only through v2.0, deleted in **v2.1** after one minor
-  release); §1 adds an explicit reconciliation that this RFC **is** the
-  v2-backlog "Re-evaluate post-v1.0 ship" gate firing (not a contradiction of
-  the non-goals list) and that PRD §7.4 "no telemetry / local-first" is
-  permanent and *preserved*, not traded away.
-
-### What was verified but not changed
-
-- **Inherited baseline on S36 tip**: `pkill -9 -f "Latte.app"` pre-flight →
-  `xcodebuild test` **611/611 PASS** (~12s); `check_doc_drift.sh --strict`
-  clean; catalog 172 keys; ru `%lld minutes`/`%lld hours`/`Currently: %lld
-  external displays` each carry one/few/many/other. (Project regenerated via
-  `xcodegen generate` — the worktree had no `.xcodeproj`; expected for a fresh
-  worktree.)
-- **Full catalog completeness sweep**: 172 keys × 10 target locales = **1720
-  cells, zero missing/empty** (plural-aware). The 3 plural keys all carry
-  correct `variations.plural`. The inherited i18n state is complete and
-  self-consistent.
-- **LanguageStep defer-and-watch item — empirically CLOSED.** Onboarding
-  `languageStep` uses exactly 2 localized strings ("Choose your language" +
-  the restart caption); **no bullets** (the "bullet review" carry-over from S34
-  referred to the helper caption). Both have full 11-locale coverage, and
-  `LocalizationCatalogTests.testEveryEntryCoversAllPhaseHLanguages()` *already*
-  asserts the every-key × every-locale non-empty invariant (plural-aware) and
-  is in the green 611. No code/test change warranted — adding another guard
-  would duplicate an existing one.
-- **RFC↔existing-docs consistency**: every RFC cross-reference checked against
-  04-data-model §2.2 (migration steps 1-6, schemaVersion 1→2, v2.1 deletion,
-  the `grep UserDefaults` lint rule), PRD §7.4 (no-telemetry non-goal), 09-c3
-  §3/§6/§7 (decoupled JSON store, privacy exclusions, version wrapper), 07-spec
-  §1/§2 (`register(chord:)` API, S17 "J" disabled-cue), and v2-backlog
-  Won't-do line 319. **No contradictions found.**
-
-### Patterns reinforced this session
-
-S37 NEW (4):
-
-a. **RFC-first is the correct autonomous move for a "solo ship risks migration
-   churn" deferral.** When a feature was deferred *specifically* because
-   piecemeal shipping endangers a one-time schema migration, the highest-value
-   autonomous action is a design-only RFC that unifies the migration event —
-   not code. Zero code = zero regression = it *protects* the very
-   verification-safety the deferral existed to guard.
-b. **CloudKit *private* DB preserves Apple's "No Data Collected" label.** Data
-   in the user's own private CloudKit database with no developer-side
-   processing is not "developer collection" under App Store privacy semantics.
-   Load-bearing for all future sync work. The S14 structured-`reasonCode`
-   boundary already excludes PII, so it carries over for free once entries
-   leave the single device.
-c. **An append-only log must never ride a last-writer-wins sync path.** The
-   two-domain split (Settings = LWW, Activity = union-merge) is a *structural*
-   data-loss guard, not a stylistic choice — funnelling both through one
-   generic "sync the blob" mechanism silently destroys concurrent-day history.
-d. **"Re-evaluate post-X" in a Won't-do list is a gate, not a refusal.** An RFC
-   opened against such an item is the gate firing; state that explicitly in the
-   doc so a future reader doesn't misread the RFC as contradicting the
-   non-goals list.
-
-Cumulative NEW S20→S37 ≈ 55.
-
-### What was deferred / why the autonomous backlog is now terminal
-
-The single-session autonomous backlog is **exhausted at the RFC boundary**. The
-RFC is the *last* autonomous deliverable: its next step (Phase 1 code) requires
-the owner to answer RFC §12 (Q1 activity-log scope, Q2 privacy sign-off, Q5
-phase ordering). Everything else remaining is owner-Apple-blocked (S8.5/S9) or
-owner-decision-gated. Inventing further work to consume context would be
-net-negative churn against the "don't add work beyond what's needed" principle —
-so S37 stops here deliberately, not prematurely.
+Cumulative NEW S20→S39 ≈ 61.
 
 ---
 
 ## Next-session entry points (priority order)
 
-**1. (AUTONOMOUS, large — now actionable)** **iCloud-sync Phase 1.** §12 is
-decided (S38), so this is unblocked and needs **no Apple prerequisite**.
-Scope (RFC §11 row 1): `CloudSyncEngine` protocol + `MockCloudSyncEngine` +
-entitlement file + `cloudKitDatabase` wiring **behind the compile-time
-kill-switch — ships dark, zero behaviour change**. Verify: full unit suite
-green + app behaviour identical with sync off (cheapest phase to verify —
-changes nothing observable). Design contract is RFC §3/§4(B-2)/§6/§7/§10;
-Q1=B-2, Q5=v2.0[P1+2]/v2.1[P3] are locked. **Read RFC §10 + §11 before
-starting.** Q4 (container-id `iCloud.com.parkbyeongjun.latte`) is non-gating
-— inject it via the seam; literal lives in one adapter + the entitlement
-file. This is the single largest remaining autonomous deliverable.
+**1. (AUTONOMOUS, large) — iCloud-sync Phase 1.** RFC §12 is decided (S38);
+unblocked, needs **no Apple prerequisite**. S39 already cleared the §3.2
+Core/SwiftUI blocker the Phase 2 SwiftData lift depends on. Scope (RFC §11
+row 1): `CloudSyncEngine` protocol + `MockCloudSyncEngine` + entitlement file +
+`cloudKitDatabase` wiring **behind the compile-time kill-switch — ships dark,
+zero behaviour change**, 100% pure-unit-testable per RFC §10. Container id
+`iCloud.com.parkbyeongjun.latte` (Q4, non-gating) injected via the seam. **Read
+[docs/design/10-c3-icloud-sync-rfc.md](design/10-c3-icloud-sync-rfc.md) §10+§11
+before starting.**
 
-**2. (BLOCKER, owner-side)** **S8.5 Apple Developer Program** — check email +
-portal; if past ~Day 16 of the wait, call Developer Support. Gates S9 *and*
-iCloud-sync Phase ≥ 2 (live CloudKit). Does **not** gate Phase 1 (#1).
+**2. (AUTONOMOUS, medium — alternative / recommended-before-Phase-1) — Swift 6
+strict-concurrency migration.** Clears the 13 warnings (Step 4 above) so Phase 1
+adds concurrency code onto a clean base. Higher care required (delicate
+teardown code). Either #1 or #2 is a valid next move — owner's call.
 
-**3. (BLOCKER, owner-side)** **S9 App Store Connect metadata** — depends on
-S8.5. Includes deferred S8d screenshot picking.
+**3. (BLOCKER, owner-side) S8.5 Apple Developer Program** — gates S9 *and* iCloud
+Phase ≥ 2 (live CloudKit). Does **not** gate Phase 1 (#1).
 
-The autonomous-OPTIONAL i18n queue is empty and *verified* empty (S37 catalog
-sweep). After Phase 1 ships, Phase 2/3 are S8.5-gated. Q4 is the only open
-RFC item and is non-gating.
+**4. (BLOCKER, owner-side) S9 App Store Connect metadata** — depends on S8.5.
+
+The autonomous-OPTIONAL i18n queue is empty and verified empty (S37 catalog sweep).
 
 ---
 
@@ -214,7 +137,7 @@ S31's one-command ritual still applies: `latte` (zsh alias) or
 # PRE-FLIGHT (MANDATORY before any xcodebuild test / Cmd-R) — kill stale Latte.
 # A surviving Latte.app + LSMultipleInstancesProhibited makes the test host
 # launch fail "Could not launch LatteTests" (LaunchServices) — NOT a code
-# regression. See feedback_smoke_iteration.md §5. Re-hit at S36 cold-start.
+# regression. See feedback_smoke_iteration.md §5.
 pkill -9 -f "Latte.app" 2>/dev/null; sleep 1
 
 # A FRESH WORKTREE HAS NO .xcodeproj — generate it first (xcodegen project):
@@ -224,7 +147,7 @@ xcodegen generate
 # root. Absolute repo-root paths resolve to the main checkout (S36 footgun;
 # feedback_smoke_iteration.md §7). Verify: git -C <worktree-path> status
 
-# Tests (~12s, expect 611 PASS)
+# Tests (~12s, expect 619 PASS)
 xcodebuild test -scheme Latte -destination 'platform=macOS,arch=arm64' 2>&1 | grep "Executed"
 
 # Catalog summary (expect 172 keys; ru 3 plural keys each one/few/many/other)
@@ -236,53 +159,50 @@ ru=d['strings']['%lld minutes']['localizations']['ru']['variations']['plural']
 print('ru %lld minutes forms:',sorted(ru.keys()))  # [few, many, one, other]
 "
 
-# Doc drift
+# Doc drift (now also checks Sources/Core is SwiftUI-free)
 scripts/check_doc_drift.sh
-
-# Bundle pre-flight + smoke (~7min, expect 23/23) — owner-side, GUI-gated
-APP=$(ls -dt ~/Library/Developer/Xcode/DerivedData/Latte-*/Build/Products/Release/Latte.app | head -1)
-~/dev/smoke-harness/lib/assert_bundle_resources.sh "$APP" 11 cold-start-check
-~/dev/smoke-harness/run.sh --project .
 ```
 
-**Expect**: 611/611 PASS; doc-drift clean; 172 keys × 11 langs; ru 4 CLDR forms.
+**Expect**: 619/619 PASS; doc-drift clean (incl. Core-layering ✓); 172 keys × 11
+langs; ru 4 CLDR forms.
 
 ---
 
 ## How to resume
 
 1. Read this file first.
-2. `ROADMAP.md` rows 1.31 → 1.38 (S31–S38) for the i18n + infrastructure +
-   iCloud-RFC + decision-lock lineage.
+2. `ROADMAP.md` rows 1.31 → 1.39 (S31–S39) for the i18n + infra + iCloud-RFC +
+   decision-lock + audit-stabilization lineage.
 3. **Read [docs/design/10-c3-icloud-sync-rfc.md](design/10-c3-icloud-sync-rfc.md)**
-   before any iCloud-sync work — authoritative joint design; §12 is now a
-   **decision log** (Q1/Q2/Q5 locked 2026-05-18), §10/§11 define the Phase 1
-   test surface and scope.
-4. Memory: `MEMORY.md` → `project_latte_v1_9.md` S20→S38 section.
+   before any iCloud-sync work — §12 is a decision log (Q1/Q2/Q5 locked
+   2026-05-18); §10/§11 define the Phase 1 test surface and scope.
+4. Memory: `MEMORY.md` → `project_latte_v1_9.md` S20→S39 section.
 5. **Don't** re-read S1-S11 memory entries — consolidated during S13.
 
 ---
 
-## Owner-side pending (S38 update)
+## Owner-side pending (S39 update)
 
 | # | What | Why blocked | Effort |
 |---|---|---|---|
-| S8.5 | Apple Developer Program — applied 2026-05-02 | Apple wait. Check email + portal; if past ~Day 16, call Developer Support | 1-2 days typical |
+| S8.5 | Apple Developer Program — applied 2026-05-02 | Apple wait. Check email + portal; if past the typical window, call Developer Support | 1-2 days typical |
 | S9 | App Store Connect metadata + screenshots + binary submission | S8.5 depends | 1-3 sessions once unblocked |
-| **Push branch** | **`claude/focused-hamilton-417bfc`** — S36 + S37 + S38 docs commits. Push the **branch tip** (count via `git rev-list --count origin/main..HEAD`). Standalone `claude/suspicious-kowalevski-4ffca8` redundant — ignore/delete. | none — ready | seconds |
-| ~~iCloud RFC §12~~ | **DONE 2026-05-18 (S38)** — Q1=B-2, Q2=approved, Q5=v2.0[P1+2]/v2.1[P3]. Phase 1 now autonomous. | — | ✅ |
-| iCloud RFC Q4 | Container-id `iCloud.com.parkbyeongjun.latte` — accept at Phase 1 kickoff (non-gating; hold only if V2-20 changes bundle prefix) | owner, non-gating | 1 answer |
-| Smoke 23 re-run | First run incl. 00- pre-flight; S37/S38 changed no UI so no scenario delta expected | none | 7 min |
+| **Push branch** | **`claude/focused-hamilton-417bfc`** — S36 + S37 + S38 + S39 commits. Push the **branch tip** (count via `git rev-list --count origin/main..HEAD`). Standalone `claude/suspicious-kowalevski-4ffca8` redundant — ignore/delete. | none — ready | seconds |
+| WiFi WhenInUse | Downgrade `requestAlwaysAuthorization` → `requestWhenInUseAuthorization` (lower privilege, matches usage-string) — needs a real Mac to confirm CoreWLAN `ssid()` still resolves under When-In-Use | owner device smoke | 1 edit + 1 smoke |
+| iCloud RFC Q4 | Container-id `iCloud.com.parkbyeongjun.latte` — accept at Phase 1 kickoff (non-gating) | owner, non-gating | 1 answer |
+| Smoke 23 re-run | S37/S38/S39 changed no UI; no scenario delta expected | none | 7 min |
 | Phase I community PRs | TRANSLATIONS.md; Russian is the worked reference | awaiting community | ongoing |
 
 ---
 
-## v1.9 owner-visible behaviour reference (post-S38)
+## v1.9 owner-visible behaviour reference (post-S39)
 
-**No owner-visible change in S38.** Design-doc + decision-recording only —
-zero code, zero UI, zero test delta (611 unchanged). Russian-locale plural
-correctness from S36 stands. All other surfaces unchanged from the S35/S36
-reference.
+**No owner-visible behaviour change in S39.** All fixes are internal robustness
+(signal handling, activity-log ordering, power fan-out, WiFi continuation
+guard), an entitlement removal (no functional effect — the capability was
+unused), an internal refactor (ActivityChartPalette Core/UI split, same
+behaviour), and test additions. The cup, menu bar, triggers, Settings, Activity,
+and ⌘⇧L all behave exactly as the S35/S36 reference.
 
 ---
 
@@ -294,7 +214,7 @@ Unchanged. `AwakeManager.toggle()` already implements the correct semantic.
 
 ## Smoke harness + GitHub repo / Pages infrastructure reference
 
-Unchanged from S29–S36. Pages live at https://spespark.github.io/latte/ +
+Unchanged from S29–S38. Pages live at https://spespark.github.io/latte/ +
 /privacy.html. Cross-project helper
 `~/dev/smoke-harness/lib/assert_bundle_resources.sh` + repo scenario
 `.smoke/scenarios/00-bundle-integrity.sh` (S35).

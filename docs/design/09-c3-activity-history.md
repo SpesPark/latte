@@ -303,6 +303,13 @@ ergonomic value were shipped in 4 feat commits + 1 simplify-pass:
 | 4 | `0dfb9d2` | **D — click-row → trigger config jump**. Activity rows are buttons with chevron; click flips tab + `ScrollViewReader` scrolls. Deep-link form `latte://settings/triggers?focus=<id>`. `parseRoute(_:)` returns `SettingsRoute`; legacy `parse(_:)` kept. Already-open window re-emits via `Notification.Name.settingsRequestFocusTrigger`. 462 → 467 tests. |
 | 5 | `4343d2a` | **8th simplify-pass follow-through**. APPROVE-WITH-NITS, 0 CRIT/HIGH, 2 MED + 5 LOW all addressed: reload on retention `.onChange`, `isLoading=true` at reload entry, `ActivityLogStore.secondsPerDay` constant collapses 4 magic-86_400 sites, `ActivityFilter.label(for:)` extraction (kebab → Title-Case, no `.capitalized` locale dep), DST cosmetic note documented on `splitByHourWithDate`. 467 → **468 tests**. |
 
+> **Update (S24, `0e13546`)**: the CSV/JSON export (#3 above) was **removed** —
+> the export buttons were non-functional in the shipped Settings layout.
+> `ActivityLogExporter` and the `ExportButtons` view no longer exist in the
+> codebase; cross-device history is now folded into the iCloud-sync RFC
+> ([10-c3-icloud-sync-rfc.md](10-c3-icloud-sync-rfc.md) Domain B). Treat any
+> "export" reference above as historical, not current state.
+
 **Deferred design decisions resolved during ship**:
 - **F: which Settings tab does the Stepper live in?** — Activity tab itself
   (not General). It's contextually about activity; owner adjusting retention
