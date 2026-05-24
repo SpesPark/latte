@@ -102,6 +102,10 @@ public protocol SettingsStore: AnyObject {
     func data(_ key: SettingsKey) -> Data?
     func setData(_ value: Data?, for key: SettingsKey)
     func remove(_ key: SettingsKey)
+    /// Whether a value has been explicitly stored for `key`. Distinguishes
+    /// "never touched" (→ default) from "set to the default value" — the OQ-04
+    /// migration relies on this to copy only present keys (04-data-model §2.2).
+    func exists(_ key: SettingsKey) -> Bool
 }
 
 public extension SettingsStore {
@@ -211,6 +215,10 @@ public final class UserDefaultsSettingsStore: SettingsStore {
     public func remove(_ key: SettingsKey) {
         defaults.removeObject(forKey: key.rawValue)
     }
+
+    public func exists(_ key: SettingsKey) -> Bool {
+        defaults.object(forKey: key.rawValue) != nil
+    }
 }
 
 public final class InMemorySettingsStore: SettingsStore {
@@ -277,5 +285,9 @@ public final class InMemorySettingsStore: SettingsStore {
 
     public func remove(_ key: SettingsKey) {
         storage.removeValue(forKey: key.rawValue)
+    }
+
+    public func exists(_ key: SettingsKey) -> Bool {
+        storage[key.rawValue] != nil
     }
 }
