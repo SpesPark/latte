@@ -91,9 +91,10 @@ the parts it left open.
   `shortcutChord`, `externalDisplayWhitelist`, `activityRetentionDays`,
   `activityChartColors`, `recurringQuickPresets`, `didSeedBuiltinPresets`, …).
   The migration must enumerate **`SettingsKey.allCases` at v2.0 build time**, not
-  the stale doc list. (Doc-drift note: 04-data-model §5's enum is out of date vs.
-  shipped code. Fixing that doc is **out of scope for this RFC** and tracked as a
-  separate deferred doc-tidy item — see §13.)
+  any hand-maintained doc list. (Doc note: 04-data-model §5's enum snapshot was
+  refreshed in S38 and now carries an explicit "`allCases` is authoritative, not
+  this snapshot" pointer, so the migration stays correct regardless — the
+  staleness this RFC flagged at S37 is resolved. See §13.)
 
 ---
 
@@ -351,10 +352,11 @@ non-gating.
 
 ## §13. Out of scope for this RFC (tracked, not done)
 
-- **04-data-model §5 enum staleness** — the v1 `SettingsKey` list there predates
-  ~7 shipped keys. Real doc drift, but a separate doc-tidy task; not gating and
-  not touched here (this RFC only *references* `SettingsKey.allCases` as the
-  source of truth so it stays correct regardless).
+- **04-data-model §5 enum staleness** — ✅ **resolved in S38** (the §5 snapshot
+  was refreshed to the full key set + an "`allCases` is authoritative" pointer).
+  Flagged here at S37 when it still predated ~7 shipped keys; left as a tracked
+  doc-tidy then, done since. This RFC references `SettingsKey.allCases` as the
+  source of truth either way, so the migration was never at risk.
 - **Actual privacy.html / App Store privacy-answer edits** — Phase 4, owner-side.
 - **iOS companion / cross-device beyond Macs** — PRD §6.7 revenue-gated; far
   out, unaffected.
