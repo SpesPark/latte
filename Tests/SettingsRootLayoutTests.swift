@@ -12,6 +12,7 @@ import XCTest
 /// Fix: pin `SettingsRoot.minWindowHeight` to 420 so AboutTab fits without
 /// overflow on first launch. The window remains user-resizable above this
 /// floor.
+@MainActor
 final class SettingsRootLayoutTests: XCTestCase {
 
     func testMinWindowHeightPinnedToAboutTabFloor() {
