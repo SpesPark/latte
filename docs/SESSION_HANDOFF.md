@@ -6,7 +6,7 @@
 
 **Last session:** S41 (2026-05-24) — iCloud-sync Phase 1 (ships dark) + full-suite flake fix (trap #8 closed)
 **v1.x release line:** v1.9 (unchanged — S41 ships dark behind a kill-switch, no version bump, no owner-visible behaviour change)
-**Branch:** `claude/focused-hamilton-417bfc` — ahead of `origin/main` by S36 + S37 + S38 + S39 + S40 + **S41**. Push = owner action; push the **branch tip**. *(Exact count: `git rev-list --count origin/main..HEAD` — 30 at wrap.)*
+**Branch:** `claude/focused-hamilton-417bfc` — ahead of `origin/main` by S36 + S37 + S38 + S39 + S40 + **S41**. Push = owner action; push the **branch tip**. *(Exact count: `git rev-list --count origin/main..HEAD` — a frozen integer here would be off-by-one after the wrap commits that write it.)*
 **Test count:** 627/627 PASS (619 → 627: +7 CloudSync seam/wiring, +1 flake regression test)
 **Smoke:** 23 scenarios (not re-run — S41 changes no runtime behaviour; sync is dark)
 **Doc-drift:** clean (incl. Core SwiftUI-free + new CloudKit-isolation guard)
@@ -198,7 +198,7 @@ scripts/check_doc_drift.sh --strict
 |---|---|---|---|
 | S8.5 | Apple Developer Program — applied 2026-05-02 | Apple wait. Now the critical path (gates Phase 2+). Check email + portal; if past the typical window, call Developer Support | 1-2 days typical |
 | S9 | App Store Connect metadata + screenshots + binary submission | S8.5 depends | 1-3 sessions once unblocked |
-| **Push branch** | **`claude/focused-hamilton-417bfc`** — now S36+S37+S38+S39+S40+**S41** (30 commits ahead at wrap; count via `git rev-list --count origin/main..HEAD`). Push the **branch tip**. | none — ready | seconds |
+| **Push branch** | **`claude/focused-hamilton-417bfc`** — now S36+S37+S38+S39+S40+**S41** (count via `git rev-list --count origin/main..HEAD`). Push the **branch tip**. | none — ready | seconds |
 | iCloud RFC Q4 | Container-id `iCloud.com.parkbyeongjun.latte` — now hard-coded in the staged entitlement + adapter default; accept at Phase 2 kickoff (non-gating) | owner, non-gating | 1 answer |
 | WiFi WhenInUse | Downgrade `requestAlwaysAuthorization` → `requestWhenInUseAuthorization` — needs a real Mac to confirm CoreWLAN `ssid()` still resolves | owner device smoke | 1 edit + 1 smoke |
 | Smoke 23 re-run | S36–S41 changed no UI; no scenario delta expected | none | 7 min |
