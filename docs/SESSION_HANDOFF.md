@@ -4,123 +4,127 @@
 
 ---
 
-**Last session:** S39 (2026-05-22) — whole-app audit + audit-driven stabilization (Steps 1-3 of the recommended order)
-**v1.x release line:** v1.9 (unchanged — S39 has code changes but no version bump; unreleased on the branch)
-**Branch:** `claude/focused-hamilton-417bfc` — ahead of `origin/main` by S36 + S37 + S38 + **S39** commits. Push = owner action; push the **branch tip**. *(Exact count deliberately not frozen — authoritative: `git rev-list --count origin/main..HEAD`.)* Supersedes the standalone `claude/suspicious-kowalevski-4ffca8` (S36-only prefix).
-**Test count:** 619/619 PASS (was 611 — S39 added 8: 5 AppIntents, 1 Calendar overlap, 1 PowerSource fan-out, 1 TriggerCoordinator ordering)
-**Smoke:** 23 scenarios (not re-run — UI behaviour unchanged by S39's fixes; dark/internal only)
-**Doc-drift:** clean (now also asserts `Sources/Core` is SwiftUI-free)
-**Catalog:** 172 keys × 11 languages, ru 4 CLDR forms — unchanged
+**Last session:** S40 (2026-05-24) — Swift 6 strict-concurrency migration (S39's deferred Step 4)
+**v1.x release line:** v1.9 (unchanged — S40 is a language-mode migration, no version bump, no owner-visible behaviour change)
+**Branch:** `claude/focused-hamilton-417bfc` — ahead of `origin/main` by S36 + S37 + S38 + S39 + **S40**. Push = owner action; push the **branch tip**. *(Exact count: `git rev-list --count origin/main..HEAD`.)*
+**Test count:** 619/619 PASS (unchanged — S40 fixed test *code* under Swift 6, added no tests)
+**Smoke:** 23 scenarios (not re-run — S40 changes no runtime behaviour; internal/compile-time only)
+**Doc-drift:** clean (incl. Core SwiftUI-free)
+**Catalog:** 172 keys × 11 languages — unchanged
+**Toolchain:** Xcode 26.5 / Swift 6.3.2 (drifted up from the memory's recorded 26.4.1 — corrected in `project_latte_status.md`)
 
 ---
 
-## Last session (S39)
+## Last session (S40)
 
-Owner asked for a thorough whole-app verification before opening iCloud Phase 1.
-S39 ran a **5-stream parallel audit** (code-quality, security, concurrency,
-architecture/test-gaps, compiler-warnings), **self-verified the top findings
-by direct file reads** (agent summaries are intent, not fact), then executed
-the cheap-high-value fixes with **regression-test-per-fix**. **Audit verdict:
-0 CRITICAL; the codebase is healthy.** These are the **first code changes
-since S20** (S21-S38 were i18n/docs/design).
+Owner picked the **Swift 6 migration first** (vs. iCloud Phase 1) so Phase 1 lands on a
+clean concurrency base. Approach per S39's recommendation: **flip the language mode and
+fix everything that surfaces, not 13 spot-patches.** `project.yml` `SWIFT_VERSION` 5.10 →
+**6.0**.
 
-**Step 1 — stabilization (6 commits):**
-- `d4c7007` `fix(security)` — drop unused `network.client` entitlement (no
-  network code anywhere in Sources/; it only widened the sandbox + invited an
-  App Store reviewer question against No-Data-Collected).
-- `423e331` `fix(core)` — stop trapping **SIGABRT** (it suppressed the OS crash
-  report *and* spawned a Task from an already-faulting runtime; the kernel
-  releases the IOPMAssertion on process death regardless). SIGINT/SIGTERM kept.
-- `888b2f3` `fix(triggers)` — post `.activityLogDidAppend` only **after** the
-  append `await` commits. The old comment claimed actor-FIFO ordering
-  guaranteed it; in reality the unstructured Task only worked via the
-  consumer's 300 ms debounce. + contract test.
-- `f749818` `fix(core)` — snapshot power-source observers (`Array(...)`) before
-  fan-out; a callback that cancels its observation mutated the dict
-  mid-iterate. + cancel-during-callback test.
-- `7d6297a` `fix(triggers)` — guard WiFi `requestAccess` against the
-  continuation overwrite-leak (a concurrent second call stranded the first
-  coroutine forever). **The `requestAlways→WhenInUse` downgrade is deferred**
-  (owner device-smoke gated — see pending table).
-- `5446104` `docs(activity)` — drop the dead `ExportButtons` tombstone comment.
+**App-side (the 13 S39-flagged warnings → 0):**
+- **Category A — `isolated deinit` (SE-0371) ×4 sites.** A `@MainActor` class's `deinit`
+  is `nonisolated` by default, so it can't touch a non-Sendable `@MainActor`-isolated
+  stored property. `isolated deinit` runs teardown on the main actor:
+  `AwakeManager` (`powerObservation`), `NSScreenSource`/ExternalDisplayTrigger (`observer`),
+  `TriggerCoordinator` (`pauseLiftObserver` + `userDeactivateObserver`). All these objects
+  are released on the main actor in practice → deinit runs synchronously → **no behaviour
+  change.**
+- **Category B — only `FocusTrigger.observe` needed a real edit:** moved the
+  `self.isFocusActive` read *inside* the `Task { @MainActor }` hop instead of the
+  `@Sendable` KVO block. The `AppTrigger` `onLaunch`/`onTerminate` and the FocusTrigger
+  `onChange` *captures* the S39 audit flagged **resolved on their own** under Swift 6 —
+  **SE-0434 makes `@MainActor` closures `Sendable`**, so capturing them in a `@Sendable`
+  NotificationCenter/KVO block is fine.
+- **Category C — the 2 ObjectiveC `@preconcurrency` hints cleared as a side-effect** of
+  fixing the deinit isolation (no `@preconcurrency` import needed).
 
-**Step 2 — test-gap fills (2 commits):**
-- `ecd5ba9` `test(intents)` — Toggle/Start/Stop `perform()` incl. the 1 & 1440
-  minute bounds. AppIntents (Shortcuts/Spotlight) were the only UI-independent
-  entry point and had **0 tests**.
-- `bbc4448` `test(calendar)` — overlapping-event OFF suppression: when a short
-  event ends while a longer one is still active, no OFF vote (guards the
-  `&& activeIDs.isEmpty` branch; back-to-back meetings must not sleep the Mac).
+**Test-target (flipping the *whole* project surfaced test-only concurrency issues; fixed
+for a genuinely clean base):**
+- **`@unchecked Sendable` class box** for counters/clocks captured in `@Sendable` closures —
+  `OnboardingStateTests` (`CallCounter`), `TriggerCoordinatorActivityLogTests` (`Counter`),
+  `CalendarTriggerTests` (`Clock`). Reapplies the existing `ScheduleTriggerTests.Clock`
+  pattern.
+- **Fresh-iterator-inside-Task ×10** — replaced "capture an outer non-Sendable
+  `AsyncStream.Iterator` into a `@Sendable` Task" (error: *sending 'iterator' risks data
+  races*) with a fresh `makeAsyncIterator()` inside the Task. All 10 are **nil-probe**
+  tests (assert no further vote within 50 ms), for which a fresh iterator is semantically
+  identical (shared AsyncStream buffer) — the pattern several sibling tests already used.
+  Sites: AppTrigger ×4, WiFi ×2, Calendar ×1, Focus ×1, Schedule ×2, ExternalDisplay ×2,
+  ReevaluateWatched ×1 (13 edits across the probe blocks).
+- **`MainActor.assumeIsolated`** in `setUp`/`tearDown` (AppEnvironmentTests,
+  AwakeIntentsTests) — those override *nonisolated* XCTestCase methods so they stay
+  nonisolated even in a `@MainActor` class; XCTest runs them on main, so assumeIsolated is
+  safe.
+- **`@MainActor`** on `RetentionPickerTests` (calls main-actor statics); `var c` → `let c`
+  (RecurringQuickPresetTests).
 
-**Step 3 — architecture prep for iCloud (2 commits):**
-- `21db227` `refactor(core)` — moved `ActivityChartPalette`'s `Color` rendering
-  out of `Sources/Core` (Core's *only* `import SwiftUI`, violating 02-arch §3.2
-  and blocking the OQ-04 SwiftData lift). Pure data/JSON stays in Core; the
-  `Color` extension + `color(for:)` move to a UI-layer file. Same module →
-  behaviour and tests unchanged.
-- `d2693e2` `ci(drift)` — guard `Sources/Core` against `import SwiftUI` in
-  `check_doc_drift.sh --strict` so the layering can't silently re-regress.
+**Result:** app + test target both build with **0 warnings / 0 errors** under Swift 6;
+**619/619 PASS.** (The only residual build warning is a toolchain `ld` note — the test
+bundle targets macOS 13 but Xcode 26's XCTest dylib is built for 14 — pre-existing,
+deployment-target artifact, unrelated to Swift 6.)
 
-**Export-claim correction (docs/memory):** git shows CSV/JSON export was added
-S15 (`86bc5b1`) and **removed S24 (`0e13546`, non-functional)**. Memory v1.3.1
-+ 09-c3 changelog had recorded it as shipped; both corrected. No exporter
-exists in current code (so there is *no* path-traversal export surface — a
-security non-issue). README counts refreshed (610→619 tests, 22→23 smoke).
+### IMPORTANT finding — a PRE-EXISTING full-suite test flake (NOT introduced by S40)
 
-**Deliberately deferred — each deserves a dedicated full-budget session
-(rushing risks regressions in delicate code):**
-- **Step 4 — Swift 6 strict-concurrency migration.** 13 build warnings ("error
-  in Swift 6 language mode"), concentrated in **nonisolated-deinit teardown**
-  (TriggerCoordinator observers, ExternalDisplayTrigger observer, AwakeManager
-  `powerObservation`) and **`@Sendable` closures capturing `@MainActor`
-  closures** (FocusTrigger:74-75, AppTrigger:193,204). This is the exact
-  concurrency code prior sessions tuned (phantom-count, FIFO) — do it as a
-  focused session, ideally by flipping `SWIFT_STRICT_CONCURRENCY`/Swift 6 mode
-  and fixing everything that surfaces, not 13 spot-patches.
-- **Step 5 — iCloud Phase 1** (the major deliverable; see entry points).
+While verifying, the full `xcodebuild test` sweep **intermittently hangs (~12%)**: a random
+async test (test82 / ReevaluateWatched / ActivityLog — *different each time*) stalls the
+main actor ~18 s → *"Restarting after unexpected exit, crash, or test timeout"* → TEST
+FAILED. **No assertion failure, no signal** = an environmental/scheduling stall, not a bug.
 
-**S39 NEW patterns (4):**
-a. **Whole-app audit = fan out non-overlapping split-role agents, then
-   self-verify the top findings by direct read.** Re-reading caught that
-   "no export code" was a genuinely *removed* feature (not an agent oversight),
-   and downgraded a reported "HIGH silent-data-loss" to LOW once the reality
-   that `[String]` JSON-encode can't fail was confirmed.
-b. **A permission/entitlement change that can't be unit-verified is
-   owner-device-smoke-gated, not an autonomous edit.** Applied the safe WiFi
-   continuation-guard; deferred the `requestAlways→WhenInUse` downgrade because
-   CoreWLAN `ssid()` resolution under When-In-Use needs a real Mac
-   (mock/production parity).
-c. **Stop at a clean, fully-committed, fully-green boundary rather than start a
-   large risky item with too little budget to finish.** A half-done concurrency
-   refactor is worse than a clean handoff; "use context fully" ≠ "begin work
-   you can't land cleanly."
-d. **post-after-await converts an *accidental* ordering guarantee into a real
-   one** — leaning on a downstream debounce to mask an unstructured-Task race
-   is the kind of invariant a future eager consumer silently breaks.
+Classified rigorously before concluding:
+- The hung test is **0/15 when run in isolation** — not its own logic.
+- **S39 baseline (Swift 5.10, my changes stashed): 3/25 runs failed (~12%)** — the same
+  rate, stalling at *different* async tests. **Swift-version-independent; S40 did not cause
+  it.** (A first 0/10 baseline sample was just the lucky-clean side of a ~12% rate.)
+- Same family as the documented "phantom rc=137" full-suite flake. Suspected mechanism:
+  `TriggerCoordinator.start` consumer Tasks `for await trigger.voteStream` are intentionally
+  never cancelled (S8b lesson) and strongly retain the trigger, so ~600 suspended tasks
+  accumulate across the suite. Logged as cross-cutting trap #8 in `project_latte_status.md`.
+- **Mitigation today:** if a full-suite run reports FAILED, re-run (usually green). A real
+  fix is a separate session (see entry point #2).
 
-Cumulative NEW S20→S39 ≈ 61.
+### S40 NEW patterns (6)
+
+a. **`isolated deinit` (SE-0371, Swift 6.1+) is the clean fix** for "`@MainActor` class must
+   touch a non-Sendable isolated stored property in `deinit`". Objects released on the
+   isolating actor → deinit runs synchronously, zero behaviour change.
+b. **SE-0434: `@MainActor` closures are `Sendable` in Swift 6 language mode** — capturing a
+   `@MainActor` closure in a `@Sendable` NotificationCenter/KVO block is *not* an error; the
+   only residual fix is to move main-actor-isolated property **reads** inside the actor hop,
+   out of the `@Sendable` scope.
+c. **Fresh-iterator-inside-Task** beats capturing an outer `AsyncStream.Iterator` into a
+   `@Sendable` Task; for nil-probe tests it's semantically identical (one shared buffer).
+d. **`@unchecked Sendable` class box** for a test counter/clock mutated inside a `@Sendable`
+   closure — only ever touched on one thread, so `@unchecked` is honest.
+e. **`MainActor.assumeIsolated`** for `@MainActor` test classes' `setUp`/`tearDown`
+   (nonisolated overrides) — XCTest runs them on the main thread.
+f. **Characterize a flaky failure before "fixing" it** — isolate the test (0/15) *and*
+   diff against the unmodified baseline (3/25) before attributing it to your change. Saved
+   a wrong fix here: the flake was pre-existing.
+
+Cumulative NEW S20→S40 ≈ 67.
 
 ---
 
 ## Next-session entry points (priority order)
 
-**1. (AUTONOMOUS, large) — iCloud-sync Phase 1.** RFC §12 is decided (S38);
-unblocked, needs **no Apple prerequisite**. S39 already cleared the §3.2
-Core/SwiftUI blocker the Phase 2 SwiftData lift depends on. Scope (RFC §11
-row 1): `CloudSyncEngine` protocol + `MockCloudSyncEngine` + entitlement file +
-`cloudKitDatabase` wiring **behind the compile-time kill-switch — ships dark,
-zero behaviour change**, 100% pure-unit-testable per RFC §10. Container id
-`iCloud.com.parkbyeongjun.latte` (Q4, non-gating) injected via the seam. **Read
-[docs/design/10-c3-icloud-sync-rfc.md](design/10-c3-icloud-sync-rfc.md) §10+§11
-before starting.**
+**1. (AUTONOMOUS, large) — iCloud-sync Phase 1.** Now on a **clean Swift 6 base** (this
+session's whole point). RFC §12 decided (S38); no Apple prerequisite. Scope (RFC §11 row 1):
+`CloudSyncEngine` protocol + `MockCloudSyncEngine` + entitlement file + `cloudKitDatabase`
+wiring **behind the compile-time kill-switch — ships dark, zero behaviour change**, 100%
+pure-unit-testable per RFC §10. Container id `iCloud.com.parkbyeongjun.latte` (Q4,
+non-gating) injected via the seam. **Read
+[docs/design/10-c3-icloud-sync-rfc.md](design/10-c3-icloud-sync-rfc.md) §10+§11 first.**
 
-**2. (AUTONOMOUS, medium — alternative / recommended-before-Phase-1) — Swift 6
-strict-concurrency migration.** Clears the 13 warnings (Step 4 above) so Phase 1
-adds concurrency code onto a clean base. Higher care required (delicate
-teardown code). Either #1 or #2 is a valid next move — owner's call.
+**2. (AUTONOMOUS, medium — optional, CI reliability) — pre-existing full-suite test hang.**
+The ~12% intermittent main-actor stall (see above + trap #8). Suspect: uncancelled
+consumer Tasks in `TriggerCoordinator` accumulating across the suite. NOT a production bug
+(prod never makes 600 coordinators) and NOT Swift-6-related — a test-infra reliability
+improvement. Mind the S8b lesson (don't break the OFF→ON restart path) — cancelling in
+`deinit` only is likely safe since the coordinator is gone.
 
-**3. (BLOCKER, owner-side) S8.5 Apple Developer Program** — gates S9 *and* iCloud
-Phase ≥ 2 (live CloudKit). Does **not** gate Phase 1 (#1).
+**3. (BLOCKER, owner-side) S8.5 Apple Developer Program** — gates S9 *and* iCloud Phase ≥ 2
+(live CloudKit). Does **not** gate Phase 1 (#1).
 
 **4. (BLOCKER, owner-side) S9 App Store Connect metadata** — depends on S8.5.
 
@@ -134,75 +138,63 @@ S31's one-command ritual still applies: `latte` (zsh alias) or
 `bash ~/Documents/Claude/Projects/Latte/scripts/latte-resume.sh`.
 
 ```bash
-# PRE-FLIGHT (MANDATORY before any xcodebuild test / Cmd-R) — kill stale Latte.
-# A surviving Latte.app + LSMultipleInstancesProhibited makes the test host
-# launch fail "Could not launch LatteTests" (LaunchServices) — NOT a code
-# regression. See feedback_smoke_iteration.md §5.
+# PRE-FLIGHT (MANDATORY) — kill stale Latte before any test/Cmd-R.
 pkill -9 -f "Latte.app" 2>/dev/null; sleep 1
 
-# A FRESH WORKTREE HAS NO .xcodeproj — generate it first (xcodegen project):
+# A FRESH WORKTREE HAS NO .xcodeproj — generate it first:
 xcodegen generate
 
-# IMPORTANT in a git worktree: edit + test the worktree path, NOT the repo
-# root. Absolute repo-root paths resolve to the main checkout (S36 footgun;
-# feedback_smoke_iteration.md §7). Verify: git -C <worktree-path> status
+# In a git worktree: edit + test the worktree path, NOT the repo root (S36 footgun).
 
-# Tests (~12s, expect 619 PASS)
+# Tests (~12s, expect 619 PASS). NOTE: full-suite hangs ~12% (pre-existing, trap #8) —
+# if it reports FAILED with no assertion text, just re-run.
 xcodebuild test -scheme Latte -destination 'platform=macOS,arch=arm64' 2>&1 | grep "Executed"
 
-# Catalog summary (expect 172 keys; ru 3 plural keys each one/few/many/other)
-python3 -c "
-import json
-d=json.load(open('Resources/Localizable.xcstrings'))
-print('keys:',len(d['strings']))
-ru=d['strings']['%lld minutes']['localizations']['ru']['variations']['plural']
-print('ru %lld minutes forms:',sorted(ru.keys()))  # [few, many, one, other]
-"
+# Build clean under Swift 6 (expect 0 warnings):
+xcodebuild build -scheme Latte -destination 'platform=macOS,arch=arm64' 2>&1 | grep -E "warning:|BUILD"
 
-# Doc drift (now also checks Sources/Core is SwiftUI-free)
+# Doc drift (incl. Core SwiftUI-free):
 scripts/check_doc_drift.sh
 ```
 
-**Expect**: 619/619 PASS; doc-drift clean (incl. Core-layering ✓); 172 keys × 11
-langs; ru 4 CLDR forms.
+**Expect**: 619/619 PASS; build 0 warnings under Swift 6 mode; doc-drift clean; 172 keys ×
+11 langs.
 
 ---
 
 ## How to resume
 
 1. Read this file first.
-2. `ROADMAP.md` rows 1.31 → 1.39 (S31–S39) for the i18n + infra + iCloud-RFC +
-   decision-lock + audit-stabilization lineage.
-3. **Read [docs/design/10-c3-icloud-sync-rfc.md](design/10-c3-icloud-sync-rfc.md)**
-   before any iCloud-sync work — §12 is a decision log (Q1/Q2/Q5 locked
-   2026-05-18); §10/§11 define the Phase 1 test surface and scope.
-4. Memory: `MEMORY.md` → `project_latte_v1_9.md` S20→S39 section.
+2. `ROADMAP.md` rows 1.31 → 1.40 (S31–S40) for the i18n + infra + iCloud-RFC + decision-lock
+   + audit-stabilization + Swift-6-migration lineage.
+3. **Read [docs/design/10-c3-icloud-sync-rfc.md](design/10-c3-icloud-sync-rfc.md)** before any
+   iCloud-sync work — §12 is the decision log; §10/§11 define the Phase 1 test surface/scope.
+4. Memory: `MEMORY.md` → `project_latte_v1_9.md` S20→S40 section; cross-cutting traps in
+   `project_latte_status.md` (NEW trap #8 = the full-suite flake).
 5. **Don't** re-read S1-S11 memory entries — consolidated during S13.
 
 ---
 
-## Owner-side pending (S39 update)
+## Owner-side pending (S40 update)
 
 | # | What | Why blocked | Effort |
 |---|---|---|---|
 | S8.5 | Apple Developer Program — applied 2026-05-02 | Apple wait. Check email + portal; if past the typical window, call Developer Support | 1-2 days typical |
 | S9 | App Store Connect metadata + screenshots + binary submission | S8.5 depends | 1-3 sessions once unblocked |
-| **Push branch** | **`claude/focused-hamilton-417bfc`** — S36 + S37 + S38 + S39 commits. Push the **branch tip** (count via `git rev-list --count origin/main..HEAD`). Standalone `claude/suspicious-kowalevski-4ffca8` redundant — ignore/delete. | none — ready | seconds |
-| WiFi WhenInUse | Downgrade `requestAlwaysAuthorization` → `requestWhenInUseAuthorization` (lower privilege, matches usage-string) — needs a real Mac to confirm CoreWLAN `ssid()` still resolves under When-In-Use | owner device smoke | 1 edit + 1 smoke |
+| **Push branch** | **`claude/focused-hamilton-417bfc`** — now S36 + S37 + S38 + S39 + S40. Push the **branch tip** (count via `git rev-list --count origin/main..HEAD`). | none — ready | seconds |
+| WiFi WhenInUse | Downgrade `requestAlwaysAuthorization` → `requestWhenInUseAuthorization` — needs a real Mac to confirm CoreWLAN `ssid()` still resolves under When-In-Use | owner device smoke | 1 edit + 1 smoke |
 | iCloud RFC Q4 | Container-id `iCloud.com.parkbyeongjun.latte` — accept at Phase 1 kickoff (non-gating) | owner, non-gating | 1 answer |
-| Smoke 23 re-run | S37/S38/S39 changed no UI; no scenario delta expected | none | 7 min |
+| Smoke 23 re-run | S37–S40 changed no UI; no scenario delta expected | none | 7 min |
 | Phase I community PRs | TRANSLATIONS.md; Russian is the worked reference | awaiting community | ongoing |
 
 ---
 
-## v1.9 owner-visible behaviour reference (post-S39)
+## v1.9 owner-visible behaviour reference (post-S40)
 
-**No owner-visible behaviour change in S39.** All fixes are internal robustness
-(signal handling, activity-log ordering, power fan-out, WiFi continuation
-guard), an entitlement removal (no functional effect — the capability was
-unused), an internal refactor (ActivityChartPalette Core/UI split, same
-behaviour), and test additions. The cup, menu bar, triggers, Settings, Activity,
-and ⌘⇧L all behave exactly as the S35/S36 reference.
+**No owner-visible behaviour change in S40.** It is a Swift 6 *language-mode* migration:
+`isolated deinit` (teardown runs on main, synchronous in practice), one KVO read moved
+inside its actor hop, and test-only concurrency fixes. The cup, menu bar, triggers,
+Settings, Activity, ⌘⇧L all behave exactly as the S35/S36/S39 reference.
 
 ---
 
@@ -214,7 +206,6 @@ Unchanged. `AwakeManager.toggle()` already implements the correct semantic.
 
 ## Smoke harness + GitHub repo / Pages infrastructure reference
 
-Unchanged from S29–S38. Pages live at https://spespark.github.io/latte/ +
-/privacy.html. Cross-project helper
-`~/dev/smoke-harness/lib/assert_bundle_resources.sh` + repo scenario
+Unchanged from S29–S39. Pages live at https://spespark.github.io/latte/ + /privacy.html.
+Cross-project helper `~/dev/smoke-harness/lib/assert_bundle_resources.sh` + repo scenario
 `.smoke/scenarios/00-bundle-integrity.sh` (S35).

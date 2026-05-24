@@ -61,7 +61,9 @@ public final class TriggerCoordinator: ObservableObject {
         }
     }
 
-    deinit {
+    isolated deinit {
+        // `isolated deinit` (SE-0371) runs on the main actor so the teardown
+        // can read the @MainActor-isolated observer tokens.
         if let pauseLiftObserver {
             NotificationCenter.default.removeObserver(pauseLiftObserver)
         }

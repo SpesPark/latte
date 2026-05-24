@@ -77,7 +77,9 @@ public final class NSScreenSource: DisplaySource {
         }
     }
 
-    deinit {
+    isolated deinit {
+        // `isolated deinit` (SE-0371) runs on the main actor so the teardown
+        // can read the @MainActor-isolated `observer` token.
         if let observer { NotificationCenter.default.removeObserver(observer) }
         continuation.finish()
     }

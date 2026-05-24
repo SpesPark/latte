@@ -5,6 +5,7 @@ import XCTest
 /// `nearestPreset` maps any stored retention value (including legacy values
 /// the user could have set via the old Stepper, e.g. 22) to one of the 6
 /// preset windows so the Picker always renders a tag-matching selection.
+@MainActor
 final class RetentionPickerTests: XCTestCase {
 
     func testNearestPresetExactMatchReturnsItself() {

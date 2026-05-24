@@ -19,9 +19,7 @@ final class RecurringQuickPresetTests: XCTestCase {
         comps.year = year; comps.month = month; comps.day = day
         comps.hour = hour; comps.minute = minute; comps.second = 0
         comps.timeZone = TimeZone(secondsFromGMT: 0)!
-        return Calendar(identifier: .gregorian).date(from: {
-            var c = comps; return c
-        }()) ?? Date()
+        return Calendar(identifier: .gregorian).date(from: comps) ?? Date()
     }
 
     private func makePreset(

@@ -11,11 +11,14 @@ final class AwakeIntentsTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        AwakeManager.shared.deactivate()
+        // setUp/tearDown override nonisolated XCTestCase methods, so they stay
+        // nonisolated even in a @MainActor class. XCTest runs them on the main
+        // thread for a main-actor test case, so assumeIsolated is safe.
+        MainActor.assumeIsolated { AwakeManager.shared.deactivate() }
     }
 
     override func tearDown() {
-        AwakeManager.shared.deactivate()
+        MainActor.assumeIsolated { AwakeManager.shared.deactivate() }
         super.tearDown()
     }
 

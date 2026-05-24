@@ -1,6 +1,13 @@
 import XCTest
 @testable import Latte
 
+/// Counter box so the @Sendable NotificationCenter observer block can tally
+/// posts while staying Sendable. The block only fires on the posting thread
+/// (all posts here originate on the main actor), so @unchecked is safe.
+private final class Counter: @unchecked Sendable {
+    var value = 0
+}
+
 @MainActor
 final class TriggerCoordinatorActivityLogTests: XCTestCase {
 
@@ -207,15 +214,15 @@ final class TriggerCoordinatorActivityLogTests: XCTestCase {
         coordinator.register(trigger)
         await coordinator.start(trigger)
 
-        var observed = 0
+        let counter = Counter()
         let token = NotificationCenter.default.addObserver(
             forName: .activityLogDidAppend, object: nil, queue: nil
-        ) { _ in observed += 1 }
+        ) { _ in counter.value += 1 }
         defer { NotificationCenter.default.removeObserver(token) }
 
         coordinator.stop("wifi")
         try await Task.sleep(nanoseconds: 100_000_000)
-        XCTAssertEqual(observed, 0,
+        XCTAssertEqual(counter.value, 0,
                        "stop() with no active vote must not emit a refresh signal")
     }
 
@@ -228,17 +235,17 @@ final class TriggerCoordinatorActivityLogTests: XCTestCase {
         coordinator.register(trigger)
         await coordinator.start(trigger)
 
-        var observed = 0
+        let counter = Counter()
         let token = NotificationCenter.default.addObserver(
             forName: .activityLogDidAppend, object: nil, queue: nil
-        ) { _ in observed += 1 }
+        ) { _ in counter.value += 1 }
         defer { NotificationCenter.default.removeObserver(token) }
 
         trigger.emit(TriggerVote(wantsAwake: true, reason: "x"))
         try await Task.sleep(nanoseconds: 100_000_000)
         coordinator.stop("wifi")
         try await Task.sleep(nanoseconds: 100_000_000)
-        XCTAssertEqual(observed, 0,
+        XCTAssertEqual(counter.value, 0,
                        "nil store: no append happened, so no signal must fire")
     }
 }

@@ -69,7 +69,10 @@ final class ExternalDisplayTriggerTests: XCTestCase {
 
         // A second evaluate with the same count should NOT re-emit.
         trigger.evaluate()
-        let probe = Task { @MainActor () -> TriggerVote? in await it.next() }
+        let probe = Task { @MainActor () -> TriggerVote? in
+            var probeIt = trigger.voteStream.makeAsyncIterator()
+            return await probeIt.next()
+        }
         try await Task.sleep(nanoseconds: 50_000_000)
         probe.cancel()
         let next = await probe.value
@@ -100,12 +103,15 @@ final class ExternalDisplayTriggerTests: XCTestCase {
         trigger.stop()
 
         // After stop, source change events must NOT drive evaluate (the
-        // observeTask gates on `isRunning`). Verify with a brief probe
-        // through the same iterator — `AsyncStream` is single-consumer
-        // and creating a second iterator competes for buffered elements
-        // in undefined ways.
+        // observeTask gates on `isRunning`). The probe expects no vote, so a
+        // fresh iterator inside the task is equivalent (nothing is buffered to
+        // compete over) and keeps the @Sendable Task from capturing the outer
+        // non-Sendable iterator.
         source.emitChange()
-        let probe = Task { @MainActor () -> TriggerVote? in await it.next() }
+        let probe = Task { @MainActor () -> TriggerVote? in
+            var probeIt = trigger.voteStream.makeAsyncIterator()
+            return await probeIt.next()
+        }
         try await Task.sleep(nanoseconds: 50_000_000)
         probe.cancel()
         let nothing = await probe.value

@@ -112,7 +112,8 @@ final class WiFiTriggerTests: XCTestCase {
 
         trigger.evaluate()
         let task = Task { @MainActor () -> TriggerVote? in
-            await iterator.next()
+            var it = trigger.voteStream.makeAsyncIterator()
+            return await it.next()
         }
         try await Task.sleep(nanoseconds: 50_000_000)
         task.cancel()
@@ -186,7 +187,8 @@ final class WiFiTriggerTests: XCTestCase {
         // S7.11: stop() no longer finishes the AsyncStream (so Toggle OFF→ON
         // cycles work). Verify no further yields by polling with a timeout.
         let nextProbe = Task { @MainActor () -> TriggerVote? in
-            await it.next()
+            var probeIt = trigger.voteStream.makeAsyncIterator()
+            return await probeIt.next()
         }
         try await Task.sleep(nanoseconds: 50_000_000)
         nextProbe.cancel()

@@ -304,9 +304,9 @@ Phase 2 (Cross-device)       ← iOS/Watch — separate decision after Year 1 da
 
 ### 8.1 Technical
 
-- **Language**: Swift 5.10+
+- **Language**: Swift 6 language mode (`SWIFT_VERSION = 6.0`)
 - **UI framework**: SwiftUI only (no Storyboard, no AppKit views except where necessary, e.g., `NSStatusItem` is replaced by `MenuBarExtra`)
-- **Concurrency**: Swift Concurrency (`async`/`await`, `@MainActor`); `SWIFT_STRICT_CONCURRENCY=complete` enabled
+- **Concurrency**: Swift Concurrency (`async`/`await`, `@MainActor`); Swift 6 language mode (strict concurrency is complete by default)
 - **Persistence**: `UserDefaults` for v1; migration path to SwiftData planned in `04-data-model.md`
 - **Dependencies**: zero third-party SPM packages in v1 (re-evaluate at Phase 1.5)
 - **Build system**: XcodeGen (`project.yml` → `.xcodeproj`); Package.swift only if SPM packages added

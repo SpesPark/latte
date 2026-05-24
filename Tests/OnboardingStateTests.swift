@@ -31,9 +31,16 @@ final class OnboardingStateTests: XCTestCase {
     }
 
     func testMarkCompletedIsIdempotent() {
-        var calls = 0
+        // Class box so the @Sendable dateProvider can mutate the call counter
+        // while staying Sendable. The provider is only ever invoked on the main
+        // actor (via markCompleted()), so @unchecked is safe — same pattern as
+        // ScheduleTriggerTests' Clock box.
+        final class CallCounter: @unchecked Sendable {
+            var count = 0
+        }
+        let counter = CallCounter()
         let provider: @Sendable () -> Date = {
-            calls += 1
+            counter.count += 1
             return Date(timeIntervalSince1970: 100)
         }
         let settings = InMemorySettingsStore()
@@ -42,7 +49,7 @@ final class OnboardingStateTests: XCTestCase {
         state.markCompleted()
         state.markCompleted()
         // Date provider only consulted on the first markCompleted.
-        XCTAssertEqual(calls, 1, "Date provider should only run on the first markCompleted call")
+        XCTAssertEqual(counter.count, 1, "Date provider should only run on the first markCompleted call")
     }
 
     func testResetClearsFlagAndDate() {

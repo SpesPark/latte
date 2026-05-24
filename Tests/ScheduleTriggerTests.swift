@@ -361,7 +361,8 @@ final class ScheduleTriggerTests: XCTestCase {
         XCTAssertEqual(first?.wantsAwake, true)
 
         let task = Task { @MainActor () -> TriggerVote? in
-            await iterator.next()
+            var it = trigger.voteStream.makeAsyncIterator()
+            return await it.next()
         }
         try? await Task.sleep(nanoseconds: 50_000_000)
         task.cancel()
@@ -448,7 +449,8 @@ final class ScheduleTriggerTests: XCTestCase {
         trigger.stop()
         // Stop must not finish the AsyncStream (S7.11 invariant).
         let probe = Task { @MainActor () -> TriggerVote? in
-            await iterator.next()
+            var it = trigger.voteStream.makeAsyncIterator()
+            return await it.next()
         }
         try await Task.sleep(nanoseconds: 50_000_000)
         probe.cancel()

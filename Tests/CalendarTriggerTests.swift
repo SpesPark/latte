@@ -1,6 +1,15 @@
 import XCTest
 @testable import Latte
 
+/// Mutable time box so the `@Sendable` `now:` provider stays Sendable while
+/// the test advances the clock between polls. The trigger only reads it on the
+/// main actor (via pollOnce), so @unchecked is safe — same pattern as
+/// ScheduleTriggerTests' Clock box.
+private final class Clock: @unchecked Sendable {
+    var current: Date
+    init(_ d: Date) { current = d }
+}
+
 @MainActor
 final class CalendarTriggerTests: XCTestCase {
 
@@ -167,7 +176,7 @@ final class CalendarTriggerTests: XCTestCase {
     }
 
     func testEventEndingTransitionsToOff() async {
-        var now = Date(timeIntervalSince1970: 1_750_000_000)
+        let now = Date(timeIntervalSince1970: 1_750_000_000)
         let event = CalendarEventSnapshot(
             id: "ev-trans",
             title: "Brief",
@@ -176,7 +185,7 @@ final class CalendarTriggerTests: XCTestCase {
             isAllDay: false,
             calendarID: "cal-1"
         )
-        var nowRef = now
+        let clock = Clock(now)
         let settings = InMemorySettingsStore()
         settings.setBool(true, for: .calendarTriggerEnabled)
         let source = MockCalendarSource(events: [event])
@@ -184,12 +193,11 @@ final class CalendarTriggerTests: XCTestCase {
             settings: settings,
             source: source,
             pollInterval: 60,
-            now: { nowRef }
+            now: { clock.current }
         )
         await trigger.pollOnce()
         // Move time past event + trailing
-        now = now.addingTimeInterval(120)
-        nowRef = now
+        clock.current = now.addingTimeInterval(120)
         await trigger.pollOnce()
 
         var votes: [TriggerVote] = []
@@ -209,7 +217,7 @@ final class CalendarTriggerTests: XCTestCase {
     /// the moment the first event ends.
     func testOverlappingEventEndingKeepsAssertionWhenOtherActive() async {
         let t0 = Date(timeIntervalSince1970: 1_750_000_000)
-        var nowRef = t0
+        let clock = Clock(t0)
         let shortEvent = CalendarEventSnapshot(
             id: "ev-short",
             title: "Short",
@@ -233,11 +241,11 @@ final class CalendarTriggerTests: XCTestCase {
             settings: settings,
             source: source,
             pollInterval: 60,
-            now: { nowRef }
+            now: { clock.current }
         )
 
         await trigger.pollOnce() // both newly active → two ON votes
-        nowRef = t0.addingTimeInterval(1800) // short ended; long still active
+        clock.current = t0.addingTimeInterval(1800) // short ended; long still active
         await trigger.pollOnce() // short inactive, long active → must NOT emit OFF
 
         // Collect everything available within the window: exactly the two ON
@@ -362,7 +370,8 @@ final class CalendarTriggerTests: XCTestCase {
         // work). To verify nothing else is yielded after stop, drain with a
         // bounded timeout.
         let nextProbe = Task { @MainActor () -> TriggerVote? in
-            await it.next()
+            var probeIt = trigger.voteStream.makeAsyncIterator()
+            return await probeIt.next()
         }
         try await Task.sleep(nanoseconds: 50_000_000)
         nextProbe.cancel()

@@ -671,10 +671,12 @@ public final class AwakeManager: ObservableObject {
         }
     }
 
-    deinit {
-        // PowerSourceObservation cancellation is @MainActor; deinit isn't.
-        // Best-effort: drop the strong ref. The IOPowerSource observer table
-        // also drops via [weak self], so the run-loop callback no-ops.
+    isolated deinit {
+        // PowerSourceObservation cancellation is @MainActor. `isolated deinit`
+        // (SE-0371) runs this teardown on the main actor so it can touch the
+        // isolated `powerObservation`. Drop the strong ref; the IOPowerSource
+        // observer table also drops via [weak self], so the run-loop callback
+        // no-ops.
         powerObservation = nil
     }
 

@@ -73,7 +73,8 @@ final class ReevaluateWatchedTests: XCTestCase {
         // trigger's internal newlyActive set is empty → no new vote.
         trigger.reevaluateWatched()
         let probe = Task { @MainActor () -> TriggerVote? in
-            await it.next()
+            var probeIt = trigger.voteStream.makeAsyncIterator()
+            return await probeIt.next()
         }
         try await Task.sleep(nanoseconds: 50_000_000)
         probe.cancel()
