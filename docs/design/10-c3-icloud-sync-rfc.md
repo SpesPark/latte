@@ -293,7 +293,7 @@ error" property the RFC-first approach is meant to buy.
 |---|---|---|---|
 | **0** | This RFC + owner answers §12 | internal-consistency review | ✅ **DONE 2026-05-18** (Q1=B-2, Q2=approved, Q5=v2.0[P1+2]/v2.1[P3]) |
 | **1** | `CloudSyncEngine` protocol seam + `MockCloudSyncEngine` + entitlement plumbing + `cloudKitDatabase` wiring **behind the compile-time kill-switch (ships dark, no behaviour change)** | full unit suite green; app behaviour identical with sync off | S8.5 (entitlement file only; can stub container until then) |
-| **2** | Domain A: OQ-04 SwiftData migration for all `SettingsKey.allCases` + LWW resolver + chord value sync | pure migration/LWW unit tests; manual single-device upgrade smoke | S8.5 live |
+| **2** | Domain A: OQ-04 migration for all `SettingsKey.allCases` + LWW resolver + chord value sync. **Pure logic pre-built dark in S42** (see note); the SwiftData `@Model` write (forces macOS 14) + live CloudKit are the gated activation. | pure migration/LWW/chord unit tests; manual single-device upgrade smoke | S8.5 live + macOS-14 target bump for the `@Model` write |
 | **3** | Domain B: activity-log custom-zone union merge **(or adopt B-1 and close as non-goal)** | pure merge unit tests (commutativity/idempotency/GC) | S8.5 live |
 | **4** | Chord per-device override polish + privacy-doc + App Store privacy re-answer | unit + owner two-Mac manual smoke | S8.5 + S9 metadata |
 
@@ -310,6 +310,32 @@ is the cheapest to verify (it changes nothing observable).
 > The default build is CloudKit-free and behaviour-identical (626 tests green); a
 > flag-on build compiles the adapter clean under Swift 6. Phase 2 (S8.5-gated)
 > flips the switch, activates the entitlement, and attaches the Domain A/B drivers.
+
+> **Phase 2 pure logic pre-built dark in S42 (2026-05-24).** Owner-confirmed the
+> CloudKit-free pre-build (the only autonomous path at the S41 boundary). Shipped
+> as pure value types in `Sources/Core`, fully unit-tested without iCloud:
+> - **`SettingsLWWResolver`** (Domain A only) — per-record last-writer-wins;
+>   strictly-later remote wins, exact tie keeps local (§3/§6). The activity log
+>   never reaches it (§6 invariant). 10 tests.
+> - **`SettingsMigration`** — `snapshot(from:now:)` enumerates every present
+>   `SettingsKey` (compiler-enforced exhaustive `SettingsKey.valueType`, 34 cases)
+>   into a Codable `SettingsSnapshot` stamped `schemaVersion = 2`; absent keys
+>   stay absent. Modelled as **plain Codable, not a SwiftData `@Model`**, so it
+>   stays on the **macOS 13** deployment target — the `@Model` write (which forces
+>   macOS 14) is part of activation. Adds `SettingsStore.exists(_:)`.
+>   `needsMigration` defaults an absent `schemaVersion` to `1` (the shipped v1.x
+>   never wrote it — the §2.2 "absent → fresh" assumption is corrected). 15 tests.
+> - **`ChordSyncResolver`** (§7) — a local override wins locally; a failed
+>   registration keeps the synced value and reports `showsDisabledCue`; persists
+>   nothing (structurally cannot clobber the synced value). 6 tests. The
+>   local-only `shortcutChordDeviceOverride` key + its migration-exclusion are
+>   deferred to activation.
+>
+> **Activation (S8.5-gated) remaining for Phase 2:** bump deployment target to
+> macOS 14; introduce the SwiftData `@Model` container + drive the snapshot into
+> it; set `ModelConfiguration.cloudKitDatabase = .private(...)`; wire the
+> resolvers into `CloudKitSyncEngine`; add the `shortcutChordDeviceOverride`
+> local-only key (excluded from `SettingsMigration`). 658 tests green.
 
 ---
 
