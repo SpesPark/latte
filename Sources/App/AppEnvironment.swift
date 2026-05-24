@@ -116,9 +116,13 @@ public final class AppEnvironment: ObservableObject {
         self.settings = settings
         // Dark by default: with the LATTE_ICLOUD_SYNC kill-switch off, no
         // engine is resolved and `cloudSync` stays nil (unless a test injects
-        // one). The flag-on branch that resolves the production adapter is
-        // added with `CloudKitSyncEngine` in the next chunk.
+        // one) — sync ships dark with zero behaviour change. The flag-on build
+        // resolves the production CloudKitSyncEngine (docs/design/10 §8, §11).
+        #if LATTE_ICLOUD_SYNC
+        self.cloudSync = cloudSync ?? CloudKitSyncEngine()
+        #else
         self.cloudSync = cloudSync
+        #endif
         // Use AwakeManager.shared so AppIntents (out-of-process) and the in-process app
         // operate on the same FSM. Re-creating would split state.
         self.manager = AwakeManager.shared

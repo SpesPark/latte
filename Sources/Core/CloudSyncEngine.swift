@@ -8,8 +8,8 @@ import Foundation
 /// code is compiled, and app behaviour is unchanged.
 ///
 /// The production adapter `CloudKitSyncEngine` is the **only** type permitted to
-/// touch `CKContainer` / `CKDatabase` (§10 lint rule). All conflict-bearing
-/// logic — Settings last-writer-wins resolution (Domain A) and the activity-log
+/// touch CloudKit's container / database APIs (§10 lint rule). All
+/// conflict-bearing logic — Settings last-writer-wins (Domain A) and the activity-log
 /// append-only union merge (Domain B) — lands in later phases as pure,
 /// CloudKit-free functions that an engine drives, so it stays unit-testable
 /// without a live iCloud account.
