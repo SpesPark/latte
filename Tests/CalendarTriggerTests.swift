@@ -489,4 +489,35 @@ final class CalendarTriggerTests: XCTestCase {
         XCTAssertEqual(secondVote?.wantsAwake, true, "reemitCurrentVote must re-emit ON for steady-state active event")
         XCTAssertTrue(secondVote?.reason.contains("Standup") ?? false)
     }
+
+    // MARK: - trap #8: a started trigger must not leak via a self-retaining pollTask
+
+    /// See `ScheduleTriggerTests.testStartedTriggerDeallocatesWithoutExplicitStop`
+    /// for the full rationale — `CalendarTrigger.start()` installs the same kind
+    /// of long-lived `pollTask` that must hold only a weak self.
+    func testStartedTriggerDeallocatesWithoutExplicitStop() async {
+        weak var weakTrigger: CalendarTrigger?
+        do {
+            let settings = InMemorySettingsStore()
+            settings.setBool(true, for: .calendarTriggerEnabled)
+            let trigger = CalendarTrigger(
+                settings: settings,
+                source: MockCalendarSource(events: []),
+                pollInterval: 0.02,
+                now: { Date() }
+            )
+            weakTrigger = trigger
+            await trigger.start()
+            // See ScheduleTriggerTests: let the poll task bind a strong self
+            // before the trigger reference is dropped.
+            try? await Task.sleep(nanoseconds: 50_000_000)
+            XCTAssertNotNil(weakTrigger, "trigger alive while referenced")
+        }
+        for _ in 0..<200 where weakTrigger != nil {
+            await Task.yield()
+            try? await Task.sleep(nanoseconds: 5_000_000)
+        }
+        XCTAssertNil(weakTrigger,
+                     "started CalendarTrigger leaked via a self-retaining pollTask (trap #8)")
+    }
 }

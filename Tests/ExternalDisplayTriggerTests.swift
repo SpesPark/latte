@@ -282,4 +282,52 @@ final class ExternalDisplayTriggerTests: XCTestCase {
         XCTAssertTrue(trigger.isEnabled)
         XCTAssertTrue(settings.bool(.externalDisplayEnabled, default: false))
     }
+
+    // MARK: - trap #8: started trigger / debounce source must not leak via a self-retaining observeTask
+
+    /// See `ScheduleTriggerTests.testStartedTriggerDeallocatesWithoutExplicitStop`.
+    /// `ExternalDisplayTrigger.start()` installs a long-lived `observeTask`
+    /// iterating `source.changeStream`; before the trap #8 fix it bound a strong
+    /// self ahead of the `for await`, so the trigger never deallocated and its
+    /// `deinit` (which cancels the task) never ran.
+    func testStartedTriggerDeallocatesWithoutExplicitStop() async {
+        weak var weakTrigger: ExternalDisplayTrigger?
+        do {
+            let settings = InMemorySettingsStore()
+            settings.setBool(true, for: .externalDisplayEnabled)
+            let trigger = ExternalDisplayTrigger(settings: settings, source: MockDisplaySource())
+            weakTrigger = trigger
+            await trigger.start()
+            // Let the observe task bind a strong self before dropping the ref.
+            try? await Task.sleep(nanoseconds: 50_000_000)
+            XCTAssertNotNil(weakTrigger, "trigger alive while referenced")
+        }
+        for _ in 0..<200 where weakTrigger != nil {
+            await Task.yield()
+            try? await Task.sleep(nanoseconds: 5_000_000)
+        }
+        XCTAssertNil(weakTrigger,
+                     "started ExternalDisplayTrigger leaked via a self-retaining observeTask (trap #8)")
+    }
+
+    /// `DebouncingDisplaySource` installs its coalescing `observeTask` in `init`
+    /// (no `start()` needed). Same trap #8 self-retain bug: the task bound a
+    /// strong self ahead of `for await upstream.changeStream`, so the source
+    /// never deallocated and its `deinit` never finished the stream.
+    func testDebouncingDisplaySourceDeallocates() async {
+        weak var weakSource: DebouncingDisplaySource?
+        do {
+            let source = DebouncingDisplaySource(wrapping: MockDisplaySource())
+            weakSource = source
+            // Let the init-installed observe task bind a strong self first.
+            try? await Task.sleep(nanoseconds: 50_000_000)
+            XCTAssertNotNil(weakSource, "source alive while referenced")
+        }
+        for _ in 0..<200 where weakSource != nil {
+            await Task.yield()
+            try? await Task.sleep(nanoseconds: 5_000_000)
+        }
+        XCTAssertNil(weakSource,
+                     "DebouncingDisplaySource leaked via a self-retaining observeTask (trap #8)")
+    }
 }

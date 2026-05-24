@@ -210,16 +210,31 @@ public final class ScheduleTrigger: Trigger {
         self.continuation = continuation
     }
 
+    isolated deinit {
+        // `isolated deinit` (SE-0371) runs on the main actor so it can touch
+        // the isolated `pollTask`. Cancel it: the poll task holds only a weak
+        // self (see start()), so once the trigger is released the task would
+        // otherwise spin no-op polls forever. stop() already cancels on the
+        // live path; this covers release without an explicit stop().
+        pollTask?.cancel()
+    }
+
     public func start() async {
         guard pollTask == nil else { return }
         logger.info("ScheduleTrigger.start")
+        // Capture the interval by value and re-acquire `self` weakly each
+        // iteration. Binding a strong `self` ahead of the loop (the obvious
+        // `guard let self`) retains it across `Task.sleep`, forming a
+        // pollTask ↔ trigger cycle that survives release — across the full
+        // test suite these orphaned tasks accumulated and stalled the run
+        // (project_latte_status.md trap #8). `deinit` cancels the task.
         pollTask = Task { @MainActor [weak self] in
-            guard let self else { return }
-            await self.pollOnce()
+            guard let interval = self?.pollInterval else { return }
+            await self?.pollOnce()
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: UInt64(self.pollInterval * 1_000_000_000))
+                try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
                 if Task.isCancelled { break }
-                await self.pollOnce()
+                await self?.pollOnce()
             }
         }
     }

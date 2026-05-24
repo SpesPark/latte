@@ -141,16 +141,26 @@ public final class WiFiTrigger: Trigger {
         }
     }
 
+    isolated deinit {
+        // See ScheduleTrigger.deinit — cancel the weak-self poll task so it
+        // does not spin no-op polls after the trigger is released without stop().
+        pollTask?.cancel()
+    }
+
     public func start() async {
         guard pollTask == nil else { return }
         logger.info("WiFiTrigger.start")
         evaluate()
+        // Capture the interval by value and re-acquire `self` weakly each
+        // iteration — never hold a strong `self` across `Task.sleep`, which
+        // would form a pollTask ↔ trigger cycle that survives release
+        // (project_latte_status.md trap #8). `deinit` cancels the task.
         pollTask = Task { @MainActor [weak self] in
-            guard let self else { return }
+            guard let interval = self?.pollInterval else { return }
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: UInt64(self.pollInterval * 1_000_000_000))
+                try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
                 if Task.isCancelled { break }
-                self.evaluate()
+                self?.evaluate()
             }
         }
     }
