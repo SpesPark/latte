@@ -294,7 +294,7 @@ error" property the RFC-first approach is meant to buy.
 | **0** | This RFC + owner answers §12 | internal-consistency review | ✅ **DONE 2026-05-18** (Q1=B-2, Q2=approved, Q5=v2.0[P1+2]/v2.1[P3]) |
 | **1** | `CloudSyncEngine` protocol seam + `MockCloudSyncEngine` + entitlement plumbing + `cloudKitDatabase` wiring **behind the compile-time kill-switch (ships dark, no behaviour change)** | full unit suite green; app behaviour identical with sync off | S8.5 (entitlement file only; can stub container until then) |
 | **2** | Domain A: OQ-04 migration for all `SettingsKey.allCases` + LWW resolver + chord value sync. **Pure logic pre-built dark in S42** (see note); the SwiftData `@Model` write (forces macOS 14) + live CloudKit are the gated activation. | pure migration/LWW/chord unit tests; manual single-device upgrade smoke | S8.5 live + macOS-14 target bump for the `@Model` write |
-| **3** | Domain B: activity-log custom-zone union merge **(or adopt B-1 and close as non-goal)** | pure merge unit tests (commutativity/idempotency/GC) | S8.5 live |
+| **3** | Domain B: activity-log custom-zone union merge **(or adopt B-1 and close as non-goal)**. **Pure merge logic pre-built dark in S43** (see note); the CloudKit custom-zone wiring is the gated activation. | pure merge unit tests (commutativity/associativity/idempotency/GC/content-addressed-id) — green | S8.5 live (CloudKit zone wiring only) |
 | **4** | Chord per-device override polish + privacy-doc + App Store privacy re-answer | unit + owner two-Mac manual smoke | S8.5 + S9 metadata |
 
 Phases 2 and 3 are **independent** (different domains, different storage) and
@@ -336,6 +336,37 @@ is the cheapest to verify (it changes nothing observable).
 > it; set `ModelConfiguration.cloudKitDatabase = .private(...)`; wire the
 > resolvers into `CloudKitSyncEngine`; add the `shortcutChordDeviceOverride`
 > local-only key (excluded from `SettingsMigration`). 658 tests green.
+
+> **Phase 3 pure logic pre-built dark in S43 (2026-05-24).** Owner-confirmed
+> pre-building the v2.1 Domain B merge ahead of v2.0 (same gate as S42; §12 Q5
+> sequences Phase 3 as v2.1). Shipped as one inert pure value type in
+> `Sources/Core`, fully unit-tested without iCloud — and, unlike Phase 2, with
+> **no deployment-target cost** (no `@Model`, so macOS 13 holds):
+> - **`ActivityLogMergeResolver`** — the append-only **union** merge for the
+>   activity log (§4 B-2/§6), **never LWW**. `merge(_:)` unions any number of
+>   device views, deduplicating by a stable **content-addressed id**
+>   (`contentAddressedID` = SHA-256 of the immutable tuple → a valid
+>   `CKRecord.recordName` with no further transform at activation), and returns a
+>   single canonical order (timestamp, then id) so the merge is **commutative,
+>   associative, and idempotent** as plain array equality (device wake order
+>   cannot matter; re-syncing a merged set is a no-op). `pruned(_:now:retention:)`
+>   mirrors `ActivityLogStore.gc` exactly (drop entries strictly older than
+>   `now − retention`, keep the boundary; default tracks
+>   `ActivityLogStore.defaultRetention` = 14 days) as a pure function with `now`
+>   injected; `mergedAndPruned` is the full Domain B sync-in transform (union,
+>   then local GC on the merged set — §4 B-2). 18 tests incl. the load-bearing
+>   **never-LWW** guard (two Macs logging the same instant with distinct ids both
+>   survive), content-addressed-id collision-freeness, and a Codable round-trip
+>   stability check (the id must survive the on-disk `secondsSince1970` format or
+>   dedup breaks). **No `ActivityLogEntry` model change**; CryptoKit is a system
+>   framework, not CloudKit, so the §10 isolation guard stays green.
+>
+> **Activation (S8.5-gated) remaining for Phase 3:** create the CloudKit
+> `activity-log` custom zone in the private DB; write each entry as a `CKRecord`
+> named by `contentAddressedID`; feed downloaded records + the local JSON cache
+> through `ActivityLogMergeResolver.mergedAndPruned` on sync-in; queue offline
+> writes and flush on reconnect. The on-disk JSON stays the local cache / offline
+> buffer (§4 B-2). 676 tests green.
 
 ---
 
