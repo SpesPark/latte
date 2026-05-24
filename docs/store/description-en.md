@@ -1,78 +1,48 @@
 Never let your Mac sleep at the wrong moment.
 
-Latte stays awake automatically — for meetings, presentations, downloads, or wherever your day takes you. It's a menu bar utility that prevents your Mac from sleeping — but unlike every other "stay awake" app, you don't have to remember to toggle it. Latte watches your context and decides for you.
+Latte is a menu bar utility that keeps your Mac awake — for meetings, presentations, downloads, wherever your day takes you. But unlike every other "stay awake" app, you don't have to remember to toggle it. Latte watches your context and decides for you.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 WHY LATTE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-You're in the middle of a Zoom call. The lid clicks shut. Your Mac sleeps. Screen share dies. Every. Single. Time.
+You're mid-Zoom-call, the lid clicks shut, your Mac sleeps — screen share dead. Every. Single. Time. Or you enable caffeine for a presentation, forget to turn it off, and the battery's dead by Monday. Latte fixes both by automating the toggle: configure once, then forget about it.
 
-Or you finally remembered to enable caffeine before that big presentation. The presentation ends. You forget to turn it off. Your Mac sits awake all weekend and the battery is dead by Monday.
+HOW IT WORKS — SIX SMART TRIGGERS
 
-Latte fixes both problems by automating the toggle. You configure once, then forget about it.
+Calendar — stays awake during your scheduled meetings. Pick which calendars count (work only, no personal birthdays). Configurable lead and trail time so you're caffeinated a few minutes before the call and after it ends. Optional "exclude all-day events" so birthday reminders don't keep your Mac awake all day.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-HOW IT WORKS — THREE SMART TRIGGERS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Apps — active when Zoom, Microsoft Teams, Webex, Discord, Slack, Google Meet, or any app you choose is running. The picker shows real names with real app icons — no bundle ID hunting. Add anything that's running with one click.
 
-Calendar — stays awake during your scheduled meetings. Pick which calendars trigger Latte (work only, no personal birthdays). Configurable lead and trail time so you're caffeinated a few minutes before the call starts and for a few minutes after it ends. Optional "exclude all-day events" so birthday reminders don't keep your Mac awake all day.
+Wi-Fi — awake on your work network, asleep on your home Wi-Fi. Or invert it. Add as many SSIDs as you like.
 
-Apps — active when Zoom, Microsoft Teams, Webex, Discord, Slack, Google Meet, or any app you choose is running. The picker shows real friendly names with real app icons. No bundle ID hunting. Add anything that's running with one click.
+Focus — awake whenever a macOS Focus mode is on. Heads-down with Do Not Disturb? Latte keeps the screen alive without you lifting a finger.
 
-Wi-Fi — awake on your work network, sleeping on your home Wi-Fi. Or invert it — your call. Add multiple SSIDs.
+Schedule — awake on your own clock. Pick the weekdays and the hours — 9 to 6, Monday to Friday, or whatever your day looks like — and save the patterns you reuse.
 
-Triggers vote together. Latte stays awake when at least one trigger says "stay awake." When the last trigger says "go to sleep," Latte releases the assertion immediately — no hidden cool-down delay, no surprise battery drain.
+External Display — awake whenever a monitor is plugged in. Docked at your desk? Your Mac stays up; unplug and it's free to sleep again. The built-in screen never counts.
 
-You can still toggle caffeine manually from the menu bar — 15 minutes, 30 minutes, 1 hour, 2 hours, custom (1 to 1440 minutes), or "until I turn it off." All four toggle modes coexist with the trigger system.
+Triggers vote together. Latte stays awake when at least one says "stay awake." When the last one says "go to sleep," it releases immediately — no hidden cool-down, no surprise battery drain.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+You can also toggle caffeine manually from the menu bar — 15 min, 30 min, 1 or 2 hours, a custom 1–1440 minutes, or "until I turn it off." Manual and automatic modes coexist.
+
 WHAT MAKES LATTE DIFFERENT
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Most "stay awake" apps make you remember a toggle. Latte doesn't — it watches your context and decides for you.
+• Calendar-aware: no other mainstream menu-bar utility activates automatically from calendar events.
+• Live state in the menu bar: the cup fills when active, empties at rest. Glance once and you know.
+• Set and forget: enable Launch at Login in the welcome wizard, pick what matters, never touch it again.
+• Activity history: see when — and why — Latte kept your Mac awake, with 24-hour and 14-day charts you can export as CSV or JSON.
+• One-key toggle: a global keyboard shortcut (⌘⇧L by default, fully rebindable) flips caffeine on or off from anywhere.
+• No subscription, ever. $2.99 once and Latte is yours for life — no "Plus" tier, no upgrade-as-a-service.
 
-• Calendar-aware: no other mainstream menu-bar utility activates automatically based on calendar events.
-• Live state in the menu bar: the cup fills when active, empties when at rest. Glance once and you know.
-• Set and forget: enable Launch at Login during the welcome wizard, pick which contexts matter, and never touch it again.
-• No subscription. Ever. $2.99 once and Latte is yours for life — no "Plus" tier, no upgrade-as-a-service.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 DESIGNED FOR macOS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Native SwiftUI menu bar app with a coffee-cup view that animates with steam particles when you're caffeinated. The menu-bar icon visibly fills when Latte is keeping your Mac awake — no need to open the popover to check.
+A native SwiftUI menu bar app with a coffee-cup view that steams when you're caffeinated, and a menu-bar icon that visibly fills while Latte keeps your Mac awake — no need to open the popover to check. Pick from six accent tones — espresso, caramel, mocha, latte, matcha, or noir — and choose a menu-bar icon style. On macOS 26 Tahoe, the cup picks up the Liquid Glass treatment automatically.
 
-A friendly first-run wizard walks you through choosing which contexts should keep your Mac awake. You can change anything later from Settings.
-
-Pick from six accent tones — espresso, caramel, mocha, latte, matcha, or noir — to match your menu bar aesthetic. Choose a menu-bar icon style.
-
-On macOS 26 Tahoe, the cup picks up the Liquid Glass treatment automatically.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 PRIVACY THAT'S ACTUALLY PRIVATE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Latte does not collect any data. There is no analytics SDK. There is no telemetry. There are no network calls to anyone's servers — Latte doesn't have any servers.
+Latte collects no data. No analytics SDK, no telemetry, no network calls to anyone's servers — Latte doesn't have any servers. Your calendar is read-only, Wi-Fi network names and app lists never leave your Mac, and settings live in your local UserDefaults. Full Privacy Policy on our site (linked below). Plain English, no tricks.
 
-Your calendar is read-only. Wi-Fi network names never leave your Mac. App lists never leave your Mac. Settings live in your local UserDefaults.
-
-Read the full Privacy Policy on our site (linked below). Plain English. No tricks.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ONE-TIME PURCHASE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-$2.99 once. No subscription, ever. No upgrade-as-a-service. No "Plus" tier rent-seeking. Pay once, own forever.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 REQUIREMENTS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-macOS 13 Ventura or later. Apple Silicon recommended (universal binary supports Intel as best-effort).
-
-Calendar trigger requires read-only Calendar access. Wi-Fi trigger requires Location Services permission (Apple platform requirement for SSID access — Latte never reads location). All permissions are requested only when you enable the corresponding trigger, never at launch.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+macOS 13 Ventura or later; Apple Silicon recommended. The Calendar, Wi-Fi, and Focus triggers each ask for the matching permission only when you enable them — never at launch (Wi-Fi uses Location Services only to read the SSID, never your location). Schedule and External Display need no permission at all.
 
 Built by an independent developer. Questions? Use the Support link below.
