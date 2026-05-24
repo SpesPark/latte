@@ -536,4 +536,36 @@ final class TriggerCoordinatorTests: XCTestCase {
                        "pause-all must suppress external-display vote (C-9 parity)")
         XCTAssertFalse(assertion.isActive)
     }
+
+    // MARK: - Consumer-task teardown (trap #8: full-suite stall)
+
+    func testDeinitReleasesConsumerTaskAndTrigger() async {
+        // start(_:) keeps a long-lived `for await trigger.voteStream` consumer
+        // task alive and deliberately never cancels it on stop() (S8b: cancelling
+        // breaks the OFF→ON restart). That task strongly retains its trigger, so
+        // before the deinit-cancel fix it survived the coordinator as a suspended
+        // task — across the full suite hundreds accumulated and stalled the run
+        // (project_latte_status trap #8). deinit must cancel them so the trigger
+        // is released once the coordinator is gone.
+        weak var weakTrigger: MockTrigger?
+        do {
+            let assertion = MockPowerAssertion()
+            let settings = InMemorySettingsStore()
+            let manager = AwakeManager(assertion: assertion, settings: settings)
+            let coordinator = TriggerCoordinator(awakeManager: manager, settings: settings)
+            let trigger = MockTrigger(id: "leak-probe")
+            weakTrigger = trigger
+            coordinator.register(trigger)
+            await coordinator.start(trigger)
+            XCTAssertNotNil(weakTrigger, "trigger alive while coordinator is")
+        }
+        // The cancelled consumer task needs a few hops to observe cancellation,
+        // exit its `for await`, and drop the captured trigger.
+        for _ in 0..<200 where weakTrigger != nil {
+            await Task.yield()
+            try? await Task.sleep(nanoseconds: 5_000_000)
+        }
+        XCTAssertNil(weakTrigger,
+                     "Coordinator deinit must cancel the consumer task so its trigger is released, not leaked")
+    }
 }
