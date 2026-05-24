@@ -20,6 +20,13 @@ public final class AppEnvironment: ObservableObject {
     /// the app keeps running, the Activity tab shows an empty state.
     public let activityStore: ActivityLogStore?
 
+    /// iCloud sync engine (docs/design/10, C-3 + B1.2 + OQ-04). `nil` in the
+    /// default build — the `LATTE_ICLOUD_SYNC` compile-time kill-switch is off,
+    /// so sync ships dark with zero behaviour change. When the flag is enabled
+    /// the init resolves the production `CloudKitSyncEngine`; tests inject a
+    /// mock. Lifecycle is driven by `startCloudSyncIfNeeded()`.
+    public let cloudSync: (any CloudSyncEngine)?
+
     /// User-selected menu bar icon variant. Mirrors `SettingsKey.menuBarIconStyle`
     /// — writing here persists to the underlying `SettingsStore`.
     @Published public var menuBarIconStyle: MenuBarIconStyle {
@@ -103,9 +110,15 @@ public final class AppEnvironment: ObservableObject {
     public init(
         settings: SettingsStore = UserDefaultsSettingsStore(),
         launchAtLoginService: LaunchAtLoginService? = nil,
-        hotKeyRegistrar: HotKeyRegistrar? = nil
+        hotKeyRegistrar: HotKeyRegistrar? = nil,
+        cloudSync: (any CloudSyncEngine)? = nil
     ) {
         self.settings = settings
+        // Dark by default: with the LATTE_ICLOUD_SYNC kill-switch off, no
+        // engine is resolved and `cloudSync` stays nil (unless a test injects
+        // one). The flag-on branch that resolves the production adapter is
+        // added with `CloudKitSyncEngine` in the next chunk.
+        self.cloudSync = cloudSync
         // Use AwakeManager.shared so AppIntents (out-of-process) and the in-process app
         // operate on the same FSM. Re-creating would split state.
         self.manager = AwakeManager.shared
@@ -236,5 +249,13 @@ public final class AppEnvironment: ObservableObject {
             }
             await coordinator.start(trigger)
         }
+    }
+
+    /// Bring iCloud sync up if an engine is wired (docs/design/10 §11 Phase 1).
+    /// A no-op in the default build where `cloudSync` is nil (LATTE_ICLOUD_SYNC
+    /// off) — sync ships dark. The engine's own §8 graceful degradation handles
+    /// a signed-out account, so this never blocks boot.
+    public func startCloudSyncIfNeeded() async {
+        await cloudSync?.start()
     }
 }

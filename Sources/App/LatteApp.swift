@@ -29,6 +29,9 @@ final class LatteAppDelegate: NSObject, NSApplicationDelegate, ObservableObject 
             }
         Task { @MainActor in
             await env.bootTriggers()
+            // Dark in the default build (cloudSync nil, kill-switch off) —
+            // no behaviour change. docs/design/10 §11 Phase 1.
+            await env.startCloudSyncIfNeeded()
             if !env.onboarding.hasCompletedOnboarding {
                 OnboardingWindowController.shared.show(
                     state: env.onboarding,

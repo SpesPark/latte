@@ -65,4 +65,29 @@ final class CloudSyncEngineTests: XCTestCase {
         XCTAssertFalse(engine.isRunning)
         XCTAssertEqual(engine.stopCallCount, 2)
     }
+
+    // MARK: - AppEnvironment wiring (ships dark)
+
+    func testCloudSyncIsNilInDefaultBuild() {
+        // LATTE_ICLOUD_SYNC off → no engine resolved → sync ships dark.
+        let env = AppEnvironment(settings: InMemorySettingsStore())
+        XCTAssertNil(env.cloudSync)
+    }
+
+    func testStartCloudSyncIfNeededIsNoOpWhenNil() async {
+        // The dark default boot hook must not crash or block when no engine
+        // is wired — exercises the `cloudSync?.start()` optional-chain no-op.
+        let env = AppEnvironment(settings: InMemorySettingsStore())
+        await env.startCloudSyncIfNeeded()
+        XCTAssertNil(env.cloudSync)
+    }
+
+    func testStartCloudSyncIfNeededDrivesInjectedEngine() async {
+        let engine = MockCloudSyncEngine()
+        let env = AppEnvironment(settings: InMemorySettingsStore(), cloudSync: engine)
+        XCTAssertTrue(env.cloudSync === engine, "Injected engine must be retained")
+        await env.startCloudSyncIfNeeded()
+        XCTAssertEqual(engine.startCallCount, 1)
+        XCTAssertTrue(engine.isRunning)
+    }
 }
