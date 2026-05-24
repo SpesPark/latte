@@ -300,6 +300,16 @@ Phases 2 and 3 are **independent** (different domains, different storage) and
 could be reordered or parallelised. Phase 1 is a hard prerequisite for both and
 is the cheapest to verify (it changes nothing observable).
 
+> **Phase 1 landed dark in S41 (2026-05-24).** Shipped: the `CloudSyncEngine`
+> seam + `MockCloudSyncEngine`; the `LATTE_ICLOUD_SYNC` compile-time kill-switch
+> (off by default); `AppEnvironment` injection + a `startCloudSyncIfNeeded()`
+> boot hook; the `#if LATTE_ICLOUD_SYNC` `CloudKitSyncEngine` skeleton
+> (account-availability gate only) with the §10 CloudKit-isolation lint guard in
+> `check_doc_drift.sh`; and a staged-**inactive** `Configuration/Latte.icloud.entitlements`.
+> The default build is CloudKit-free and behaviour-identical (626 tests green); a
+> flag-on build compiles the adapter clean under Swift 6. Phase 2 (S8.5-gated)
+> flips the switch, activates the entitlement, and attaches the Domain A/B drivers.
+
 ---
 
 ## §12. Owner decisions — DECIDED 2026-05-18 (S38)
