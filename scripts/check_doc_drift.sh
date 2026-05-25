@@ -110,6 +110,17 @@ else
     note "CloudKit (CKContainer/CKDatabase) confined to CloudKitSyncEngine.swift"
 fi
 
+echo "== App Store field char limits =="
+# Apple rejects over-limit listing fields at submit time (S45: description-en
+# had silently grown ~690 chars over the 4000 cap). Delegate to the dedicated
+# checker so over-cap drift fails this gate instead of surfacing at submission.
+if STORE_OUT=$(scripts/check_store_limits.sh --strict 2>&1); then
+    note "all App Store fields within Apple character limits"
+else
+    warn "App Store field(s) over Apple's character limit (run scripts/check_store_limits.sh):"
+    echo "$STORE_OUT" | grep -E '✗' | sed 's/^/    /'
+fi
+
 echo "== Summary =="
 if [[ $DRIFT -eq 0 ]]; then
     echo "  no drift detected ✓"

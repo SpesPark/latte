@@ -22,6 +22,20 @@ Source-of-truth for everything that gets pasted into App Store Connect. Edit her
 | `age-rating.md` | Age Rating questionnaire answers | n/a |
 | `review-notes.md` | Notes for App Store reviewer | n/a |
 
+## Character-limit enforcement
+
+`scripts/check_store_limits.sh` asserts every char-limited field above stays
+under Apple's cap (Unicode code points, trailing newline stripped — Korean
+counts as 1/char). It runs inside `scripts/check_doc_drift.sh --strict`, so
+over-cap copy fails CI instead of surfacing at submit time (the S45 bug:
+`description-en.md` had silently grown ~690 chars over the 4000 cap). Run it
+directly after editing any field:
+
+```bash
+scripts/check_store_limits.sh          # report-only
+scripts/check_store_limits.sh --strict # exit 1 on any over-limit field
+```
+
 ## Submission day workflow
 
 1. Open App Store Connect → My Apps → Latte → Version 1.0.
