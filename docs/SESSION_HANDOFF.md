@@ -4,119 +4,114 @@
 
 ---
 
-**Last session:** S46 (2026-05-25) — **opened the main-merge PR + hardened the store-metadata verification gate + pre-merge review + Phase-1-dark re-verification.** Docs/CI/tooling only; **no Swift source change, no version bump, no owner-visible behaviour change.** This session ran under **pty exhaustion (trap #9)** the whole time, so the full test suite could NOT be re-run — all work was deliberately scoped to pty-free, build-verifiable, or read-only tasks (writing test code that can't be verified would violate the session's stated goal of minimising verification errors).
+**Last session:** S47 (2026-05-26) — **pty recovered → executed the S46-deferred autonomous backlog D→C→B.** trap #9 was cleared (reboot/relogin), so the pty-gated work S46 had to defer became actionable. Owner confirmed **"자율 D→C→B"**. Shipped: a perf fix (C/T7) and a CI test-runner that absorbs the trap #8 stall (B). Both verified; full suite green.
 **v1.x release line:** v1.9 (unchanged). **Public App Store version = 1.0.0** (owner decision S45).
-**Branch:** `claude/focused-hamilton-417bfc` — pushed to `origin`, now ahead of `origin/main` by S36 … + S45 + **S46** (count: `git rev-list --count origin/main..HEAD`). **PR #1 is OPEN** (`https://github.com/SpesPark/latte/pull/1`) — **not merged** (owner decides; see Owner-side pending #1).
-**Latest commit:** `09e46ee` `ci(store): add App Store char-limit checker + wire into doc-drift`.
-**Test count:** **681** static — **NOT re-run this session (pty-blocked, trap #9).** No Swift changed since S45's verified 681-green, so it still holds. **Default + `LATTE_ICLOUD_SYNC` flag-on builds were both re-verified this session: BUILD SUCCEEDED, 0 warnings** (the build path does NOT need a pty — only the test runner does).
+**Branch:** `claude/focused-hamilton-417bfc` — pushed to `origin`, ahead of `origin/main` by S36 … + S47 (count: `git rev-list --count origin/main..HEAD`). **PR #1 is OPEN** (`https://github.com/SpesPark/latte/pull/1`) — **not merged** (owner decides; see Owner-side pending #1). New S47 commits stack on the branch and auto-update the PR.
+**Latest commits:** `8893a56` (C/T7 perf), `6e24e88` (B / `run_tests.sh`), + this docs wrap.
+**Test count:** **681** — re-confirmed green this session (681/681 PASS, first run, `** TEST SUCCEEDED **`). No test count change (C fixed a hot path, B added a script — neither adds tests; the C change is covered by the existing 18 resolver tests).
 **Smoke:** 23 scenarios (not re-run — no runtime change).
-**Doc-drift:** clean — and now **also enforces App Store char limits** (new section delegating to `scripts/check_store_limits.sh`).
+**Doc-drift:** clean (incl. App Store char limits).
 **Catalog:** 172 keys × 11 languages — unchanged.
 **Toolchain:** Xcode 26.5 / Swift 6.3.2 (Swift 6 language mode). **Deployment target:** macOS 13.0.
 
-**🔴 pty exhaustion (trap #9) is ACTIVE right now** — `os.openpty()` fails with `Errno 6 Device not configured`; 527 `/dev/ttys*` nodes vs kernel cap 511. **It must be cleared by reboot / logout-login before any `xcodebuild test`.** See Cold-start. **🟢 Apple Developer Program (S8.5) is handled.** **🟡 Next phase = App Store upload** (owner-driven).
+**🟢 pty (trap #9) was CLEAR this session** (`os.openpty` 8/8). **🟢 trap #8 stall is now auto-absorbed by `scripts/run_tests.sh`** (retries the no-assertion stall only; real failures fail fast). **🟢 Apple Developer Program (S8.5) is handled.** **🟡 Next phase = App Store upload** (owner-driven). **The autonomous backlog is now genuinely exhausted** — every remaining engineering step needs the live CloudKit container behind S8.5 (see Next-session entry points).
 
 ---
 
-## Last session (S46)
+## Last session (S47)
 
-Owner intent: build a task list + remaining-work list, recommend an order optimised for *incremental, low-error verification* ("철저하게 차곡차곡 쌓아가서 검증 오류 최소화"), then execute autonomously, using context fully, and wrap up. Owner picked **"open the main-merge PR first."**
+Owner intent (from the S46 handoff + this session's confirm): pty was the only thing blocking the S46-deferred backlog; if recovered, run **D→C→B** autonomously with maximal verification, then wrap.
 
-Discovered at startup that **`xcodebuild test` was pty-blocked (trap #9, active)** — killing the stale `testmanagerd` did NOT recover it (the 527 `/dev/ttys*` nodes are orphaned device nodes the kernel won't reclaim without a reboot/relogin; only 1 live process held any ptys). So the plan was re-scoped to pty-free work and the test-dependent tasks (trigger-leak fix, perf nit) were deferred rather than written blind.
+**Startup checks:** trap #9 CLEARED (`os.openpty` 8/8; 20 `/dev/ttys` nodes vs S46's 527 orphaned — the machine was rebooted/relogged). Branch tip was `8fc4217` (S46 docs wrap), **one commit past the `09e46ee` recorded in MEMORY/handoff** — corrected. Worktree `.claude/worktrees/focused-hamilton-417bfc` healthy (has its `.xcodeproj`, synced with origin); repo root is on `main`/S35 as always — **worked in the worktree.**
 
-### 1. PR #1 opened (`claude/focused-hamilton-417bfc` → `main`)
-42 commits (S36–S45), 63 files +2557/−384. Body groups the lineage: i18n close-out, iCloud 3-phase pure logic pre-built dark, whole-app audit/stabilization, Swift 6 migration, trap #8 leak fixes, App Store metadata reconciliation. **Not merged** — merging a shared branch is an owner decision; new S46 commits stack on the branch and auto-update the PR.
+### D — baseline (681-green)
+Ran the full suite in the worktree: **681/681 PASS, first run, no trap #8 stall** (`** TEST SUCCEEDED **`, 11.9s). The honest gate S45 set, reconfirmed; nothing had changed since.
 
-### 2. Store char-limit checker (`09e46ee`)
-`scripts/check_store_limits.sh` asserts every char-limited `docs/store/` field is under Apple's cap (Unicode code points, trailing newline stripped — Korean = 1/char; counts reproduce S45 exactly: description-en 3995/4000, promo-en 160/170, keywords-en 98/100). Wired into `scripts/check_doc_drift.sh --strict` (the CI gate) so over-cap copy fails CI instead of surfacing at submit — **codifies the S45 bug** (description-en had silently grown ~690 chars over the cap). Both report-only (exit 0) and strict (exit 1 on over-limit/missing) paths verified, incl. a negative fixture test. All 11 fields currently pass.
+### C — T7 perf nit (`8893a56`)
+`ActivityLogMergeResolver.canonicallyOrdered` recomputed SHA-256 for **both** operands on every sort comparison (O(N log N) hashes). Switched to **decorate-sort-undecorate**: hash each entry once (O(N)), sort the `(id, entry)` pairs by `(timestamp, id)`, undecorate. The order is byte-identical, so the union merge's commutativity / associativity / idempotency contract is unchanged. Resolves the S46 pre-merge-review MEDIUM (dark Phase-3 code). **Verified:** 18 resolver tests + full 681 green; default + flag-on (`LATTE_ICLOUD_SYNC`) builds 0-warning; doc-drift --strict clean.
 
-### 3. Pre-merge code review (posted to PR #1, no code changed)
-A `code-reviewer` agent reviewed the net Swift diff (read-only). **Verdict: no merge-blockers.** Findings + dispositions:
-- **HIGH (agent) = FALSE POSITIVE.** It flagged `DebouncingDisplaySource`/`ExternalDisplayTrigger` plain `deinit` (not `isolated deinit`) on a `@MainActor` class as a Swift-6 data race. But the deinit only touches `observeTask: Task<Void,Never>?` and `AsyncStream.Continuation`, **both Sendable** → a nonisolated deinit cancelling a Sendable Task is legal & race-free under Swift 6, **proven by the 0-warning strict-concurrency build.** `isolated deinit` (SE-0371) is only required for *non-Sendable* isolated state. No action; do NOT "fix" this in a future session.
-- **MEDIUM (real, deferred → T7):** `ActivityLogMergeResolver.canonicallyOrdered` recomputes SHA-256 on both operands per sort comparison (O(N log N) hashes vs O(N)). Dark/inactive Phase-3 code; the fix changes the canonical-ordering path → needs the 18 resolver tests re-run (pty-blocked). Tracked.
-- MEDIUM (readability, no bug) + LOW (comment) — noted, no action.
+### B — trap #8 harness mitigation (`6e24e88`)
+**Investigation first.** The two levers the S46 handoff suggested turned out to be exhausted or inapplicable:
+- *"reduce concurrency / serialise the trigger tests"* — the scheme is **already `parallelizable = "NO"`** (test classes run serially). Lever spent.
+- *"per-test teardown that cancels spawned tasks"* — all 11 trigger test classes hold their triggers as **local variables** (released at method scope-end). A `tearDown` override has no reference to reach them. Only 4 non-trigger test files even have setUp/tearDown.
 
-### 4. iCloud Phase-1-dark re-verification + entry-point correction
-Verified the dark state is healthy and consistent: flag OFF by default (`project.yml:61` signs with the no-CloudKit `Latte.entitlements`; `LATTE_ICLOUD_SYNC` only in activation comments), `Latte.icloud.entitlements` staged-**inactive**, container id `iCloud.com.parkbyeongjun.latte` consistent across the staged entitlement + `CloudKitSyncEngine.swift:22`, and **both default & flag-on builds 0-warning.**
-**Correction (important):** the S45 handoff listed "iCloud Phase 1 *activation*" as an autonomous next step. That is **wrong** — `project.yml:54-60` and RFC §11 both correctly frame the flag-flip as **Phase 2** (needs S8.5 + a provisioned container + switching `CODE_SIGN_ENTITLEMENTS` to the iCloud entitlement + macOS-14 for the `@Model` write). **There is NO autonomous activation step left**: Phase 1 (the dark seam) is already shipped; flipping the flag is a gated Phase 2 release action. A future session must NOT flip it (it would break signing without a provisioned container).
+S46 had already confirmed there is **no remaining product leak** (static Task-spawn audit). So the correct B — per S46's own verdict, *"harness mitigation, not leak-hunting"* — is to **codify the long-documented "re-run-on-FAILED" manual mitigation into infrastructure**:
 
-### 5. Static Task-spawn inventory → trap #8 is harness-level (confirms the S44 read)
-Inventoried every `Task` spawn in `Sources/`. **Every long-lived/looping task is stored and cancelled via deinit** (WiFi/Schedule/Calendar `pollTask`; ExternalDisplay/Debouncing `observeTask`; coordinator `consumerTasks`); all other spawns are one-shot fire-and-forget (incl. `TriggerCoordinator.swift:222`, the post-append notification, `[weak self]`). **No remaining uncancelled long-lived Task leak exists.** → The trap #8 residual is a **harness-level, load-dependent main-actor stall, not a product leak.** Next session's reliability work should pursue **harness mitigation** (per-test teardown cancelling spawned tasks, or lower test concurrency / serialise the trigger tests), NOT more leak-hunting.
+`scripts/run_tests.sh` runs `xcodebuild test`, captures the log, and classifies it by the **authoritative `** TEST SUCCEEDED/FAILED **` line (NOT the pipe exit code)** into:
+- **PASS** → exit 0.
+- **FAIL** (a real `Test Case … failed`, a nonzero failure summary, OR a build failure) → **exit 1, never retried.**
+- **PTY** (trap #9 launch error) → **exit 1, never retried** (reboot fixes it; retrying burns ptys).
+- **STALL** (`** TEST FAILED **` with zero assertion evidence, or a killed/absent result) = trap #8 → **retry**, bounded (default 3 attempts, well under the ~25 that re-exhaust ptys).
 
-### S46 NEW patterns (3)
-a. **Codify a manual char/limit audit into a CI script the moment it bites once.** The S45 over-cap bug was invisible because the check was manual; `check_store_limits.sh` (Unicode code points, trailing-NL stripped) makes it fail CI. Calibrate the counter against a known prior result (description-en=3995) before trusting it, and verify the FAIL path with a negative fixture (a guard that never trips is useless).
-b. **A `@MainActor` class with a plain `deinit` is NOT a Swift-6 race if the deinit only touches Sendable state** (`Task?`, `AsyncStream.Continuation`). The 0-warning strict build is the proof; `isolated deinit` is only for non-Sendable isolated cleanup. Don't cargo-cult `isolated deinit` onto every deinit.
-c. **`xcodebuild build` does NOT need a pty; `xcodebuild test` does.** Under trap #9 you can still verify *builds* (0-warning, default + flag-on) and do all read-only/doc/CI work — only the test runner is blocked. Scope the session accordingly instead of stalling.
+Pre-flight kills stale Latte + clears a stale `-resultBundlePath` before each attempt so retries are clean. **CI's Test step now calls it.** The safety property — *a genuine red is never masked* — is the whole point: retry ONLY the well-characterised stall, fail-fast on everything else.
 
-Cumulative NEW S20→S46 ≈ 89.
+**Verified:** 6-case classifier self-test with crafted logs (PASS/FAIL/STALL/PTY/build/empty — proving the dangerous "real fail → no retry" direction); live happy-path (PASS attempt 1, exit 0); `-resultBundlePath` retry-clean (consecutive runs, no "already exists"); and **a live run that genuinely hit a trap #8 stall on attempt 1 and recovered on attempt 2** — empirical proof both that the residual stall is real/load-dependent and that the runner absorbs it. Confirmed the "already exists" error (`xcodebuild: error: Existing file…`) classifies as FAIL, not STALL (no misclassification).
+
+### S47 NEW patterns (3)
+a. **Decorate-sort-undecorate to hoist an expensive comparator key.** When a sort tie-break recomputes a costly key (SHA-256) per comparison, precompute it once per element (O(N) vs O(N log N)) and sort the decorated pairs; identical order ⇒ the algebraic contract holds.
+b. **Codify a documented manual flake-mitigation into a retry-runner that decides by the authoritative result line, not the pipe exit code.** Retry ONLY the well-characterised no-assertion stall; fail-fast on every real/build/pty failure so a red is never masked; prove the dangerous direction impossible with crafted-log fixtures before trusting it.
+c. **When the suggested fix levers are already pulled (serialisation) or structurally inapplicable (local-var triggers a teardown can't reach), the right move for a confirmed harness-level flake is harness infrastructure, not product/test churn.**
+
+Cumulative NEW S20→S47 ≈ 92.
 
 ---
 
 ## Next-session entry points (priority order)
 
-**FIRST: clear pty exhaustion.** `xcodebuild test` cannot run until the ptys are freed — **reboot or log out/in** (see Cold-start probe). Without this, the only progress possible is the owner-side App Store chain + more docs.
+**The autonomous backlog is genuinely exhausted.** All three iCloud phases' pure CloudKit-free logic is pre-built dark (P1 seam S41, P2 LWW/migration/chord S42, P3 union-merge S43); the trap #8 stall is now auto-absorbed by the runner; the Swift 6 migration is done; the store metadata + char-limit gate are in. **There is NO autonomous engineering step left** that doesn't need the live CloudKit container behind S8.5.
 
-**A. (OWNER-driven) App Store upload** — see "Owner-side pending". Claude can assist: the PR is already open; wire `DEVELOPMENT_TEAM` once the owner gives the Team ID (+ `xcodegen generate`); further metadata edits (now guarded by `check_store_limits.sh`). Screenshots + signing are owner/GUI-gated.
+**A. (OWNER-driven) App Store upload** — see "Owner-side pending". Claude can assist: PR #1 is open; wire `DEVELOPMENT_TEAM` once the owner gives the Team ID (+ `xcodegen generate`); further metadata edits (guarded by `check_store_limits.sh`). Screenshots + signing are owner/GUI-gated.
 
-**B. (AUTONOMOUS, pty-gated) trap #8 harness mitigation** — the S46 inventory confirmed there is no product leak left; the residual stall is harness/load. A dedicated effort: per-test teardown that cancels spawned tasks, or reduce test concurrency / serialise the trigger tests. Verifying it reduces stalls needs many full runs → **needs ptys.**
+**B. (gated) iCloud Phase 2 activation** — needs S8.5 + a provisioned container + switching `CODE_SIGN_ENTITLEMENTS` to `Latte.icloud.entitlements` + a macOS-14 bump for the `@Model` write (a product decision: drops macOS 13). **NOT autonomous** — a future session must NOT flip `LATTE_ICLOUD_SYNC` (it breaks signing without a provisioned container). See `docs/design/10` §11.
 
-**C. (AUTONOMOUS, pty-gated) T7 perf nit** — `ActivityLogMergeResolver.canonicallyOrdered` double-hash (see Last session §3 / TaskList). Needs the 18 resolver tests re-run → **needs ptys.**
-
-**D. (AUTONOMOUS, pty-gated) final clean 681-green full run** — re-confirm the suite green once ptys are back (S45 did this; nothing changed since, but it's the honest gate).
-
-> Note: items B/C/D are ALL pty-gated. Until the machine is rebooted, autonomous progress is essentially exhausted — the remaining value is the owner-side App Store chain. iCloud Phase 1 is **done** (dark); Phase 2/3 activation is S8.5 + macOS-14 + owner-signing gated (NOT autonomous — see Last session §4).
+**C. (only if trap #8 ever exceeds the runner's retries)** — `run_tests.sh` now absorbs the stall; if a run ever fails all 3 attempts with no assertion, that exceeds the historical flake rate → investigate the harness/load (per-test main-actor quiescence, lower trigger-test load), do NOT just bump the retry count.
 
 ---
 
 ## Cold-start (다음 세션 진입)
 
 ```bash
-# 0. ⚠ PTY CHECK FIRST (trap #9 was ACTIVE at S46 end). If this fails, REBOOT
-#    or log out/in — killing testmanagerd does NOT help (orphaned /dev/ttys
-#    nodes; kernel reclaims them only on reboot/relogin). sysctl raise is
-#    REJECTED (kern.tty.ptmx_max=511 is at/above the cap). No test runs until ok.
-python3 -c "import os;[os.close(x) for x in os.openpty()]" && echo pty-ok || echo "PTY EXHAUSTED — reboot/relogin before any xcodebuild test"
+# 0. PTY CHECK (trap #9). Was CLEAR at S47 end. If this fails, REBOOT or log
+#    out/in — killing testmanagerd / sysctl does NOT help (orphaned /dev/ttys
+#    nodes; kernel reclaims them only on reboot/relogin).
+python3 -c "import os;[os.close(x) for x in os.openpty()]" && echo pty-ok || echo "PTY EXHAUSTED — reboot/relogin"
 
-# 1. PRE-FLIGHT — kill stale Latte before any test/Cmd-R.
-pkill -9 -f "Latte.app" 2>/dev/null; sleep 1
+# 1. Work in the WORKTREE, not the repo root (repo root is on `main`/S35).
+cd .claude/worktrees/focused-hamilton-417bfc   # branch claude/focused-hamilton-417bfc, has its .xcodeproj
 
-# 2. Work in the WORKTREE, not the repo root (repo root is on `main`/S35).
-#    Worktree: .claude/worktrees/focused-hamilton-417bfc (branch claude/focused-hamilton-417bfc,
-#    has its .xcodeproj already; a fresh worktree would need `xcodegen generate`).
-
-# 3. Builds work WITHOUT a pty (only the test runner needs one):
+# 2. Builds need no pty:
 xcodebuild build -scheme Latte -destination 'platform=macOS,arch=arm64' 2>&1 | grep -E "warning:|BUILD"
 xcodebuild build -scheme Latte -destination 'platform=macOS,arch=arm64' \
   SWIFT_ACTIVE_COMPILATION_CONDITIONS='$(inherited) LATTE_ICLOUD_SYNC' 2>&1 | grep -E "warning:|BUILD"
 
-# 4. Doc-drift (now also checks App Store char limits) + the store checker directly:
+# 3. Doc-drift (+ App Store char limits) + the store checker directly:
 scripts/check_doc_drift.sh --strict
 scripts/check_store_limits.sh --strict
 
-# 5. ONLY after pty-ok — tests (~11s, expect 681). trap #8 stall MITIGATED, NOT
-#    CLOSED: a full run can stall with NO assertion text + 0 failures → ** TEST
-#    FAILED **. Read the ** TEST SUCCEEDED/FAILED ** line, not a grep pipe's exit
-#    code. RE-RUN on a no-assertion FAILED. Don't hammer back-to-back full runs
-#    (inflates flake + re-leaks ptys → trap #9).
-xcodebuild test -scheme Latte -destination 'platform=macOS,arch=arm64' 2>&1 | tail -3
+# 4. Tests — PREFER the runner (auto-retries the trap #8 no-assertion stall,
+#    fails fast on real failures). ~11s, expect 681. Don't hammer back-to-back
+#    full runs (re-leaks ptys → trap #9).
+scripts/run_tests.sh
+#    (raw, if you need it: xcodebuild test -scheme Latte -destination 'platform=macOS,arch=arm64' 2>&1 | tail -3 —
+#     read the ** TEST SUCCEEDED/FAILED ** line, NOT the pipe exit code; re-run on a no-assertion FAILED.)
 ```
 
-**Expect**: pty-ok after reboot; 681/681 PASS; default + flag-on builds 0 warnings; doc-drift clean (incl. store char limits); 172 keys × 11 langs; macOS 13 target; `cloudSync` nil in the default build.
+**Expect**: pty-ok; 681/681 PASS; default + flag-on builds 0 warnings; doc-drift clean (incl. store char limits); 172 keys × 11 langs; macOS 13 target; `cloudSync` nil in the default build.
 
 ---
 
 ## How to resume
 
 1. Read this file first.
-2. `ROADMAP.md` rows 1.40 → 1.46.
+2. `ROADMAP.md` rows 1.41 → 1.47.
 3. **Read [docs/design/10-c3-icloud-sync-rfc.md](design/10-c3-icloud-sync-rfc.md)** before any iCloud work — §11 phasing (Phase 1 done dark; flag-flip = Phase 2, gated), §12 decision log.
-4. For App Store work, source-of-truth is **`docs/store/`** (README maps every field; char limits now enforced by `scripts/check_store_limits.sh`; `screenshot-guide.md` for captures).
-5. Memory: `MEMORY.md` → `project_latte_v1_9.md` S20→S46 section; cross-cutting traps in `project_latte_status.md` (**trap #8 = mitigated/harness-level**, **trap #9 = pty, fixed by reboot/relogin not kill/sysctl**).
+4. For App Store work, source-of-truth is **`docs/store/`** (README maps every field; char limits enforced by `scripts/check_store_limits.sh`; `screenshot-guide.md` for captures).
+5. Memory: `MEMORY.md` → `project_latte_v1_9.md` S20→S47 section; cross-cutting traps in `project_latte_status.md` (**trap #8 = harness-level, now auto-absorbed by `run_tests.sh`**; **trap #9 = pty, fixed by reboot/relogin not kill/sysctl**).
 6. **Don't** re-read S1-S11 memory entries — consolidated during S13.
 
 ---
 
-## Owner-side pending (App Store upload — unchanged from S45 + reboot note)
+## Owner-side pending (App Store upload)
 
 Order matters (later steps depend on earlier).
 
@@ -130,16 +125,15 @@ Order matters (later steps depend on earlier).
 | 6 | **Screenshots** 2880×1800 per `docs/store/screenshot-guide.md` | `docs/store/screenshots/` is EMPTY (.gitkeep) — **hard blocker**; needs a running build | owner |
 | 7 | **Fill ASC listing** from `docs/store/*` + pricing **$2.99** + App Privacy "No Data Collected" + age rating + URLs | privacy URL live (spespark.github.io/latte/privacy.html) | owner |
 | 8 | **Archive → Validate → Upload → Submit** (Xcode Organizer) | Release, signed with the team from #4 | owner |
-| — | **Reboot/relogin** to clear pty exhaustion | needed before Claude can re-run the test suite for any pty-gated autonomous work (entry points B/C/D) | owner |
 | — | **WiFi WhenInUse downgrade** (review-risk) | code calls `requestAlwaysAuthorization` but Info.plist has only the WhenInUse string; needs a real Mac to confirm CoreWLAN `ssid()` still resolves after downgrade | owner device smoke |
 
 Other long-standing non-blocking items: RFC Q4 container-id (Phase ≥2), macOS-14 bump (Phase 2 activation only), Phase I community translation PRs.
 
 ---
 
-## v1.9 owner-visible behaviour reference (post-S46)
+## v1.9 owner-visible behaviour reference (post-S47)
 
-**No owner-visible behaviour change in S46** (docs/CI/tooling only). The app behaves exactly as the S40–S45 reference: `cloudSync` nil, no CloudKit compiled, cup / menu bar / 6 triggers / Settings / Activity / ⌘⇧L all unchanged.
+**No owner-visible behaviour change in S47** (a perf fix on dark Phase-3 code + a CI test-runner). The app behaves exactly as the S40–S46 reference: `cloudSync` nil, no CloudKit compiled, cup / menu bar / 6 triggers / Settings / Activity / ⌘⇧L all unchanged.
 
 ---
 
@@ -151,5 +145,5 @@ Unchanged. `AwakeManager.toggle()` implements the correct semantic.
 
 ## Smoke harness + GitHub repo / Pages infrastructure reference
 
-Unchanged from S29–S45. Pages live at https://spespark.github.io/latte/ + /privacy.html.
+Unchanged from S29–S46. Pages live at https://spespark.github.io/latte/ + /privacy.html.
 Cross-project helper `~/dev/smoke-harness/lib/assert_bundle_resources.sh` + repo scenario `.smoke/scenarios/00-bundle-integrity.sh` (S35).
