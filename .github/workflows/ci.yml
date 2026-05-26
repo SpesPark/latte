@@ -44,15 +44,15 @@ jobs:
             | tail -200
 
       - name: Test
+        # run_tests.sh retries the trap #8 no-assertion stall (and ONLY that
+        # stall — real assertion/build failures and pty exhaustion fail fast,
+        # never retried). Decisions come from the ** TEST SUCCEEDED/FAILED **
+        # line, not a pipe exit code. Scheme/destination default inside the script.
         run: |
-          set -o pipefail
-          xcodebuild test \
-            -scheme Latte \
-            -destination 'platform=macOS,arch=arm64' \
+          scripts/run_tests.sh \
             -configuration Debug \
             CODE_SIGNING_ALLOWED=NO \
-            -resultBundlePath TestResults.xcresult \
-            | tail -300
+            -resultBundlePath TestResults.xcresult
 
       - name: Upload test results on failure
         if: failure()
