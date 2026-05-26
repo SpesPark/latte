@@ -90,9 +90,14 @@ public enum ActivityLogMergeResolver {
     /// content-addressed id as a tie-break) so union merge is commutative and
     /// associative as array equality.
     private static func canonicallyOrdered(_ entries: [ActivityLogEntry]) -> [ActivityLogEntry] {
-        entries.sorted { lhs, rhs in
-            if lhs.timestamp != rhs.timestamp { return lhs.timestamp < rhs.timestamp }
-            return contentAddressedID(for: lhs) < contentAddressedID(for: rhs)
-        }
+        // Decorate-sort-undecorate: hash each entry once (O(N)) rather than
+        // recomputing SHA-256 for both operands on every comparison (O(N log N)).
+        entries
+            .map { (key: contentAddressedID(for: $0), entry: $0) }
+            .sorted { lhs, rhs in
+                if lhs.entry.timestamp != rhs.entry.timestamp { return lhs.entry.timestamp < rhs.entry.timestamp }
+                return lhs.key < rhs.key
+            }
+            .map(\.entry)
     }
 }
