@@ -57,6 +57,10 @@ Out of scope:
 5. Mark `migrationCompleted = true` in UserDefaults.
 6. Future launches: read from SwiftData. UserDefaults is read only as fallback if SwiftData store is missing or corrupt.
 
+**Idempotency gate (L1, S49 audit).** The pre-built `SettingsMigration.needsMigration` reads `schemaVersion` from **UserDefaults** (the `SettingsStore`), so step 4's write of `2` must land where that read sees it: either also bump UserDefaults `schemaVersion` to `2`, or gate on `migrationCompleted` (step 5). Writing the new version **only** to SwiftData leaves UserDefaults at the absent/`1` reading → `needsMigration` stays true → the migration re-runs every launch. Pin the gate to the store the check actually reads.
+
+**Type-mismatch keys (L2, S49 audit).** `SettingsMigration.snapshot` omits a key whose stored value can't be read as its declared `valueType` (e.g. a `.data` key holding a non-`Data` object) → that setting reverts to its default in v2. Vanishingly rare (the app only ever writes consistent types) and non-crashing; noted so activation tests don't flag a dropped malformed key as a regression.
+
 **Why not delete UserDefaults immediately after migration?**
 - Defensive: if migration partially failed, we can re-run it.
 - Removed in v2.1 after one minor release of stable telemetry-free observation.

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Document version** | 0.3 (S49, 2026-05-27) — design only; §12 owner decisions recorded (S38). **S49: H1 fix** — §3 migration bullet de-contradicted vs §11 (absent `schemaVersion` → `1`, not fresh; the total-settings-loss trap), matching the corrected 04-data-model §2.2/§4.1/§6.2 |
+| **Document version** | 0.3 (S49, 2026-05-27) — design only; §12 owner decisions recorded (S38). **S49 audit fixes**: H1 — §3 migration bullet de-contradicted vs §11 (absent `schemaVersion` → `1`, not fresh; the total-settings-loss trap), matching corrected 04-data-model §2.2/§4.1/§6.2. M1 — §4 zone-retention gap (local GC doesn't bound CloudKit; recommended delete-on-GC, owner choice). M2 — §4 dedup on `recordName`, not a re-hash. M3 — §3 LWW timestamp = server `modificationDate` |
 | **Status** | **Decisions locked 2026-05-18** (Q1=B-2, Q2=approved, Q5=v2.0[P1+2]/v2.1[P3] — see §12). Phase 1 (dark, no behaviour change) is now implementable. Phase ≥ 2 still blocks on S8.5. |
 | **Supersedes** | nothing; **extends** [04-data-model.md](04-data-model.md) §2 (OQ-04), [09-c3-activity-history.md](09-c3-activity-history.md) §6/§7/§14, [07-shortcut-recorder.md](07-shortcut-recorder.md) §1 |
 | **Resolves** | the "iCloud sync — joint design with B1.2, schema-integration risk if shipped solo" deferral recorded in 09-c3 §14 and 07-spec §1 |
@@ -92,6 +92,14 @@ the parts it left open.
 - **Conflict**: per-record last-writer-wins (04-data-model §2.2). Acceptable:
   settings are low-frequency, single-user, and a clobbered toggle is recoverable
   by re-toggling. **Exception: the chord — see §7.**
+  - **(M3, S49 audit) Pin the LWW timestamp to CloudKit's server
+    `modificationDate`, not a device wall-clock.** `SettingsLWWResolver` compares
+    whatever `updatedAt` it is given; if that is each Mac's local clock (the
+    `GeneralSetting.updatedAt` field), cross-device clock skew can let an *older*
+    edit win. At activation, feed the resolver the server-assigned
+    `CKRecord.modificationDate` (monotonic per record on Apple's side); keep the
+    app-written `updatedAt` only as a display/debug value. The pure resolver is
+    unchanged — this fixes *which* timestamp the driver feeds it.
 - **Schema-version interaction**: the shipped key set is now well beyond the v1
   enum frozen in 04-data-model §5 (it omits `keyboardShortcutEnabled`,
   `shortcutChord`, `externalDisplayWhitelist`, `activityRetentionDays`,
@@ -122,9 +130,20 @@ explicit fallback if the owner wants the smallest possible v2.0.
 ### B-2 — CloudKit custom zone, append-only union merge (recommended)
 
 - Each `ActivityLogEntry` becomes one `CKRecord` in a **private-database custom
-  zone** (`activity-log` zone), record name = a **content-addressed id**:
-  `"<deviceUUID>-<monotonicSeq>"` (or SHA-256 of the immutable tuple). Entries
-  are immutable once written.
+  zone** (`activity-log` zone), record name = the **content-addressed id** built
+  in S43 (`ActivityLogMergeResolver.contentAddressedID` = SHA-256 of the full
+  immutable tuple, incl. the per-event UUID → 64-char hex, a valid
+  `CKRecord.recordName` with no further transform). Entries are immutable once
+  written.
+  - **(M2, S49 audit) Dedup on the stored `recordName`; do not re-hash on
+    download.** The pure `merge` recomputes the id from entry fields — fine for
+    the JSON round-trip the unit tests cover, but at activation the entry
+    round-trips through **CloudKit field encoding**, not JSON. If CloudKit stores
+    the `timestamp` field at a different precision than the on-disk
+    `secondsSince1970`, a recomputed id would diverge from the write-time id and
+    dedup would silently break (duplicate history). Since the id **is** the record
+    name, the driver must dedup on `record.recordID.recordName` (stable by
+    construction) — never trust a re-hash of downloaded fields.
 - Sync = **union** of all devices' records, then the existing 14-day GC runs
   locally on the merged set. **Never last-writer-wins** — LWW on an append-only
   log silently destroys history when two devices are awake the same day.
@@ -135,7 +154,23 @@ explicit fallback if the owner wants the smallest possible v2.0.
 - **Pro**: correct multi-device history; reuses the existing ring-buffer GC
   unchanged; the immutable-entry model makes merge trivial and test-pure.
 - **Con**: new merge + zone code (but pure and unit-testable — §10); CloudKit
-  quota (negligible: ~1 small record per trigger fire, 14-day GC bounds it).
+  quota — see the retention note below (the local GC alone does **not** bound the
+  zone, contra an earlier draft of this line).
+- **(M1, S49 audit) Who deletes old records from the zone — unresolved gap.** The
+  local 14-day GC prunes the *local* merged view; it does **not** delete
+  `CKRecord`s, so without a remote-side step the zone grows unbounded (~1 record
+  per fire, forever) and every sync re-downloads the full history. The earlier
+  "14-day GC bounds quota" claim was true only of the *local* file.
+  **Recommended (confirm at the Phase-3 lock, v2.1):** on each local GC, issue a
+  best-effort `CKModifyRecordsOperation` delete of the just-pruned record names,
+  and only *upload* entries newer than the cutoff — bounding the zone to
+  ≈retention across all devices. Caveat: a device offline longer than the
+  retention window may re-inject (then re-prune) entries others already deleted —
+  tolerable churn, **not** data loss, since merge+GC is idempotent.
+  **Alternative** (if the owner wants full cross-device history beyond the local
+  retention window): keep the zone append-only and accept slow unbounded growth —
+  defensible given the tiny per-record size, but state it explicitly. This is a
+  genuine product choice; default to the bounded option unless the owner opts in.
 
 **Recommendation: B-2.** The append-only immutable-entry shape that C-3 already
 ships (09-c3 §2) makes union-merge nearly free and is the *reason* the original
@@ -187,7 +222,7 @@ must not break it. Analysis:
 
 | Domain | Policy | Why |
 |---|---|---|
-| Settings (Domain A) | per-record **last-writer-wins** | low-frequency single-user edits; clobber is re-toggle-recoverable; matches 04-data-model §2.2 |
+| Settings (Domain A) | per-record **last-writer-wins** (timestamp = server `modificationDate` — §3 M3) | low-frequency single-user edits; clobber is re-toggle-recoverable; matches 04-data-model §2.2 |
 | Activity log (Domain B) | **append-only union merge**, immutable entries, local 14-day GC on merged set | LWW on an event log destroys concurrent-day history — categorically wrong |
 | B1.2 chord | LWW on the *value*, **per-device registration best-effort**, optional non-synced local override | a chord valid on Mac A may be reserved on Mac B — see §7 |
 
@@ -210,6 +245,16 @@ But registration is device-physical:
   **already-shipped disabled-state UX cue** (07-spec polish "J", shipped S17 —
   opacity + "Enable above to record" hint pattern). Do **not** silently drop or
   rewrite the synced value. The mismatch is visible, not corrupt.
+  - **(L3, S49 audit)** `ChordSyncResolver.apply` unregisters the *prior* chord
+    before attempting the new one, so a failed sync-in leaves this Mac with **no
+    active hotkey at all** — not even the previously-working chord — until the
+    user re-records or sets a `shortcutChordDeviceOverride`. Intentional (the
+    synced value is the source of truth), but a sharp edge worth a release note.
+- **(L4, S49 audit) Gate `apply` on `keyboardShortcutEnabled`.** The resolver
+  always (un)registers; it does **not** consult the feature flag. The activation
+  caller must skip registration (and unregister) when `keyboardShortcutEnabled ==
+  false` on this device, so syncing a chord value while the global shortcut is
+  off never registers a live hotkey.
 - **Optional per-device override**: a *non-synced* `shortcutChordDeviceOverride`
   (new local-only key, deliberately excluded from the SwiftData/CloudKit model).
   If set, it wins locally and never propagates. This is the standard
@@ -239,7 +284,9 @@ But registration is device-physical:
 - **Activity-log migration** (if B-2): existing local JSON entries are uploaded
   to the custom zone on first run with content-addressed ids → idempotent, no
   duplication, no history loss. The 09-c3 §7 `version: Int` wrapper already
-  gives the version seam.
+  gives the version seam. (Steady-state zone **retention** — who deletes old
+  records — is the §4 B-2 **M1** note; the local GC does not bound the zone by
+  itself.)
 
 ---
 

@@ -98,16 +98,19 @@ else
 fi
 
 echo "== CloudKit isolation (docs/design/10 §10) =="
-# CKContainer / CKDatabase may appear ONLY in the single production adapter
+# CloudKit usage may appear ONLY in the single production adapter
 # (CloudKitSyncEngine.swift). The conflict-bearing logic stays pure and
 # unit-testable behind the CloudSyncEngine seam — any leak elsewhere is a
-# latent "sync the blob" data-loss bug (§6).
-CK_LEAK=$(grep -rln 'CKContainer\|CKDatabase' Sources/ 2>/dev/null | grep -v 'CloudKitSyncEngine.swift' || true)
+# latent "sync the blob" data-loss bug (§6). `import CloudKit` is the gating
+# signal (L5, S49 audit): the prior CKContainer/CKDatabase-only grep was
+# narrower than the rule — a stray file using CKRecord/CKQuery/CKRecordZone
+# without those two tokens would slip through, but it cannot without the import.
+CK_LEAK=$(grep -rln 'CKContainer\|CKDatabase\|import CloudKit' Sources/ 2>/dev/null | grep -v 'CloudKitSyncEngine.swift' || true)
 if [[ -n "$CK_LEAK" ]]; then
-    warn "CKContainer/CKDatabase outside CloudKitSyncEngine.swift — keep CloudKit in the one adapter (§10):"
+    warn "CloudKit usage (CKContainer/CKDatabase/import CloudKit) outside CloudKitSyncEngine.swift — keep it in the one adapter (§10):"
     echo "$CK_LEAK" | sed 's/^/    /'
 else
-    note "CloudKit (CKContainer/CKDatabase) confined to CloudKitSyncEngine.swift"
+    note "CloudKit (CKContainer/CKDatabase/import CloudKit) confined to CloudKitSyncEngine.swift"
 fi
 
 echo "== App Store field char limits =="
