@@ -50,7 +50,7 @@ Out of scope:
 
 **Migration plan** (executes once on first v2.0 launch):
 
-1. Detect `schemaVersion == 1` in UserDefaults. (If absent, treat as fresh install — no migration needed.)
+1. Read `schemaVersion` from UserDefaults, **treating an absent value as `1`** — the shipped v1.x app never wrote this key, so an existing install reads as v1, **not** as a fresh install. Migrate whenever the (possibly-defaulted) value is `< 2`. (On a genuinely fresh v2.0 install the read is also `1`, but the copy in step 3 finds no present keys — a harmless no-op — and step 4 then stamps `2`. The pre-built `SettingsMigration.currentSchemaVersion` already defaults absent → `1`; this step matches it. Earlier drafts said "absent → fresh → skip", which would have skipped migrating every real upgrading user — corrected.)
 2. Open SwiftData store.
 3. For each `SettingsKey`, read from UserDefaults, decode into a typed `Setting` model entity, save to SwiftData.
 4. Write `schemaVersion = 2` to SwiftData.
@@ -115,7 +115,7 @@ Example: `SettingsKey.allowDisplaySleep.rawValue == "latte.allowDisplaySleep"`.
 
 | Key (`latte.` prefixed) | Type | Default | Description | Validation |
 |---|---|---|---|---|
-| `schemaVersion` | `Int` | `1` | Bumped when shape of stored data changes. | Must be `1` in v1; mismatch → log fault, treat as fresh. |
+| `schemaVersion` | `Int` | `1` | Bumped when shape of stored data changes. First *written* by v2.0's migration (§2.2). | **Shipped v1.x never wrote this key** → absent reads as `1` (an existing v1 install), **not** fresh — see §2.2 / §6.2. Migrate when `< 2`; `>` current → §6.2 downgrade handling. |
 | `firstRunCompleted` | `Bool` | `false` | Set after onboarding screen dismissed. | Read-only after first true. |
 | `firstRunCompletedAt` | `Double` (Date) | `0` | Timestamp of first run completion. | Informational. |
 | `allowDisplaySleep` | `Bool` | `false` | When true, display may sleep but system stays awake (`NoIdleSleep`). | — |
@@ -371,7 +371,7 @@ Future bumps follow this protocol:
 
 1. New version `N` ships with `schemaVersion = N`.
 2. On launch, read current `schemaVersion`:
-   - missing → fresh install; write `N`.
+   - missing → **treat as `1`** (the shipped v1.x floor never wrote `schemaVersion`, so an absent key means an existing v1 install, *not* fresh) → fall into the `< N` migration path below. On a genuinely fresh install that path copies nothing — a harmless no-op — and step 3 writes `N`. **Never skip migration on a missing key.**
    - `< N` → run migration function `migrate_K_to_N(store:)` for each step `K → K+1`.
    - `== N` → no-op.
    - `> N` → user downgraded; log `.notice`, leave data untouched (forward compatibility within reason; older code reads what it knows).

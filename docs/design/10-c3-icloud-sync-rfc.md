@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Document version** | 0.2 (S38, 2026-05-18) — design only, **no code**; §12 owner decisions recorded |
+| **Document version** | 0.3 (S49, 2026-05-27) — design only; §12 owner decisions recorded (S38). **S49: H1 fix** — §3 migration bullet de-contradicted vs §11 (absent `schemaVersion` → `1`, not fresh; the total-settings-loss trap), matching the corrected 04-data-model §2.2/§4.1/§6.2 |
 | **Status** | **Decisions locked 2026-05-18** (Q1=B-2, Q2=approved, Q5=v2.0[P1+2]/v2.1[P3] — see §12). Phase 1 (dark, no behaviour change) is now implementable. Phase ≥ 2 still blocks on S8.5. |
 | **Supersedes** | nothing; **extends** [04-data-model.md](04-data-model.md) §2 (OQ-04), [09-c3-activity-history.md](09-c3-activity-history.md) §6/§7/§14, [07-shortcut-recorder.md](07-shortcut-recorder.md) §1 |
 | **Resolves** | the "iCloud sync — joint design with B1.2, schema-integration risk if shipped solo" deferral recorded in 09-c3 §14 and 07-spec §1 |
@@ -78,11 +78,17 @@ the parts it left open.
 - **Store**: SwiftData model container; iCloud via
   `ModelConfiguration(cloudKitDatabase: .private(<container-id>))`. Private
   database only — never public, never shared (privacy, §5).
-- **Migration**: 04-data-model §2.2 steps 1–6 unchanged — detect
-  `schemaVersion == 1` in UserDefaults, copy every `SettingsKey` into a typed
-  SwiftData entity, write `schemaVersion = 2` to SwiftData, set
-  `migrationCompleted = true` in UserDefaults, keep UserDefaults as
-  read-only fallback for **one minor version** then remove.
+- **Migration**: follow 04-data-model §2.2, with the **absent-`schemaVersion`
+  correction now folded into that doc**: step 1 must treat an *absent*
+  `schemaVersion` as `1`, **not** as a fresh install. The shipped v1.x app never
+  wrote the key, so an "absent → fresh → skip" reading would skip migrating
+  every real upgrading user — a silent total-settings-loss trap. The pre-built
+  `SettingsMigration.currentSchemaVersion` already defaults absent → `1` (§11),
+  and §2.2 / §4.1 / §6.2 were corrected to match. Otherwise per §2.2: copy every
+  *present* `SettingsKey` into a typed SwiftData entity, write `schemaVersion = 2`,
+  set `migrationCompleted = true` in UserDefaults, keep UserDefaults as read-only
+  fallback for **one minor version** then remove. (On a genuinely fresh v2.0
+  install the copy finds no present keys — a harmless no-op.)
 - **Conflict**: per-record last-writer-wins (04-data-model §2.2). Acceptable:
   settings are low-frequency, single-user, and a clobbered toggle is recoverable
   by re-toggling. **Exception: the chord — see §7.**
