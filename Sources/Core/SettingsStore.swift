@@ -124,7 +124,16 @@ public extension SettingsStore {
         // preserves the "absent = default / never touched" invariant a
         // future migration may rely on.
         guard !value.isEmpty else { remove(key); return }
-        let encoded = try? JSONEncoder().encode(value)
+        // Preserve the existing value on encode failure rather than writing a
+        // nil (which `setData` interprets as remove) — silently deleting a
+        // non-empty value the caller asked to persist would be data loss.
+        // Mirrors `setKeyChord`'s preserve-on-failure contract. Encoding a
+        // `[String]` cannot actually throw for valid Swift strings, so this is
+        // defensive; the `.fault` makes any future regression visible.
+        guard let encoded = try? JSONEncoder().encode(value) else {
+            settingsLogger.fault("settings key \(key.rawValue, privacy: .public) failed to encode as [String]; existing value left unchanged")
+            return
+        }
         setData(encoded, for: key)
     }
 
