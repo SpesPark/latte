@@ -57,10 +57,14 @@ defaults write "$BID" latte.calendarTrigger.enabled -bool true
 defaults write "$BID" latte.appTrigger.enabled -bool true
 defaults write "$BID" latte.wifiTrigger.enabled -bool true
 
-# cup
+# cup hero + 6 accent cups (demo window updates its content in place)
 quit; open -a "$APP"; sleep 3
 open -a "$APP" "latte://demo/cup?fill=0.55&accent=caramel&awake=true"; sleep 4
 cap "Latte Demo Cup" "$OUT/1-cup.png"
+for ac in espresso caramel mocha latte matcha noir; do
+  open -a "$APP" "latte://demo/cup?fill=0.7&accent=$ac&awake=true"; sleep 2.5
+  cap "Latte Demo Cup" "$OUT/cup-$ac.png"
+done
 
 # settings tabs (relaunch per tab so initialTab is honored)
 for tab in general triggers about; do
@@ -72,11 +76,18 @@ mv -f "$OUT/general.png"  "$OUT/2-general.png"
 mv -f "$OUT/triggers.png" "$OUT/3-triggers.png"
 mv -f "$OUT/about.png"    "$OUT/5-about.png"
 
-# menu-bar popover — needs an Accessibility status-item click
-quit; open -a "$APP"; sleep 3
+# menu-bar popover in the ACTIVE (awake) state — activateOnLaunch makes the
+# app hold the assertion on launch (indefinite), so the popover shows
+# "Latte is awake" / Indefinitely ✓ / Turn off enabled. Needs an
+# Accessibility status-item click to open.
+quit
+defaults write "$BID" latte.activateOnLaunch -bool true
+open -a "$APP"; sleep 4
 osascript -e 'tell application "System Events" to tell process "Latte" to click menu bar item 1 of menu bar 2' >/dev/null 2>&1
 sleep 1.5
-cap_popover "$OUT/M-menubar-off.png"
+cap_popover "$OUT/M-menubar-awake.png"
+quit
+defaults write "$BID" latte.activateOnLaunch -bool false
 
 # activity tab — seed synthetic, privacy-safe history into the CONTAINER log
 quit

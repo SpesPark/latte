@@ -48,13 +48,14 @@ def place(src_name, out_name, max_scale=1.65, crop_bottom=0.0):
 
 
 jobs = [
-    ("1-cup.png",        "01-cup.png",      3.0,  0.0),   # brand hero (flat vector)
-    ("M-menubar-off.png","02-menubar.png",  1.40, 0.0),   # CORE — keep awake controls
-    ("3-triggers.png",   "03-triggers.png", 1.65, 0.0),   # automation differentiator
-    ("2-general.png",    "04-general.png",  1.65, 0.0),
-    ("4b-activity.png",  "05-activity.png", 1.65, 0.075),  # trim cut-off 14d sliver
-    ("A-language.png",   "06-language.png", 1.55, 0.0),   # 11-language i18n
-    ("5-about.png",      "07-about.png",    1.8,  0.0),
+    ("1-cup.png",         "01-cup.png",      3.0,  0.0),   # brand hero (flat vector)
+    ("M-menubar-awake.png","02-menubar.png", 1.40, 0.0),   # CORE — awake state + durations
+    ("3-triggers.png",    "03-triggers.png", 1.65, 0.0),   # automation differentiator
+    ("2-general.png",     "04-general.png",  1.65, 0.0),
+    ("4b-activity.png",   "05-activity.png", 1.65, 0.075),  # trim cut-off 14d sliver
+    # 06-accents.png is built separately by latte-accent-grid.py
+    ("A-language.png",    "07-language.png", 1.55, 0.0),   # 11-language i18n
+    ("5-about.png",       "08-about.png",    1.8,  0.0),
 ]
 print("== composited 2880x1800 ==")
 for s, o, ms, cb in jobs:
