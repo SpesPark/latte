@@ -66,11 +66,16 @@ public final class CoreWLANSource: NSObject, WiFiSource, CLLocationManagerDelega
         guard pendingPermissionContinuation == nil else { return false }
         return await withCheckedContinuation { continuation in
             pendingPermissionContinuation = continuation
-            // NOTE: downgrading to `requestWhenInUseAuthorization()` (lower
-            // privilege, matches the usage-string copy) is desirable but
-            // needs real-device confirmation that CoreWLAN `ssid()` still
-            // resolves under When-In-Use on macOS — owner smoke-gated.
-            locationManager.requestAlwaysAuthorization()
+            // When-In-Use matches the only usage-string we ship
+            // (`NSLocationWhenInUseUsageDescription`) and is least-privilege —
+            // requesting `Always` while declaring only the When-In-Use string
+            // is an entitlement/description mismatch an App Reviewer can flag.
+            // macOS resolves both to the same prompt and grants
+            // `.authorized` / `.authorizedAlways` (both handled by
+            // `permissionStatus`). OWNER DEVICE-VERIFY: confirm CoreWLAN
+            // `ssid()` still resolves under When-In-Use before relying on the
+            // Wi-Fi trigger in the shipped build.
+            locationManager.requestWhenInUseAuthorization()
         }
     }
 
