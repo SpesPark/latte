@@ -26,8 +26,10 @@ warm = Image.new("RGB", (CW, CH), (110, 82, 56))
 BG = Image.composite(warm, BG, glow)
 
 
-def place(src_name, out_name, max_scale=1.65):
+def place(src_name, out_name, max_scale=1.65, crop_bottom=0.0):
     win = Image.open(os.path.join(SRC, src_name)).convert("RGBA")
+    if crop_bottom > 0:
+        win = win.crop((0, 0, win.width, int(win.height * (1 - crop_bottom))))
     maxw, maxh = int(CW * 0.70), int(CH * 0.80)
     scale = min(maxw / win.width, maxh / win.height, max_scale)
     nw, nh = int(win.width * scale), int(win.height * scale)
@@ -46,12 +48,14 @@ def place(src_name, out_name, max_scale=1.65):
 
 
 jobs = [
-    ("1-cup.png", "01-cup.png", 3.0),       # flat vector art — upscales cleanly
-    ("3-triggers.png", "02-triggers.png", 1.65),
-    ("2-general.png", "03-general.png", 1.65),
-    ("A-language.png", "04-language.png", 1.55),
-    ("5-about.png", "05-about.png", 1.8),   # smaller native window
+    ("1-cup.png",        "01-cup.png",      3.0,  0.0),   # brand hero (flat vector)
+    ("M-menubar-off.png","02-menubar.png",  1.40, 0.0),   # CORE — keep awake controls
+    ("3-triggers.png",   "03-triggers.png", 1.65, 0.0),   # automation differentiator
+    ("2-general.png",    "04-general.png",  1.65, 0.0),
+    ("4b-activity.png",  "05-activity.png", 1.65, 0.075),  # trim cut-off 14d sliver
+    ("A-language.png",   "06-language.png", 1.55, 0.0),   # 11-language i18n
+    ("5-about.png",      "07-about.png",    1.8,  0.0),
 ]
 print("== composited 2880x1800 ==")
-for s, o, ms in jobs:
-    place(s, o, ms)
+for s, o, ms, cb in jobs:
+    place(s, o, ms, cb)
