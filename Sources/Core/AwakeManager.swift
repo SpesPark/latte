@@ -65,6 +65,36 @@ public enum AwakeState: Equatable, Sendable {
     }
 }
 
+extension AwakeState: CustomStringConvertible {
+    /// Privacy-safe rendering for os_log. The transition logger emits this at
+    /// `privacy: .public`, so it must NOT include `TriggerVote.reason` — which
+    /// carries user content (Wi-Fi SSID, calendar event title, running-app
+    /// names). `.awakeTriggered` / `.coolingDown` therefore expose only the
+    /// static voting trigger IDs (e.g. "wifi"), never the reasons. The default
+    /// reflected `String(describing:)` would leak the full vote structs.
+    public var description: String {
+        switch self {
+        case .asleep:
+            return "asleep"
+        case .awakeUserIndefinite:
+            return "awakeUserIndefinite"
+        case .awakeUserTimed(let endsAt):
+            return "awakeUserTimed(endsAt: \(endsAt.timeIntervalSince1970))"
+        case .awakeTriggered(let votes):
+            return "awakeTriggered(triggers: \(Self.triggerIDList(votes)))"
+        case .coolingDown(let until, let lastVotes):
+            return "coolingDown(until: \(until.timeIntervalSince1970), triggers: \(Self.triggerIDList(lastVotes)))"
+        case .snoozed(let until):
+            return "snoozed(until: \(until.timeIntervalSince1970))"
+        }
+    }
+
+    /// Sorted trigger IDs only — deterministic and PII-free.
+    private static func triggerIDList(_ votes: [String: TriggerVote]) -> String {
+        "[" + votes.keys.sorted().joined(separator: ", ") + "]"
+    }
+}
+
 public enum AwakeInput: Equatable, Sendable {
     case userActivate(AwakeDuration)
     case userDeactivate
