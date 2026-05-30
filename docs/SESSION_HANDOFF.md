@@ -53,7 +53,7 @@ Documented here so they're not lost. None is a blocker; each has "no functional 
 
 **The autonomous engineering backlog is exhausted again** (S50 cleared all MEDIUM+; the rest is the deferred LOW list, mostly cosmetic/sharp-edged).
 
-**A. (OWNER-driven, the originally-planned work) App Store upload** — see "Owner-side pending". Claude can assist autonomously where possible: wire `DEVELOPMENT_TEAM` once the owner gives the Team ID (+ `xcodegen generate`); further `docs/store/` metadata edits (guarded by `check_store_limits.sh`). Screenshots (2880×1800, hard blocker) + signing + ASC paste are owner/GUI-gated.
+**A. (OWNER-driven, the originally-planned work) App Store upload** — see "Owner-side pending". Claude can assist autonomously where possible: wire `DEVELOPMENT_TEAM` once the owner gives the Team ID (+ `xcodegen generate`); further `docs/store/` metadata edits (guarded by `check_store_limits.sh`). **Screenshots are DONE (S50)** — 5 ASC-ready 2880×1800 shots in `docs/store/screenshots/` (Claude can capture more via `screenshots/_scripts/` since Screen Recording is granted). Signing + ASC paste remain owner/GUI-gated.
 
 **B. (optional, if owner wants) clear deferred LOW backlog** — items 4–7 above are safe; items 1–3 are sharp (read their warnings first, especially the CoreWLANSource deinit trap). Do NOT do these "for completeness" mid-App-Store-push unless owner asks — they add churn for near-zero functional gain.
 
@@ -118,7 +118,7 @@ Order matters (later steps depend on earlier).
 | 3 | **Register App ID** `com.parkbyeongjun.latte` | developer.apple.com → Identifiers | owner |
 | 4 | **Team ID** → set `DEVELOPMENT_TEAM` (EMPTY in `project.yml`, currently `""`) + `xcodegen generate` | give Claude the Team ID and Claude wires it | owner→Claude |
 | 5 | **Create app record** in App Store Connect (macOS, "Latte", bundle id, SKU) | | owner |
-| 6 | **Screenshots** 2880×1800 per `docs/store/screenshot-guide.md` | `docs/store/screenshots/` is EMPTY (.gitkeep) — **hard blocker**; needs a running build | owner |
+| 6 | **Screenshots** 2880×1800 | ✅ **DONE (S50)** — 5 ASC-ready shots generated in `docs/store/screenshots/` (cup hero / triggers / general / first-run language picker / about; English UI, caramel, sRGB, no-alpha). Owner: **review framing** before upload; reorder/select in ASC. Regenerate via `screenshots/_scripts/`. | owner review |
 | 7 | **Fill ASC listing** from `docs/store/*` + pricing **$2.99** + App Privacy "No Data Collected" + age rating + URLs | privacy URL live (spespark.github.io/latte/privacy.html) | owner |
 | 8 | **Archive → Validate → Upload → Submit** (Xcode Organizer) | Release, signed with the team from #4 | owner |
 | — | **WiFi When-In-Use device-verify** (S50 T5) | code now calls `requestWhenInUseAuthorization()` matching the Info.plist string; confirm on a real Mac that CoreWLAN `ssid()` still resolves under When-In-Use before relying on the Wi-Fi trigger in the shipped build | owner device smoke |
