@@ -292,7 +292,7 @@ public final class CalendarTrigger: Trigger {
     /// initial poll.
     public func reevaluateWatched() {
         guard pollTask != nil else { return }
-        Task { await pollOnce() }
+        Task { [weak self] in await self?.pollOnceIfRunning() }
     }
 
     /// **S22 / P-issue-6d** — see `Trigger.reemitCurrentVote()` doc.
@@ -303,7 +303,19 @@ public final class CalendarTrigger: Trigger {
     public func reemitCurrentVote() {
         guard pollTask != nil else { return }
         activeEventIDs = []
-        Task { await pollOnce() }
+        Task { [weak self] in await self?.pollOnceIfRunning() }
+    }
+
+    /// Deferred-poll seam for `reevaluateWatched` / `reemitCurrentVote`. Both
+    /// enqueue a `Task` whose body runs on a LATER main-actor turn; a `stop()`
+    /// can land in between (e.g. a pause-lift reevaluate racing a user
+    /// toggle-off). Re-check `pollTask` at execution time so a stale deferred
+    /// poll never emits a spurious vote for an already-stopped trigger. Unlike
+    /// `pollOnce()` (a direct test/UI seam that intentionally runs unguarded),
+    /// this only polls while the trigger is actually running.
+    func pollOnceIfRunning() async {
+        guard pollTask != nil else { return }
+        await pollOnce()
     }
 
     /// Test seam — invoked by `start`'s polling loop, also callable directly from tests.
