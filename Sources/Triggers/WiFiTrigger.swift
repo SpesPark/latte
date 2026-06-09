@@ -46,9 +46,21 @@ public final class CoreWLANSource: NSObject, WiFiSource, CLLocationManagerDelega
         case .notDetermined: return .notDetermined
         case .restricted, .denied: return .denied
         case .authorized, .authorizedAlways: return .granted
-        @unknown default: return .notDetermined
+        @unknown default:
+            // `.authorizedWhenInUse` is API_UNAVAILABLE(macos) in the current
+            // SDK so it cannot be named as a case — but we request When-In-Use
+            // authorization, so if a future macOS starts returning it, a user
+            // who granted access must not be misclassified as not-determined.
+            return status.rawValue == Self.authorizedWhenInUseRawValue
+                ? .granted
+                : .notDetermined
         }
     }
+
+    /// `kCLAuthorizationStatusAuthorizedWhenInUse` from the shared
+    /// CoreLocation header. Unavailable as a Swift case on macOS today;
+    /// matched by raw value for forward compatibility.
+    private static let authorizedWhenInUseRawValue: CLAuthorizationStatus.RawValue = 4
 
     public var currentSSID: String? {
         client.interface()?.ssid()
@@ -89,7 +101,9 @@ public final class CoreWLANSource: NSObject, WiFiSource, CLLocationManagerDelega
             let granted: Bool
             switch status {
             case .authorized, .authorizedAlways: granted = true
-            default: granted = false
+            // Forward-compat: a future macOS may report When-In-Use (raw 4),
+            // which is what we actually requested. See `permissionStatus`.
+            default: granted = status.rawValue == Self.authorizedWhenInUseRawValue
             }
             continuation.resume(returning: granted)
         }
