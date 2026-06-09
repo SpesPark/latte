@@ -56,6 +56,34 @@ final class DeferredPollStopGuardTests: XCTestCase {
         XCTAssertNil(vote, "a deferred poll for a stopped ScheduleTrigger must not emit a spurious vote")
     }
 
+    /// The race the S50 fix actually targeted, end-to-end: the deferred Task
+    /// is ENQUEUED while the trigger is running (the enqueue-time check
+    /// passes), then `stop()` lands before the body executes. `stop()`
+    /// clears `activeEntryID`, so an unguarded stale `pollOnce()` would
+    /// re-match the entry with `prev == nil` and emit a spurious ON — the
+    /// execution-time `pollTask` re-check is the only suppressor. (S51
+    /// audit: the test above only pins the static already-stopped path.)
+    func testScheduleDeferredPollEnqueuedBeforeStopDoesNotEmit() async {
+        let trigger = makeMatchingScheduleTrigger()
+        await trigger.start()
+        var initialIterator = trigger.voteStream.makeAsyncIterator()
+        let initial = await initialIterator.next()
+        XCTAssertEqual(initial?.wantsAwake, true, "fixture must be inside the window")
+
+        trigger.reevaluateWatched() // enqueued while running — guard passes
+        trigger.stop()              // lands before the deferred body runs
+        for _ in 0..<20 { await Task.yield() } // let the stale poll execute
+
+        let probe = Task { @MainActor () -> TriggerVote? in
+            var it = trigger.voteStream.makeAsyncIterator()
+            return await it.next()
+        }
+        try? await Task.sleep(nanoseconds: 50_000_000)
+        probe.cancel()
+        let vote = await probe.value
+        XCTAssertNil(vote, "a deferred poll enqueued before stop() must not emit after stop()")
+    }
+
     func testScheduleDirectPollEmitsForSameFixture() async {
         // Contrast: the unguarded direct seam DOES emit, proving the fixture is
         // genuinely active and the guard above is the only suppressor.

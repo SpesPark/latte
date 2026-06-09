@@ -69,6 +69,26 @@ final class ActivityLogStoreTests: XCTestCase {
         XCTAssertEqual(snap.first?.id, fresh.id)
     }
 
+    /// Pins the cutoff boundary far tighter than the coarse 1h-vs-1s test
+    /// above: ±10 s around `now - retention`. (`gc` removes strictly-older
+    /// (`timestamp < cutoff`) entries, but `Date()` advances between entry
+    /// construction and the gc call, so the boundary is pinned via margins
+    /// rather than exact equality — S51 audit.)
+    func testGCBoundaryTenSecondsEitherSideOfCutoff() async throws {
+        let dir = try makeTempDirectory()
+        defer { cleanup(dir) }
+
+        let store = ActivityLogStore(directory: dir, retention: 3600)
+        let justInside = makeEntry(timestamp: Date(timeIntervalSinceNow: -3600 + 10))
+        let justOutside = makeEntry(timestamp: Date(timeIntervalSinceNow: -3600 - 10))
+        await store.append(justOutside)
+        await store.append(justInside)
+
+        let snap = await store.snapshot()
+        XCTAssertEqual(snap.count, 1, "10s outside retention must drop; 10s inside must survive")
+        XCTAssertEqual(snap.first?.id, justInside.id)
+    }
+
     func testConcurrentAppendsAllPersist() async throws {
         let dir = try makeTempDirectory()
         defer { cleanup(dir) }

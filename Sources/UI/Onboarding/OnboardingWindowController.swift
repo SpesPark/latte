@@ -20,7 +20,11 @@ public final class OnboardingWindowController: NSObject, NSWindowDelegate {
 
     public static let shared = OnboardingWindowController()
 
-    private var window: NSWindow?
+    /// Internal (not private) so tests can assert the delegate wiring —
+    /// `show()` assigning `newWindow.delegate = self` is the load-bearing
+    /// line of the first-run lockout fix, and without this seam deleting
+    /// it would leave every test green (S51 audit).
+    var window: NSWindow?
 
     /// The onboarding state to finalize when the window is closed by the user.
     /// Captured in `show()`; held weakly because `AppEnvironment` owns it for

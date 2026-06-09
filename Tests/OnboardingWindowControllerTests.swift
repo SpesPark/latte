@@ -35,6 +35,27 @@ final class OnboardingWindowControllerTests: XCTestCase {
         XCTAssertTrue(settings.bool(.firstRunCompleted, default: false))
     }
 
+    /// `show()` assigning `newWindow.delegate = self` is the load-bearing
+    /// line of the lockout fix — the seam tests in this file call
+    /// `windowWillClose` directly, so without this assertion deleting that
+    /// line would leave every test green while resurrecting the bug
+    /// (S51 audit).
+    func testShowWiresControllerAsWindowDelegate() {
+        let settings = InMemorySettingsStore()
+        let env = AppEnvironment(settings: settings)
+        let state = OnboardingState(settings: settings)
+        let controller = OnboardingWindowController()
+
+        controller.show(state: state, coordinator: env.coordinator, environment: env)
+        defer { controller.close() }
+
+        XCTAssertNotNil(controller.window)
+        XCTAssertTrue(
+            controller.window?.delegate === controller,
+            "show() must wire the controller as the window's NSWindowDelegate"
+        )
+    }
+
     func testWindowWillCloseIsIdempotentWhenAlreadyCompleted() {
         let settings = InMemorySettingsStore()
         let state = OnboardingState(settings: settings)
