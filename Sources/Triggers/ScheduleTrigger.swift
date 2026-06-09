@@ -157,7 +157,15 @@ public extension SettingsStore {
             return decoded
         }
         set {
-            let encoded = try? JSONEncoder().encode(newValue)
+            // Preserve the existing value on encode failure rather than writing
+            // a nil (which `setData` interprets as remove) — silently deleting
+            // the user's schedule entries would be data loss. Mirrors
+            // `encodeStringArray`'s preserve-on-failure contract; encoding
+            // `[ScheduleEntry]` cannot actually throw, so this is defensive.
+            guard let encoded = try? JSONEncoder().encode(newValue) else {
+                settingsLogger.fault("scheduleTriggerEntries failed to encode; existing value left unchanged")
+                return
+            }
             setData(encoded, for: .scheduleTriggerEntries)
         }
     }
