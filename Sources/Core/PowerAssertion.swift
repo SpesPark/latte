@@ -84,6 +84,11 @@ public final class MockPowerAssertion: PowerAssertionType {
     public private(set) var active = false
     public private(set) var mode: PowerAssertionMode?
 
+    /// When true, the next `activate` reports failure and leaves the
+    /// assertion inactive — mirrors `IOPMAssertionCreateWithName` returning
+    /// non-success, so tests can exercise the acquisition-failure path.
+    public var failNextActivate = false
+
     public init() {}
 
     public var isActive: Bool { active }
@@ -92,6 +97,10 @@ public final class MockPowerAssertion: PowerAssertionType {
     @discardableResult
     public func activate(mode: PowerAssertionMode, reason: String) -> Bool {
         activations.append((mode, reason))
+        if failNextActivate {
+            failNextActivate = false
+            return false
+        }
         active = true
         self.mode = mode
         return true

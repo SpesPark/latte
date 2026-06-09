@@ -618,7 +618,7 @@ public final class AwakeManager: ObservableObject {
         didSet {
             settings.setBool(allowDisplaySleep, for: .allowDisplaySleep)
             if assertion.isActive {
-                assertion.activate(mode: assertionMode, reason: "allowDisplaySleep changed")
+                activateAssertionOrForceAsleep(reason: "allowDisplaySleep changed")
             }
         }
     }
@@ -915,12 +915,12 @@ public final class AwakeManager: ObservableObject {
         for effect in effects {
             switch effect {
             case .acquireAssertion:
-                assertion.activate(mode: assertionMode, reason: "Latte awake")
+                activateAssertionOrForceAsleep(reason: "Latte awake")
             case .releaseAssertion:
                 assertion.deactivate()
             case .refreshAssertion:
                 if assertion.isActive {
-                    assertion.activate(mode: assertionMode, reason: "Latte mode change")
+                    activateAssertionOrForceAsleep(reason: "Latte mode change")
                 }
             case .scheduleTimer(let kind, let fireAt):
                 schedule(kind: kind, fireAt: fireAt)
@@ -929,6 +929,26 @@ public final class AwakeManager: ObservableObject {
             case .logFault(let message):
                 logger.fault("invariant violated: \(message, privacy: .public)")
             }
+        }
+    }
+
+    /// Activates the IOKit assertion; when acquisition FAILS, the app must
+    /// not keep claiming awake while the system refused the assertion (the
+    /// cup would show awake while the Mac can sleep — the worst silent
+    /// failure). Defer a constraint-deactivate to the next main-actor turn:
+    /// this runs inside `applyEffects`, and re-entering `process()`
+    /// mid-transition would nest `applyTransition`. S51 audit finding — the
+    /// failure Bool was previously discarded.
+    private func activateAssertionOrForceAsleep(reason: String) {
+        if assertion.activate(mode: assertionMode, reason: reason) { return }
+        logger.fault("power assertion acquisition failed; deactivating instead of claiming awake")
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            // A later transition may have recovered (re-acquired the
+            // assertion) or already left the awake state — only force
+            // asleep while we still claim awake without holding one.
+            guard self.state.isAwake, !self.assertion.isActive else { return }
+            self.process(.constraintDeactivate)
         }
     }
 
