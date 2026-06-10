@@ -6,7 +6,7 @@
 
 **Last session:** S52 (2026-06-10) — **Track F i18n adversarial quality review.** Owner picked Track F from the S51 queue. 10 parallel per-language native-reviewer agents over the machine-written catalog (172 keys × 11 languages), findings verified against the actual catalog before applying, 102 value fixes in one data-only commit. Several agent findings **rejected as false positives** after verification (see below — the review-the-reviewer step caught real agent errors).
 **v1.x release line:** v1.9 (unchanged). **Public App Store version = 1.0.0.**
-**Branch:** `claude/focused-hamilton-417bfc` — S52 adds `56498c2` (fix) + this wrap. **PR #1 OPEN** (`https://github.com/SpesPark/latte/pull/1`) — not merged (owner decides). Pushed; PR auto-updates.
+**Branch:** `claude/focused-hamilton-417bfc` — S52 adds `56498c2` (Track F fix) + wrap, then the **post-wrap A1/A2/A3 round**: `dc2cdbf` rebrand-prep kit (`scripts/rebrand.sh` + `docs/rebrand-checklist.md` — 상호 확정 시 ~5분 작업), `a7be73f` store-copy↔binary truth guard in `check_doc_drift.sh` (mutation-tested; S51 Track C can't regress), `86cd3fc` TRANSLATIONS.md review-status + protected-choices list. **PR #1 OPEN** (`https://github.com/SpesPark/latte/pull/1`) — not merged (owner decides). Pushed; PR auto-updates.
 **Test count:** **713** (unchanged — data-only session, no Swift touched).
 **Builds:** test run green attempt 1 (no trap-#8 stall). **Doc-drift + store-limits:** clean.
 **Catalog:** 172 keys × 11 languages — same shape, 102 values improved. **Toolchain:** Xcode 26.5 / Swift 6.3.2 / macOS 13 target.
@@ -52,7 +52,7 @@ ko D · ja C · zh-Hans D · zh-Hant C · de C+ · es D · fr C · it C+ · pt-B
 ## Next-session entry points (priority order)
 
 **A. (owner-decision queue — unchanged from S51):**
-1. 🟠 **상호 (brand) decision** → bundle-ID rewire → publish (see DECISION PENDING below).
+1. 🟠 **상호 (brand) decision** → bundle-ID rewire → publish (see DECISION PENDING below). **Rewire is now scripted** (S52 A1): `scripts/rebrand.sh com.<brand> --apply` + the manual steps in `docs/rebrand-checklist.md` (TCC re-grants, defaults migration, gh-pages redeploy).
 2. `latte://demo` ships in Release — `#if DEBUG` wrap yes/no (screenshots/smoke depend on it; don't wrap casually).
 3. PR #1 merge (no blockers in review).
 4. WiFi When-In-Use device-verify (S50 T5 + S51 F2).
