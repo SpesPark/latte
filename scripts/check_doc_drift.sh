@@ -113,6 +113,76 @@ else
     note "CloudKit (CKContainer/CKDatabase/import CloudKit) confined to CloudKitSyncEngine.swift"
 fi
 
+echo "== Store copy ↔ binary truth (S51 Track C regression guard) =="
+# S51 found the S45 metadata claiming features the binary doesn't ship — two
+# near-certain 2.3.1 rejections (SIX triggers incl. Focus; CSV/JSON export
+# removed in S24). This block pins the store copy to the binary so a future
+# session can't "fix" it back. SUBMITTED = fields pasted into ASC.
+SUBMITTED=$(ls docs/store/description-*.md docs/store/whats-new-*.md \
+    docs/store/promotional-text-*.txt docs/store/keywords-*.txt \
+    docs/store/subtitle-*.txt docs/store/app-name.txt 2>/dev/null)
+
+# Binary truth: active (non-commented) trigger registrations. FocusTrigger is
+# a commented-out line until V2-03b, so it doesn't count.
+TRIG_COUNT=$(awk '/private func registerDefaultTriggers/,/^    \}/' \
+    Sources/App/AppEnvironment.swift 2>/dev/null \
+    | grep -cE '^\s*coordinator\.register\(' || true)
+if [[ "$TRIG_COUNT" == "5" ]]; then
+    note "binary registers 5 triggers (FocusTrigger commented out — V2-03b)"
+else
+    warn "binary registers $TRIG_COUNT triggers but store copy says FIVE — update docs/store/* AND this check together"
+fi
+
+# Wrong-count claims in submitted copy — the count word must be ADJACENT to
+# the trigger word ("6가지 커피 톤" is legitimate accent-tone copy, not a claim).
+SIX_CLAIM=$(grep -rinE '(six|6) ?(smart )?triggers?|(6가지|여섯 가지|여섯 개의?) ?(스마트 )?트리거|트리거 (6가지|여섯)' $SUBMITTED /dev/null 2>/dev/null || true)
+if [[ -n "$SIX_CLAIM" ]]; then
+    warn "submitted copy claims six triggers — binary ships five (Focus = V2-03b):"
+    echo "$SIX_CLAIM" | sed 's/^/    /'
+else
+    note "no six-trigger claim in submitted copy"
+fi
+
+# Focus must not appear in SUBMITTED fields at all (privacy-data/review-notes
+# may legitimately explain that Focus is NOT shipped — they are excluded).
+FOCUS_CLAIM=$(grep -rinE 'focus|포커스|집중 모드' $SUBMITTED /dev/null 2>/dev/null || true)
+if [[ -n "$FOCUS_CLAIM" ]]; then
+    warn "Focus mentioned in submitted copy — FocusTrigger is NOT registered in v1.0 (V2-03b):"
+    echo "$FOCUS_CLAIM" | sed 's/^/    /'
+else
+    note "no Focus claim in submitted copy"
+fi
+
+# Export was removed in S24 (0e13546) — any export claim is a 2.3.1 risk.
+EXPORT_CLAIM=$(grep -rinE '\bcsv\b|\bjson\b|export|내보내기|내보내' $SUBMITTED /dev/null 2>/dev/null || true)
+if [[ -n "$EXPORT_CLAIM" ]]; then
+    warn "export (CSV/JSON) claimed in submitted copy — feature was removed in S24:"
+    echo "$EXPORT_CLAIM" | sed 's/^/    /'
+else
+    note "no export claim in submitted copy"
+fi
+
+# 2.3.7 — third-party brands in keyword metadata, competitor app names in
+# submitted copy + review-notes. "Zoom" in the description BODY (app-trigger
+# explanation) is legitimate; the brand restriction bites in keywords.
+# "caffeinated" as an English adjective is deliberately not matched.
+BRAND_KW=$(grep -rinE 'zoom|teams|webex|slack|discord' docs/store/keywords-*.txt 2>/dev/null || true)
+COMPETITOR=$(grep -rinE 'amphetamine|keepingyouawake' $SUBMITTED docs/store/review-notes.md /dev/null 2>/dev/null || true)
+if [[ -n "$BRAND_KW" || -n "$COMPETITOR" ]]; then
+    warn "third-party brand/competitor names in metadata (2.3.7):"
+    { echo "$BRAND_KW"; echo "$COMPETITOR"; } | grep . | sed 's/^/    /'
+else
+    note "no third-party brands in keywords, no competitor names in submitted copy"
+fi
+
+# Unused-API usage string: NSFocusStatusUsageDescription must stay out of
+# Info.plist until V2-03b actually calls INFocusStatusCenter.
+if grep -q 'NSFocusStatusUsageDescription' Resources/Info.plist 2>/dev/null; then
+    warn "NSFocusStatusUsageDescription present in Info.plist but INFocusStatusCenter is not called (re-add only with V2-03b)"
+else
+    note "Info.plist has no unused Focus usage string"
+fi
+
 echo "== App Store field char limits =="
 # Apple rejects over-limit listing fields at submit time (S45: description-en
 # had silently grown ~690 chars over the 4000 cap). Delegate to the dedicated
