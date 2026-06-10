@@ -6,15 +6,13 @@ WHY LATTE
 
 You're mid-Zoom-call, the lid clicks shut, your Mac sleeps — screen share dead. Every. Single. Time. Or you enable caffeine for a presentation, forget to turn it off, and the battery's dead by Monday. Latte fixes both by automating the toggle: configure once, then forget about it.
 
-HOW IT WORKS — SIX SMART TRIGGERS
+HOW IT WORKS — FIVE SMART TRIGGERS
 
 Calendar — stays awake during your scheduled meetings. Pick which calendars count (work only, no personal birthdays). Configurable lead and trail time so you're caffeinated a few minutes before the call and after it ends. Optional "exclude all-day events" so birthday reminders don't keep your Mac awake all day.
 
 Apps — active when Zoom, Microsoft Teams, Webex, Discord, Slack, Google Meet, or any app you choose is running. The picker shows real names with real app icons — no bundle ID hunting. Add anything that's running with one click.
 
 Wi-Fi — awake on your work network, asleep on your home Wi-Fi. Or invert it. Add as many SSIDs as you like.
-
-Focus — awake whenever a macOS Focus mode is on. Heads-down with Do Not Disturb? Latte keeps the screen alive without you lifting a finger.
 
 Schedule — awake on your own clock. Pick the weekdays and the hours — 9 to 6, Monday to Friday, or whatever your day looks like — and save the patterns you reuse.
 
@@ -29,7 +27,7 @@ WHAT MAKES LATTE DIFFERENT
 • Calendar-aware: no other mainstream menu-bar utility activates automatically from calendar events.
 • Live state in the menu bar: the cup fills when active, empties at rest. Glance once and you know.
 • Set and forget: enable Launch at Login in the welcome wizard, pick what matters, never touch it again.
-• Activity history: see when — and why — Latte kept your Mac awake, with 24-hour and 14-day charts you can export as CSV or JSON.
+• Activity history: see when — and why — Latte kept your Mac awake, with 24-hour and 14-day charts and a filterable event list.
 • One-key toggle: a global keyboard shortcut (⌘⇧L by default, fully rebindable) flips caffeine on or off from anywhere.
 • No subscription, ever. $2.99 once and Latte is yours for life — no "Plus" tier, no upgrade-as-a-service.
 
@@ -43,6 +41,6 @@ Latte collects no data. No analytics SDK, no telemetry, no network calls to anyo
 
 REQUIREMENTS
 
-macOS 13 Ventura or later; Apple Silicon recommended. The Calendar, Wi-Fi, and Focus triggers each ask for the matching permission only when you enable them — never at launch (Wi-Fi uses Location Services only to read the SSID, never your location). Schedule and External Display need no permission at all.
+macOS 13 Ventura or later; Apple Silicon recommended. The Calendar and Wi-Fi triggers each ask for the matching permission only when you enable them — never at launch (Wi-Fi uses Location Services only to read the SSID, never your location). Schedule, Apps, and External Display need no permission at all.
 
 Built by an independent developer. Questions? Use the Support link below.
