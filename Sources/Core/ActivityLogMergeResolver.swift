@@ -35,6 +35,14 @@ public enum ActivityLogMergeResolver {
     ///
     /// 64-char lowercase hex: a valid `CKRecord.recordName` with no further
     /// transform required at activation.
+    ///
+    /// ⚠️ **Activation contract (RFC §10 M2 — S51 audit):** compute this hash
+    /// ONLY at write time, from the locally-constructed entry. NEVER re-hash an
+    /// entry reconstructed from a CloudKit download: CK's `Date` wire encoding
+    /// may not preserve microsecond precision, so a recomputed digest can
+    /// differ from the stored `recordName` and every sync round-trip would then
+    /// duplicate the entry. Dedup downloaded records on
+    /// `record.recordID.recordName` (the write-time hash), not on a re-hash.
     public static func contentAddressedID(for entry: ActivityLogEntry) -> String {
         let micros = Int64((entry.timestamp.timeIntervalSince1970 * 1_000_000).rounded())
         let canonical = "\(micros)|\(entry.triggerId)|\(entry.kind.rawValue)|\(entry.reasonCode.rawValue)|\(entry.id.uuidString)"

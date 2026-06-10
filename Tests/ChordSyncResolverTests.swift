@@ -87,4 +87,29 @@ final class ChordSyncResolverTests: XCTestCase {
         XCTAssertEqual(reg.currentChord, localOverride, "A new synced chord replaces the prior one")
         XCTAssertGreaterThanOrEqual(reg.unregisterCallCount, 1)
     }
+
+    // MARK: - §7 L4: feature toggle gates registration (S51)
+
+    /// A synced chord arriving while the shortcut feature is OFF on this
+    /// device must not register a live global hotkey — and any previously
+    /// registered chord is released.
+    func testFeatureDisabledSkipsRegistrationAndUnregisters() {
+        let reg = MockHotKeyRegistrar()
+        _ = ChordSyncResolver.apply(syncedChord: synced, registrar: reg) {}
+        XCTAssertTrue(reg.isRegistered)
+
+        let res = ChordSyncResolver.apply(
+            syncedChord: localOverride, featureEnabled: false, registrar: reg
+        ) {}
+        XCTAssertFalse(reg.isRegistered, "feature OFF must leave no live hotkey")
+        XCTAssertFalse(res.registered)
+        XCTAssertEqual(res.effectiveChord, localOverride, "the synced value is still reported, never clobbered")
+    }
+
+    func testFeatureEnabledDefaultRegistersAsBefore() {
+        let reg = MockHotKeyRegistrar()
+        let res = ChordSyncResolver.apply(syncedChord: synced, registrar: reg) {}
+        XCTAssertTrue(res.registered)
+        XCTAssertEqual(reg.currentChord, synced)
+    }
 }

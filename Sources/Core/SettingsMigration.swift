@@ -108,6 +108,13 @@ public enum SettingsMigration {
     /// `schemaVersion = 2` and a uniform `now` write time. Absent keys are
     /// omitted (preserves "never touched = default"); `schemaVersion` itself is
     /// represented by the top-level field, not a copied entry.
+    ///
+    /// ⚠️ **Activation contract (RFC L1 — S51 audit):** the caller must run
+    /// this EXACTLY ONCE per upgrade and then write `schemaVersion = 2` back
+    /// to **this** `SettingsStore` (UserDefaults), not only to the SwiftData
+    /// container — `needsMigration` reads from the store, so skipping that
+    /// write re-runs the migration every launch, re-stamping all entries with
+    /// a fresh uniform `now` and clobbering per-key LWW provenance.
     public static func snapshot(from store: SettingsStore, now: Date) -> SettingsSnapshot {
         let entries = SettingsKey.allCases.compactMap { key -> SettingsSnapshotEntry? in
             guard key != .schemaVersion, store.exists(key) else { return nil }

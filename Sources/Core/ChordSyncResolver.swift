@@ -36,14 +36,24 @@ public enum ChordSyncResolver {
     /// Apply a synced (or overridden) chord on this device. Unregisters any
     /// prior chord first so a newly-synced value replaces the old one, then
     /// attempts registration and reports the outcome. Persists nothing.
+    ///
+    /// `featureEnabled` makes RFC §7 L4 structural (S51 audit): when the
+    /// shortcut feature is OFF on this device, a synced chord value must not
+    /// register a live global hotkey — the prior chord is unregistered and the
+    /// resolution reports `registered = false`. (`showsDisabledCue` is moot in
+    /// that state; the feature toggle itself gates the UI section.)
     public static func apply(
         syncedChord: KeyChord,
         deviceOverride: KeyChord? = nil,
+        featureEnabled: Bool = true,
         registrar: HotKeyRegistrar,
         handler: @escaping @MainActor () -> Void
     ) -> Resolution {
         let effective = deviceOverride ?? syncedChord
         registrar.unregister()
+        guard featureEnabled else {
+            return Resolution(effectiveChord: effective, registered: false)
+        }
         registrar.register(chord: effective, handler: handler)
         let registered = registrar.isRegistered && registrar.currentChord == effective
         return Resolution(effectiveChord: effective, registered: registered)
