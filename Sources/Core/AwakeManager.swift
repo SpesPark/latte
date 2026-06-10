@@ -672,15 +672,25 @@ public final class AwakeManager: ObservableObject {
     private var snoozeTask: Task<Void, Never>?
     private var powerObservation: PowerSourceObservation?
 
+    /// Sleep seam for timer scheduling (S52 B1). Production sleeps with
+    /// `Task.sleep`; tests inject an instant sleeper so the TimerKind →
+    /// AwakeInput wiring in `schedule(kind:fireAt:)` is testable
+    /// end-to-end — before this seam, a wiring bug there ("timed session
+    /// never ends") shipped with every test green because tests could
+    /// only feed expiry inputs to the FSM directly.
+    private let sleeper: @Sendable (UInt64) async throws -> Void
+
     private static var signalHandlerInstalled = false
 
     public init(
         assertion: PowerAssertionType = PowerAssertion(),
         settings: SettingsStore = UserDefaultsSettingsStore(),
-        powerSource: PowerSourceType? = nil
+        powerSource: PowerSourceType? = nil,
+        sleeper: @escaping @Sendable (UInt64) async throws -> Void = { try await Task.sleep(nanoseconds: $0) }
     ) {
         self.assertion = assertion
         self.settings = settings
+        self.sleeper = sleeper
         if let powerSource {
             self.powerSource = powerSource
         } else {
@@ -955,9 +965,10 @@ public final class AwakeManager: ObservableObject {
     private func schedule(kind: TimerKind, fireAt: Date) {
         cancelTimer(kind)
         let interval = max(0, fireAt.timeIntervalSinceNow)
+        let sleeper = self.sleeper
         let task = Task { @MainActor [weak self] in
             let nanos = UInt64(interval * 1_000_000_000)
-            try? await Task.sleep(nanoseconds: nanos)
+            try? await sleeper(nanos)
             if Task.isCancelled { return }
             guard let self else { return }
             switch kind {
@@ -970,6 +981,17 @@ public final class AwakeManager: ObservableObject {
         case .duration: durationTask = task
         case .coolDown: coolDownTask = task
         case .snooze: snoozeTask = task
+        }
+    }
+
+    /// Test seam (S52 B1): expose the pending timer task so tests can
+    /// await the scheduled expiry deterministically instead of polling.
+    /// Internal — not part of the public surface.
+    func timerTask(for kind: TimerKind) -> Task<Void, Never>? {
+        switch kind {
+        case .duration: return durationTask
+        case .coolDown: return coolDownTask
+        case .snooze: return snoozeTask
         }
     }
 
