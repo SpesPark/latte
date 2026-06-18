@@ -4,28 +4,24 @@
 
 ---
 
-**Last session:** S53 (2026-06-18) — **B1 verification + test-defect fix.** Picked up S52's MUST-DO: run the suite (B1 `872a38a` shipped its 4 wiring tests compile-only because trap #9 hit mid-S52). trap #9 was **already clear** at S53 start (pty 34/511, 0 orphans — owner's reboot/uptime resolved it; no action needed). Ran `scripts/run_tests.sh` → **2 of the 4 new AwakeTimerWiringTests were RED**. Root-caused as a **test defect, product correct**, fixed both, re-verified.
+**Last session:** S54 (2026-06-18) — **closed out the autonomous backlog: B3 + B2.** Both shipped TDD-first (RED via missing symbol → impl → green) with pure-helper / DI-seam extraction so the new behaviour is unit-tested without touching production control flow. With these, the v1.x autonomous backlog is **empty** — everything remaining is owner-gated (see entry points A).
 **v1.x release line:** v1.9 (unchanged). **Public App Store version = 1.0.0.**
-**Branch:** `claude/focused-hamilton-417bfc`. S53 adds one commit on top of `0289c4e`: the AwakeTimerWiringTests fix + README 713→717. **PR #1 OPEN** (`https://github.com/SpesPark/latte/pull/1`) — not merged (owner decides). Pushed; PR auto-updates.
-**Test count:** **717/717 verified GREEN** (attempt 1, no stall). Confirmed twice: `run_tests.sh` `** TEST SUCCEEDED **`, and a direct `xcodebuild test` summary = `Executed 717 tests, with 0 failures`. README now says 717.
-**Builds:** default + flag-on **0 warnings** (carried from S52); full suite green. **Doc-drift + store-limits:** clean (carried; re-verify if touching store copy).
+**Branch:** `claude/focused-hamilton-417bfc`. S54 adds two commits on top of `4f9f11c`: `85413b8` (B3) + `13db4a3` (B2). **PR #1 OPEN** (`https://github.com/SpesPark/latte/pull/1`) — not merged (owner decides). Pushed; PR auto-updates.
+**Test count:** **725/725 verified GREEN** (attempt 1, no stall) — 717 + 4 (B3 `ChartDateLabelTests`) + 4 (B2 `IOPowerSourceFanOutTests`). README says 725.
+**Builds:** default + flag-on (`-D LATTE_ICLOUD_SYNC`) **0 warnings**; full suite green. **Doc-drift + store-limits:** clean.
 **Toolchain:** Xcode 26.5 / Swift 6.3.2 / macOS 13 target. **Catalog:** 172 keys × 11 languages (unchanged since S52).
 
 ---
 
-## S53 what landed — the B1 test defect
+## S54 what landed — B3 + B2 (autonomous backlog closed)
 
-**Symptom.** `run_tests.sh` (full suite) failed, real-failure classified (not the trap-#8 stall): `testDeactivateCancelsPendingDurationTimer` + `testReactivationReplacesPendingDurationTimer`. Run in isolation (`-only-testing:LatteTests/AwakeTimerWiringTests`), only `testReactivation…` failed deterministically (line 113 "superseded timer fired into the new session — got asleep"); `testDeactivate…` **passed alone** → it was order-dependent/flaky in the full suite.
+**B3 — chart date labels localized (`85413b8`).** `DailyTotalsChart`'s x-axis used `en_US_POSIX` + a hardcoded `"M/d"`, forcing US month-first ordering ("1/15") in all 11 locales. Extracted a pure, locale-injectable `ChartDateLabel.makeFormatter(locale:)` that derives field order/separators via `setLocalizedDateFormatFromTemplate("Md")` — "15/01" en-GB, "1. 15." ko, "15.1." de. `DailyTotalsChart` caches a formatter built from `Locale.current` (same once-built `static let` caching as before — locale is fixed per app session). `ChartDateLabelTests` (4) pin month-first/day-first ordering and ko ≠ en-US; time zone pinned to UTC for CI independence, production uses the current zone.
 
-**Root cause (TEST defect — product code is correct).** The S52 seam injects an **instant sleeper** `{ _ in }` that **ignores the requested interval**. So there is no such thing as a timer that stays *pending* across an `await`: the moment the main actor yields (any `await task.value`), EVERY enqueued `@MainActor` timer task fires its expiry.
-- `testReactivation…` did `await first.value` then expected the session to still be awake — but draining the superseded task also ran the **live 1h replacement** to completion → `.asleep` → guard failed. Hard fail, reproducible in isolation.
-- `testDeactivate…` drained a single cancelled task; alone that's fine, but in the full suite a **sibling test's enqueued timer** could run during the drain → flaky.
+**B2 — IOPowerSource fan-out seam (`13db4a3`).** `fanOut()` was reachable only from the IOKit run-loop callback → the production observer registry (multi-observer delivery, copy-before-iterate cancel safety, single-shared-notifier lifecycle) had **zero** coverage; only `MockPowerSource`'s parallel reimplementation was tested (free to drift). Applied the S52 sleeper DI pattern: inject `snapshot: () -> Bool` + `notifier: PowerChangeNotifier`, defaults read real IOKit via new `systemIsOnAC` / `systemNotifier` statics. The IOKit run-loop wiring + the C-callback main-actor hop moved into `systemNotifier`; `observe()` installs one shared notifier and tears it down on last-observer-leave — **behaviour identical**, just injectable. `fanOut()` stays private; `IOPowerSourceFanOutTests` (4) drive it through an injected notifier so **no live `CFRunLoopSource`** is created in the test process (avoids aggravating trap #8).
 
-The product contracts they meant to check are genuinely upheld by `AwakeManager`: `cancelTimer` does `durationTask?.cancel(); durationTask = nil`; the task body guards `if Task.isCancelled { return }` (no late expiry); `enter()` emits `cancelTimer(.duration)` before `scheduleTimer(.duration)` on re-activation. No product change was needed or made.
+**New patterns.** (1) `setLocalizedDateFormatFromTemplate` is the correct fix for "all locales show US dates" — never hardcode `dateFormat` for user-facing labels. (2) The S52 inject-the-side-effecting-primitive seam generalizes cleanly: box a non-Sendable closure as a C run-loop context and keep it alive in the teardown closure. (3) Swift 6 tests that share mutable state across injected (sendable) closures need a `@MainActor` reference box (`Ref<T>`) — a captured local `var` trips "mutated after capture by sendable closure".
 
-**Fix (`Tests/AwakeTimerWiringTests.swift` only).** Rewrote both tests to pin the cancel/replace contract **synchronously** — `XCTAssertTrue(task.isCancelled)`, the timer-slot is nil, and the FSM state is read right after the public call (before any `await`). This is deterministic regardless of the instant sleeper and immune to suite ordering, and still catches real regressions (drop the cancel → `isCancelled` false; drop the replace's cancel → superseded task not cancelled). The expiry **wiring** itself stays covered by the two expiry tests (each holds a single timer, no pending-race). Added a `NOTE` comment in the file explaining why draining-to-observe is the wrong model under this seam.
-
-**Verification.** `run_tests.sh` green attempt 1 (no stall); direct `xcodebuild test` = **717/717, 0 failures**. README bumped 713 → 717.
+**Verification.** `run_tests.sh` green attempt 1 (no stall) = **725/725, 0 failures**; default + flag-on builds **0 warnings**; doc-drift clean. README 717 → 725.
 
 ---
 
@@ -37,15 +33,18 @@ The product contracts they meant to check are genuinely upheld by `AwakeManager`
 3. PR #1 merge (no blockers in review).
 4. WiFi When-In-Use device-verify (S50 T5 + S51 F2).
 
-**B. (autonomous, now unblocked — the suite runs again):**
-- ✅ **B1 clock seam — LANDED `872a38a` + VERIFIED S53** (tests fixed; 717 green). Done.
-- ⏳ **B3 chart POSIX locale** ([ActivityTab.swift:302](../Sources/UI/Settings/ActivityTab.swift) `en_US_POSIX`) — i18n cosmetic: charts show English dates in all 11 locales. Safe to pick up now (suite is green again). Small, self-contained.
-- ⏳ **B2 `IOPowerSource.fanOut` parity** — needs a seam design (same DI pattern as the S52 sleeper). Design-touching but low-risk now that the suite is unblocked.
+**B. (autonomous backlog — CLOSED):**
+- ✅ **B1 clock seam** — LANDED `872a38a` + VERIFIED S53 (717 green). Done.
+- ✅ **B3 chart date-label locale** — LANDED S54 `85413b8`. Done.
+- ✅ **B2 `IOPowerSource.fanOut` parity** — LANDED S54 `13db4a3`. Done.
+- ❌ **B4 LOW bundle** (dead `?? presets[0]`, `@MainActor` consistency, `recordActivity` object-nil) — still intentionally skipped; S50's "no churn during the App Store push" call stands. Pick up only post-launch as a refinement.
+
+There is **no remaining autonomous work**. Every open item is owner-gated (A) or post-launch refinement (B4).
 - ❌ **B4 LOW bundle** (dead `?? presets[0]`, `@MainActor` consistency, `recordActivity` object-nil) — intentionally skipped; S50's "no churn during the App Store push" call stands.
 
 **C. (gated) iCloud Phase 2/3 activation** — unchanged; S8.5 + container + entitlements switch + macOS-14 `@Model`. NOT autonomous. M2/L1/L4 activation contracts carried in source since S51 — read `project_icloud_design_audit.md` before flipping.
 
-**v1.x autonomous backlog:** B3 + B2 are the only remaining autonomous items; everything else is owner-gated or community-PR refinement.
+**v1.x autonomous backlog:** EXHAUSTED as of S54. The only path to publish now runs through owner decisions (A) — chiefly the 상호/bundle-ID call below. No further code work is required to ship the current binary.
 
 ### 🟠 DECISION PENDING: brand (상호) / bundle ID — owner deciding, blocks first publish
 Individual account ⇒ seller shows personal legal name; owner wants a brand ⇒ Org account (개인사업자 + D-U-N-S) later via App Transfer (must happen during v1.x, BEFORE iCloud Phase 2). Bundle ID is permanent post-publish ⇒ hold publishing until the 상호 is chosen, then `scripts/rebrand.sh` rewire (`project.yml` / entitlements / Info.plist / `.smoke/config.yml` / `docs/store/*` / screenshots `_scripts` / defaults+container paths all hardcode `com.parkbyeongjun.latte`) → regenerate → signed-build verify → publish as Individual.
