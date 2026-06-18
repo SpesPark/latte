@@ -75,6 +75,18 @@ final class AwakeTimerWiringTests: XCTestCase {
         )
     }
 
+    // NOTE on the instant sleeper and "pending" timers: the seam fires EVERY
+    // scheduled task the moment the main actor next yields (it ignores the
+    // requested interval), so there is no such thing as a timer that stays
+    // pending across an `await`. The cancel/replace contracts below are
+    // therefore pinned SYNCHRONOUSLY — on `Task.isCancelled` and the FSM
+    // state right after the public call — which is both deterministic and
+    // immune to a sibling test's enqueued @MainActor timer running during a
+    // drain. (An earlier draft drained `first.value` and expected the session
+    // to still be awake; that raced because draining the superseded task also
+    // ran the live replacement to completion.) The expiry WIRING itself is
+    // covered by the two expiry tests above, which each hold a single timer.
+
     func testDeactivateCancelsPendingDurationTimer() async {
         let manager = makeManager()
         manager.activate(for: .minutes(5))
@@ -84,10 +96,12 @@ final class AwakeTimerWiringTests: XCTestCase {
 
         manager.deactivate()
         XCTAssertEqual(manager.state, .asleep)
-        XCTAssertNil(manager.timerTask(for: .duration), "deactivate must cancel the pending timer")
+        XCTAssertNil(manager.timerTask(for: .duration), "deactivate must clear the pending timer slot")
+        XCTAssertTrue(task.isCancelled, "deactivate must cancel the pending duration timer task")
 
-        // Drain the cancelled task: its body must observe cancellation and
-        // bail without feeding a late expiry into the FSM.
+        // Only this manager's single (cancelled) task exists, so draining it
+        // is deterministic: its body must observe cancellation and bail
+        // without feeding a late `.timerExpired` into the FSM.
         await task.value
         XCTAssertEqual(
             manager.state, .asleep,
@@ -107,13 +121,19 @@ final class AwakeTimerWiringTests: XCTestCase {
             return XCTFail("re-activate must schedule a replacement duration timer")
         }
 
-        // The superseded task drains without ending the NEW session.
-        await first.value
+        // Replace contract, asserted synchronously (see NOTE above): the
+        // superseded timer is cancelled, the replacement is live, and the FSM
+        // already holds a fresh timed session.
+        XCTAssertTrue(first.isCancelled, "re-activation must cancel the superseded duration timer")
+        XCTAssertFalse(second.isCancelled, "the replacement duration timer must be live")
         guard case .awakeUserTimed = manager.state else {
-            return XCTFail("superseded timer fired into the new session — got \(manager.state)")
+            return XCTFail("re-activation must hold a fresh timed session — got \(manager.state)")
         }
 
+        // Draining is order-independent: the cancelled first task no-ops, the
+        // live replacement fires `.timerExpired` → `.asleep`.
+        await first.value
         await second.value
-        XCTAssertEqual(manager.state, .asleep, "replacement timer must end the session")
+        XCTAssertEqual(manager.state, .asleep, "the replacement timer firing must end the session")
     }
 }
