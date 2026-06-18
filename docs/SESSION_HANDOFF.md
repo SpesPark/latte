@@ -4,12 +4,22 @@
 
 ---
 
-**Last session:** S54 (2026-06-18) — **closed out the autonomous backlog: B3 + B2.** Both shipped TDD-first (RED via missing symbol → impl → green) with pure-helper / DI-seam extraction so the new behaviour is unit-tested without touching production control flow. With these, the v1.x autonomous backlog is **empty** — everything remaining is owner-gated (see entry points A).
-**v1.x release line:** v1.9 (unchanged). **Public App Store version = 1.0.0.**
-**Branch:** `claude/focused-hamilton-417bfc`. S54 adds two commits on top of `4f9f11c`: `85413b8` (B3) + `13db4a3` (B2). **PR #1 OPEN** (`https://github.com/SpesPark/latte/pull/1`) — not merged (owner decides). Pushed; PR auto-updates.
+**Last session:** S55 (2026-06-18) — **상호 확정 (Araforge) → bundle-ID rewire landed; binary is upload-ready.** Owner picked the brand and approved keeping `latte://demo` in Release; ran the scripted rewire to `com.araforge.latte`, rebuilt + re-tested clean. The only remaining work is owner-machine / owner-account (ASC + Distribution archive + upload). See entry points A.
+**v1.x release line:** v1.9 (unchanged). **Public App Store version = 1.0.0.** **Bundle ID now `com.araforge.latte` (permanent).**
+**Branch:** `claude/focused-hamilton-417bfc`. S55 adds one commit on top of `7dd1d86`: `6f9aef9` (rebrand, 24 files). **PR #1 OPEN** (`https://github.com/SpesPark/latte/pull/1`) — not merged (owner decides). Pushed; origin ahead 0.
 **Test count:** **725/725 verified GREEN** (attempt 1, no stall) — 717 + 4 (B3 `ChartDateLabelTests`) + 4 (B2 `IOPowerSourceFanOutTests`). README says 725.
-**Builds:** default + flag-on (`-D LATTE_ICLOUD_SYNC`) **0 warnings**; full suite green. **Doc-drift + store-limits:** clean.
+**Builds:** default + flag-on (`-D LATTE_ICLOUD_SYNC`) **0 warnings**; full suite green. **Doc-drift + store-limits:** clean. **rebrand.sh --check:** no leftovers.
 **Toolchain:** Xcode 26.5 / Swift 6.3.2 / macOS 13 target. **Catalog:** 172 keys × 11 languages (unchanged since S52).
+
+---
+
+## S55 what landed — 상호 rewire (binary upload-ready)
+
+**Owner decisions.** (1) 상호 = **Araforge** → bundle prefix `com.araforge`, deriving `com.araforge.latte` / `.tests` / `iCloud.com.araforge.latte`. (2) `latte://demo` **stays in Release** (no `#if DEBUG` wrap) — owner took the recommended/safest option, so the screenshot + smoke pipelines keep working unchanged.
+
+**Rewire (`6f9aef9`).** `scripts/rebrand.sh com.araforge --apply` — 33 occurrences across 24 files swapped from the `com.parkbyeongjun` placeholder (build / signing / source / tests / smoke / store-tooling / published-page / contributor / living-docs). History allowlist (ROADMAP, SESSION_HANDOFF, QA_LOG, rebrand-checklist) intentionally retains the old prefix as audit trail; `--check` ignores them. iCloud container rewired in `Latte.icloud.entitlements` (dark, unreferenced until Phase-2).
+
+**Verification.** `xcodegen generate` + default build = BUILD SUCCEEDED, 0 warnings; flag-on (`-D LATTE_ICLOUD_SYNC`) = BUILD SUCCEEDED, 0 warnings. Built app `CFBundleIdentifier = com.araforge.latte`; entitlements = sandbox + calendars + location (no CloudKit, correct for v1.0 dark launch). `run_tests.sh` = **725/725 PASS, attempt 1**. doc-drift + store-limits `--strict` clean; `rebrand.sh --check` = no leftovers outside allowlist. Pushed; origin ahead 0.
 
 ---
 
@@ -38,11 +48,16 @@ Owner-requested double-check that the binary + store assets are upload-ready so 
 
 ## Next-session entry points (priority order)
 
-**A. (owner-decision queue — unchanged):**
-1. 🟠 **상호 (brand) decision** → bundle-ID rewire → publish (see DECISION PENDING below). **Rewire is scripted** (S52 A1): `scripts/rebrand.sh com.<brand> --apply` + manual steps in `docs/rebrand-checklist.md` (TCC re-grants, defaults migration, gh-pages redeploy).
-2. `latte://demo` ships in Release — `#if DEBUG` wrap yes/no (screenshots/smoke depend on it; don't wrap casually).
-3. PR #1 merge (no blockers in review).
-4. WiFi When-In-Use device-verify (S50 T5 + S51 F2).
+**A. (owner-machine / owner-account — the ONLY path left to publish):**
+The binary, all metadata, and the bundle ID are final. What remains needs the owner's machine, Apple ID, and the Apple Developer Program — Claude cannot do these:
+1. 🟠 **App Store Connect:** register App ID `com.araforge.latte`; create the app record (name "Latte", category/age-rating/pricing from `docs/store/`). The iCloud container (`iCloud.com.araforge.latte`) is registered only at Phase-2 — NOT now.
+2. 🟠 **Distribution archive + upload:** open `Latte.xcodeproj` (Xcode 26.5) → Product ▸ Archive with Distribution signing (Team `4BXCVHZANL`) → upload via Organizer / Transporter. Paste the `docs/store/` text fields + the 8 screenshots into ASC.
+3. **gh-pages `privacy.html` redeploy** — source is rewired (`docs/site/privacy.html` → `com.araforge.latte`) but the live page (`latte-gh-pages-staging`, branch `gh-pages`) still shows the old container path. One-line diff; public push (owner-gated). The App Store privacy URL must resolve, so do this around launch.
+4. *(optional, NOT upload-blocking)* defaults migration + TCC re-grants — only needed if re-running smoke / `capture.sh` locally. Screenshots have **no visible bundle ID** so the existing 8 are valid as-is.
+5. PR #1 merge (no blockers in review).
+6. WiFi When-In-Use device-verify (S50 T5 + S51 F2).
+
+**Decided this session (no longer pending):** 상호 = Araforge (`com.araforge.latte`, landed `6f9aef9`); `latte://demo` stays in Release.
 
 **B. (autonomous backlog — CLOSED):**
 - ✅ **B1 clock seam** — LANDED `872a38a` + VERIFIED S53 (717 green). Done.
@@ -57,8 +72,8 @@ There is **no remaining autonomous work**. Every open item is owner-gated (A) or
 
 **v1.x autonomous backlog:** EXHAUSTED as of S54. The only path to publish now runs through owner decisions (A) — chiefly the 상호/bundle-ID call below. No further code work is required to ship the current binary.
 
-### 🟠 DECISION PENDING: brand (상호) / bundle ID — owner deciding, blocks first publish
-Individual account ⇒ seller shows personal legal name; owner wants a brand ⇒ Org account (개인사업자 + D-U-N-S) later via App Transfer (must happen during v1.x, BEFORE iCloud Phase 2). Bundle ID is permanent post-publish ⇒ hold publishing until the 상호 is chosen, then `scripts/rebrand.sh` rewire (`project.yml` / entitlements / Info.plist / `.smoke/config.yml` / `docs/store/*` / screenshots `_scripts` / defaults+container paths all hardcode `com.parkbyeongjun.latte`) → regenerate → signed-build verify → publish as Individual.
+### ✅ RESOLVED (S55): brand (상호) = Araforge / bundle ID = `com.araforge.latte`
+Rewire landed `6f9aef9`, verified clean (725/725, 0-warning builds, bundle ID confirmed in the built app). **Still owner-gated for later:** Individual account ⇒ App Store seller shows the personal legal name. To show the Araforge brand, the owner moves to an Org account (개인사업자 + D-U-N-S) via **App Transfer** — this MUST happen during v1.x and **BEFORE iCloud Phase-2 activation** (App Transfer is blocked for iCloud-using apps). The first publish can go out as Individual now; the brand-account transfer is a separate later step.
 
 ---
 
@@ -80,11 +95,11 @@ scripts/check_doc_drift.sh --strict && scripts/check_store_limits.sh --strict
 xcodegen generate
 xcodebuild build -scheme Latte -destination 'platform=macOS,arch=arm64' 2>&1 | grep -E "warning:|BUILD"
 
-# 4. Tests — PREFER the runner (absorbs the trap-#8 stall). ~9s suite, expect 717.
+# 4. Tests — PREFER the runner (absorbs the trap-#8 stall). ~9s suite, expect 725.
 scripts/run_tests.sh
 ```
 
-**Expect**: pty-ok; **717/717 PASS**; doc-drift + store-limits clean; 172 keys × 11 langs; `cloudSync` nil in the default build.
+**Expect**: pty-ok; **725/725 PASS**; doc-drift + store-limits clean; 172 keys × 11 langs; `cloudSync` nil in the default build; bundle ID `com.araforge.latte`.
 
 ---
 
