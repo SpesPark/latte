@@ -4,7 +4,7 @@
 
 ---
 
-**Last session:** S55 (2026-06-18) — **상호 확정 (Araforge) → bundle-ID rewire landed; binary is upload-ready.** Owner picked the brand and approved keeping `latte://demo` in Release; ran the scripted rewire to `com.araforge.latte`, rebuilt + re-tested clean. The only remaining work is owner-machine / owner-account (ASC + Distribution archive + upload). See entry points A.
+**Last session:** S55 (2026-06-18) — **🚀 App Store FIRST SUBMISSION COMPLETE (in review).** Brand decided (Araforge → `com.araforge.latte`), scripted rewire landed + verified, then the owner drove the full ASC + Xcode submission to completion. Submitted **English (US) only** (Korean localization deferred — `*-ko` files ready for a later metadata update). Now awaiting Apple review (24–48h typical). See "S55 submission" below + entry points A.
 **v1.x release line:** v1.9 (unchanged). **Public App Store version = 1.0.0.** **Bundle ID now `com.araforge.latte` (permanent).**
 **Branch:** `claude/focused-hamilton-417bfc`. S55 adds one commit on top of `7dd1d86`: `6f9aef9` (rebrand, 24 files). **PR #1 OPEN** (`https://github.com/SpesPark/latte/pull/1`) — not merged (owner decides). Pushed; origin ahead 0.
 **Test count:** **725/725 verified GREEN** (attempt 1, no stall) — 717 + 4 (B3 `ChartDateLabelTests`) + 4 (B2 `IOPowerSourceFanOutTests`). README says 725.
@@ -20,6 +20,17 @@
 **Rewire (`6f9aef9`).** `scripts/rebrand.sh com.araforge --apply` — 33 occurrences across 24 files swapped from the `com.parkbyeongjun` placeholder (build / signing / source / tests / smoke / store-tooling / published-page / contributor / living-docs). History allowlist (ROADMAP, SESSION_HANDOFF, QA_LOG, rebrand-checklist) intentionally retains the old prefix as audit trail; `--check` ignores them. iCloud container rewired in `Latte.icloud.entitlements` (dark, unreferenced until Phase-2).
 
 **Verification.** `xcodegen generate` + default build = BUILD SUCCEEDED, 0 warnings; flag-on (`-D LATTE_ICLOUD_SYNC`) = BUILD SUCCEEDED, 0 warnings. Built app `CFBundleIdentifier = com.araforge.latte`; entitlements = sandbox + calendars + location (no CloudKit, correct for v1.0 dark launch). `run_tests.sh` = **725/725 PASS, attempt 1**. doc-drift + store-limits `--strict` clean; `rebrand.sh --check` = no leftovers outside allowlist. Pushed; origin ahead 0.
+
+## S55 submission — what the owner did in ASC + Xcode
+
+- **App Store display name = "Latte - Keep Mac Awake"** (`app-name.txt`, commit `418016d`). Reason: bare "Latte" is globally taken (App Store name uniqueness). Bundle ID and `CFBundleDisplayName = "Latte"` are UNCHANGED — store-listing-only, no rebuild. ASO-friendly (keyword in name).
+- **gh-pages privacy.html redeployed** (branch `gh-pages`, commit `2c32c02`) → live page now shows `com.araforge.latte`; verified `HTTP 200` at `https://spespark.github.io/latte/privacy.html`.
+- **ASC metadata** filled from `docs/store/` (English only): subtitle/promo/description/keywords, 8 screenshots, Support+Marketing+Privacy URLs (`spespark.github.io/latte`), Category Utilities/Productivity, Pricing $2.99, Age Rating 4+ (all None/No), App Privacy = "data not collected", **Copyright = "© 2026 Araforge"**.
+- **Build** uploaded via **local Xcode Archive** (Product ▸ Archive → Organizer ▸ Distribute ▸ App Store Connect ▸ Upload, Automatic signing Team `4BXCVHZANL`). NOT Xcode Cloud — owner briefly wandered into Xcode Cloud setup (branch picker showing stale worktree branches like `satoshi`); steered back to local Archive (which builds open files regardless of git branch).
+- **review-notes.md** pasted into App Review Notes; submitted **Add for Review**.
+
+### ⚠ S55 gotcha for next session — Xcode rewrites `Localizable.xcstrings` on build
+Opening the project + archiving caused Xcode to **auto-rewrite `Resources/Localizable.xcstrings`** (reformat `":"`→`" : "` + inject empty `state:"new"` auto-extracted keys like `""`, `":"`, `"%lld"`). This is churn, NOT a real change — the curated 172-key×11-lang catalog is source-of-truth and passes the gates. **Reverted with `git checkout -- Resources/Localizable.xcstrings`.** If you see this file dirty after any Xcode build, revert it (don't commit) unless you deliberately added a string.
 
 ---
 
@@ -48,16 +59,17 @@ Owner-requested double-check that the binary + store assets are upload-ready so 
 
 ## Next-session entry points (priority order)
 
-**A. (owner-machine / owner-account — the ONLY path left to publish):**
-The binary, all metadata, and the bundle ID are final. What remains needs the owner's machine, Apple ID, and the Apple Developer Program — Claude cannot do these:
-1. 🟠 **App Store Connect:** register App ID `com.araforge.latte`; create the app record (name "Latte", category/age-rating/pricing from `docs/store/`). The iCloud container (`iCloud.com.araforge.latte`) is registered only at Phase-2 — NOT now.
-2. 🟠 **Distribution archive + upload:** open `Latte.xcodeproj` (Xcode 26.5) → Product ▸ Archive with Distribution signing (Team `4BXCVHZANL`) → upload via Organizer / Transporter. Paste the `docs/store/` text fields + the 8 screenshots into ASC.
-3. **gh-pages `privacy.html` redeploy** — source is rewired (`docs/site/privacy.html` → `com.araforge.latte`) but the live page (`latte-gh-pages-staging`, branch `gh-pages`) still shows the old container path. One-line diff; public push (owner-gated). The App Store privacy URL must resolve, so do this around launch.
-4. *(optional, NOT upload-blocking)* defaults migration + TCC re-grants — only needed if re-running smoke / `capture.sh` locally. Screenshots have **no visible bundle ID** so the existing 8 are valid as-is.
-5. PR #1 merge (no blockers in review).
-6. WiFi When-In-Use device-verify (S50 T5 + S51 F2).
+**A. (awaiting Apple review — owner-gated):**
+First submission is IN REVIEW. Nothing to do until Apple responds.
+1. 🟡 **Review outcome (24–48h):**
+   - **Rejected** → most likely on stay-awake differentiation or permission justification; `docs/store/review-notes.md` already pre-answers both. Read the rejection, reply in Resolution Center or adjust, resubmit.
+   - **Approved** → choose manual/auto release.
+2. **Korean localization** (deferred): add via a later metadata update — paste `docs/store/*-ko` into a Korean localization in ASC. KO users get Korean, others fall back to English (US) primary. Non-urgent.
+3. **Org App-Transfer** (Araforge brand on the seller field): Individual account currently shows the owner's legal name. To show "Araforge", move to an Org account (개인사업자 + D-U-N-S) and App-Transfer — MUST be during v1.x and **BEFORE iCloud Phase-2** (transfer blocked for iCloud apps).
+4. PR #1 merge (no blockers).
+5. WiFi When-In-Use device-verify (S50 T5 + S51 F2).
 
-**Decided this session (no longer pending):** 상호 = Araforge (`com.araforge.latte`, landed `6f9aef9`); `latte://demo` stays in Release.
+**Resolved S55:** 상호 = Araforge (`com.araforge.latte`, `6f9aef9`); `latte://demo` stays in Release; store name "Latte - Keep Mac Awake" (`418016d`); gh-pages privacy live-synced (`2c32c02`); **submitted to App Store review (English only)**.
 
 **B. (autonomous backlog — CLOSED):**
 - ✅ **B1 clock seam** — LANDED `872a38a` + VERIFIED S53 (717 green). Done.
