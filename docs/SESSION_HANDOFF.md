@@ -23,6 +23,17 @@
 
 **Verification.** `run_tests.sh` green attempt 1 (no stall) = **725/725, 0 failures**; default + flag-on builds **0 warnings**; doc-drift clean. README 717 → 725.
 
+### S54 post-wrap — pre-upload readiness audit (read-only, all GREEN)
+
+Owner-requested double-check that the binary + store assets are upload-ready so the only thing standing between here and submission is the brand decision. Nothing changed; all findings clean:
+- **Screenshots** 8/8 present, all **2880×1800** (valid macOS retina size).
+- **Store text fields** all present, non-empty, within Apple char limits (char-counted, confirms the doc-drift store-limits gate): keywords en 95 / ko 58 (≤100); subtitle en 28 / ko 12 (≤30); app-name 5 (≤30); promo en 163 / ko 88 (≤170).
+- **Version** `MARKETING_VERSION 1.0.0` / `CURRENT_PROJECT_VERSION 1`.
+- **Entitlements** active `Latte.entitlements` = sandbox + calendars + location (no CloudKit — correct for the v1.0 dark-iCloud launch); `Latte.icloud.entitlements` staged but unreferenced.
+- **Signing** `DEVELOPMENT_TEAM 4BXCVHZANL`, `CODE_SIGN_STYLE Automatic`.
+- **rebrand** `scripts/rebrand.sh --check` fails by design pre-rebrand (the `com.parkbyeongjun` placeholder is consistently present across the 24 target files, ready to swap in one pass).
+- **Conclusion:** zero asset/config blockers. The remaining path is owner-only: 상호 → `rebrand.sh` → archive + upload (distribution signing needs the Apple Developer Program / owner's machine).
+
 ---
 
 ## Next-session entry points (priority order)
