@@ -14,7 +14,7 @@ bash "$HARNESS_LIB/defaults_helper.sh" write "$SMOKE_BUNDLE_ID" latte.calendarTr
 bash "$HARNESS_LIB/launch_app.sh" "$SMOKE_APP_PATH" "$SMOKE_BUNDLE_ID" 20 >/dev/null
 sleep 3
 
-osascript -e 'tell application id "com.parkbyeongjun.latte" to activate' 2>/dev/null || true
+osascript -e 'tell application id "com.araforge.latte" to activate' 2>/dev/null || true
 sleep 2
 bash "$HARNESS_LIB/capture_screenshot.sh" "$SMOKE_SCREENSHOTS_DIR/05-calendar-empty-selection.png"
 

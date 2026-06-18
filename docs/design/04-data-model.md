@@ -364,7 +364,7 @@ public enum SettingsDefaults {
 
 - **Type mismatch on read**: return default, log `.notice` once per launch ("settings key X had unexpected type, using default").
 - **Out-of-range numeric**: return default. Example: `calendarTriggerLeadTimeMinutes` must be 0–15; 99 → default 0.
-- **JSON decode failure**: return default, log `.notice`. Do not erase the bad data — leave it for owner inspection if a user sends a `defaults read com.parkbyeongjun.latte` dump.
+- **JSON decode failure**: return default, log `.notice`. Do not erase the bad data — leave it for owner inspection if a user sends a `defaults read com.araforge.latte` dump.
 - **Unknown enum rawValue**: return default. Same rule.
 
 The principle: corruption never crashes the app. Worst case, settings revert to defaults silently.
@@ -400,7 +400,7 @@ In all cases, **nothing leaves the device**. The Privacy Policy (PRD §10.3) ass
 
 ### 8.1 v1: Time Machine + iCloud Drive (system-level)
 
-The app's UserDefaults plist (`~/Library/Containers/com.parkbyeongjun.latte/Data/Library/Preferences/com.parkbyeongjun.latte.plist`) is included in:
+The app's UserDefaults plist (`~/Library/Containers/com.araforge.latte/Data/Library/Preferences/com.araforge.latte.plist`) is included in:
 - Time Machine backups
 - iCloud Drive backup if user has "Desktop & Documents" sync (excluded — Containers/ is not in the synced set, but personal recovery via Migration Assistant works)
 

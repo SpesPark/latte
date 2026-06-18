@@ -19,7 +19,7 @@ public final class CloudKitSyncEngine: CloudSyncEngine {
     /// CloudKit container id (§9, RFC Q4). Tracks the bundle id; revisit if
     /// V2-20 changes the bundle prefix. The literal lives here and in the
     /// entitlement file only.
-    public static let defaultContainerIdentifier = "iCloud.com.parkbyeongjun.latte"
+    public static let defaultContainerIdentifier = "iCloud.com.araforge.latte"
 
     private let container: CKContainer
     public private(set) var isRunning = false

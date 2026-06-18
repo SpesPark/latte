@@ -296,7 +296,7 @@ But registration is device-physical:
   + an iCloud container provisioned on the App ID +
   `com.apple.developer.icloud-services` / `com.apple.developer.icloud-container-identifiers`
   in `Configuration/Latte.entitlements`. Same dependency shape as V2-03b.
-- **Container id**: propose `iCloud.com.parkbyeongjun.latte` (tracks the bundle
+- **Container id**: propose `iCloud.com.araforge.latte` (tracks the bundle
   id; revisit if V2-20 changes the bundle prefix — note the coupling).
 - **Cannot be smoke-tested by the existing harness** (no Apple Dev entitlement
   in adhoc builds; same permanent limitation noted for V2-30 owner-only items).
@@ -441,7 +441,7 @@ contract without re-litigation.
    re-confirms the App Store privacy answer before public ship — §11.)
 3. **v2.0 trigger** — **RESOLVED by Q5**: the OQ-04 migration *is* v2.0
    (v2.0 = Phase 1+2). No separate decision needed; release sequencing only.
-4. **Container id** `iCloud.com.parkbyeongjun.latte` — **OPEN, non-gating.**
+4. **Container id** `iCloud.com.araforge.latte` — **OPEN, non-gating.**
    Default proposal stands; owner accepts at Phase 1 kickoff unless V2-20
    changes the bundle prefix first (coupling tracked in §9). Does not block
    Phase 1 code (the seam is protocol-injected; the literal lives in one

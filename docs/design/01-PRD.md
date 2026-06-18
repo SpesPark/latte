@@ -4,7 +4,7 @@
 |---|---|
 | **Product name** | Latte |
 | **Working folder** | `Latte/` (renamed from `Caffeinated-Clone/` in S8 ahead of App Store submission) |
-| **Bundle identifier** | `com.parkbyeongjun.latte` (default — owner may revisit per `docs/v2-backlog.md` V2-20) |
+| **Bundle identifier** | `com.araforge.latte` (default — owner may revisit per `docs/v2-backlog.md` V2-20) |
 | **Document version** | 0.4 |
 | **Status** | Approved (design phase closed at session 2; v1.0 scope re-expanded at S8b) |
 | **Owner** | Project owner |
@@ -339,7 +339,7 @@ Phase 2 (Cross-device)       ← iOS/Watch — separate decision after Year 1 da
 | R-06 | Solo developer burnout | Medium | High (project death) | Phased shipping (1.0 → 1.A → 1.C); each phase independently shippable |
 | R-07 | Refund rate >5% from misunderstood UX | Low | Medium | TestFlight beta ≥2 weeks; capture confusion via feedback form |
 | R-08 | EventKit `requestFullAccessToEvents` rejected by macOS 13 (only macOS 14+) | High | Low (handled in code) | Code already has `#available(macOS 14, *)` branch with macOS 13 fallback |
-| R-09 | Bundle ID conflict (someone else owns `com.parkbyeongjun.latte`-like) | Low | Low | `com.parkbyeongjun.*` reverse-DNS is owner-controlled; revisit per V2-20 if owner moves to a custom domain |
+| R-09 | Bundle ID conflict (someone else owns `com.araforge.latte`-like) | Low | Low | `com.araforge.*` reverse-DNS is owner-controlled; revisit per V2-20 if owner moves to a custom domain |
 | R-10 | App Store name "Latte" already taken | Medium | Medium | Backup names: `Brew`, `Wakeful`, `Sippy`; verify before locking |
 
 ---

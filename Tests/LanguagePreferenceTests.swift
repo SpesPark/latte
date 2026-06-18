@@ -4,7 +4,7 @@ import XCTest
 final class LanguagePreferenceTests: XCTestCase {
 
     private var defaults: UserDefaults!
-    private let suiteName = "com.parkbyeongjun.latte.tests.LanguagePreference"
+    private let suiteName = "com.araforge.latte.tests.LanguagePreference"
 
     override func setUp() {
         super.setUp()

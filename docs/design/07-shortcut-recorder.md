@@ -197,7 +197,7 @@ approach Spotlight pickers use. ~50 LOC, isolated.
 - Capture window screenshot showing the default `⌘⇧L` glyph.
 - (Manual-only, can't script keyDown into the recorder field with current
   harness.) Document as INFO line that recorder interaction is owner-side.
-- Verify `defaults read com.parkbyeongjun.latte shortcutChord` is empty by
+- Verify `defaults read com.araforge.latte shortcutChord` is empty by
   default (since default chord isn't persisted until user-customised).
 
 For full recorder validation, owner manual smoke is the source of truth:

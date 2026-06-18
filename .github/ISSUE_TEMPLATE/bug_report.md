@@ -29,11 +29,11 @@ assignees: ''
 
 ## Logs (optional but very helpful)
 
-Open Console.app and filter on `subsystem == "com.parkbyeongjun.latte"`, or
+Open Console.app and filter on `subsystem == "com.araforge.latte"`, or
 run from a terminal:
 
 ```
-log stream --predicate 'subsystem == "com.parkbyeongjun.latte"' --info --debug --style compact
+log stream --predicate 'subsystem == "com.araforge.latte"' --info --debug --style compact
 ```
 
 Reproduce the issue, then paste the relevant lines below.

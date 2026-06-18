@@ -25,7 +25,7 @@ public protocol PowerAssertionType: AnyObject {
 
 public final class PowerAssertion: PowerAssertionType {
 
-    private let logger = Logger(subsystem: "com.parkbyeongjun.latte", category: "power")
+    private let logger = Logger(subsystem: "com.araforge.latte", category: "power")
     private var assertionID: IOPMAssertionID = IOPMAssertionID(0)
     private var active = false
     private var mode: PowerAssertionMode?

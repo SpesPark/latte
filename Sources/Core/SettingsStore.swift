@@ -145,7 +145,7 @@ public extension SettingsStore {
     }
 }
 
-let settingsLogger = Logger(subsystem: "com.parkbyeongjun.latte", category: "settings")
+let settingsLogger = Logger(subsystem: "com.araforge.latte", category: "settings")
 
 public final class UserDefaultsSettingsStore: SettingsStore {
 

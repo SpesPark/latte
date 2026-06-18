@@ -1,6 +1,6 @@
 name: Latte
 options:
-  bundleIdPrefix: com.parkbyeongjun
+  bundleIdPrefix: com.araforge
   deploymentTarget:
     macOS: "13.0"
   createIntermediateGroups: true
@@ -50,7 +50,7 @@ targets:
     settings:
       base:
         INFOPLIST_FILE: Resources/Info.plist
-        PRODUCT_BUNDLE_IDENTIFIER: com.parkbyeongjun.latte
+        PRODUCT_BUNDLE_IDENTIFIER: com.araforge.latte
         # iCloud sync (docs/design/10) ships dark behind the LATTE_ICLOUD_SYNC
         # compile-time kill-switch — OFF by default, so CloudKit code is never
         # compiled and the default build signs with the no-CloudKit entitlements
@@ -73,7 +73,7 @@ targets:
       - path: Tests
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.parkbyeongjun.latte.tests
+        PRODUCT_BUNDLE_IDENTIFIER: com.araforge.latte.tests
         GENERATE_INFOPLIST_FILE: YES
     dependencies:
       - target: Latte

@@ -7,7 +7,7 @@
   with Configuration/Latte.entitlements (no CloudKit) so it stays buildable
   with personal/automatic signing pre-S8.5. Activation is a Phase 2 step:
   when LATTE_ICLOUD_SYNC is enabled AND the Apple Developer Program (S8.5) has
-  provisioned the iCloud.com.parkbyeongjun.latte container on the App ID, point
+  provisioned the iCloud.com.araforge.latte container on the App ID, point
   CODE_SIGN_ENTITLEMENTS at this file in project.yml.
 
   Delta over Latte.entitlements:
@@ -32,7 +32,7 @@
     </array>
     <key>com.apple.developer.icloud-container-identifiers</key>
     <array>
-        <string>iCloud.com.parkbyeongjun.latte</string>
+        <string>iCloud.com.araforge.latte</string>
     </array>
 </dict>
 </plist>

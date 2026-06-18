@@ -63,7 +63,7 @@ public actor ActivityLogStore {
 ```
 
 - **File location**: `FileManager.default.url(for: .applicationSupportDirectory, ...)`
-  / `Latte/activity-log.json`. Sandbox: `com.parkbyeongjun.latte` container OK.
+  / `Latte/activity-log.json`. Sandbox: `com.araforge.latte` container OK.
 - **Atomic write**: `Data.write(to: url, options: .atomic)`.
 - **GC**: on every `append`, drop entries older than `retention`. No background timer.
 - **Concurrency**: actor isolation = no shared-mutable hazard. All callers `await`.

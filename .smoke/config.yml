@@ -6,7 +6,7 @@
 #   - Latte.app is built (Release) at app_path below
 #   - bundle_id matches what AppEnvironment uses for UserDefaults
 
-bundle_id: com.parkbyeongjun.latte
+bundle_id: com.araforge.latte
 app_path: ~/Library/Developer/Xcode/DerivedData/Latte-hcfmwngrrkeynehkwodtxrrnyxyq/Build/Products/Release/Latte.app
 screenshots_dir: ~/Documents/Claude/Projects/Latte/.smoke/artifacts
 

@@ -97,7 +97,7 @@ Output:
 
 When done capturing, clean up:
 ```bash
-pkill -x Latte && defaults delete com.parkbyeongjun.latte
+pkill -x Latte && defaults delete com.araforge.latte
 ```
 
 LSUIElement (menu-bar-only) apps cannot be driven into Settings programmatically — the popover/Settings click chain requires sandbox-restricted UI scripting. Shots 1-5 are owner-manual; the harness reduces setup time but does not replace the click.

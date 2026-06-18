@@ -27,7 +27,7 @@ public protocol LaunchAtLoginService: AnyObject {
 public final class SMAppServiceLaunchAtLogin: LaunchAtLoginService {
 
     private let service: SMAppService
-    private let logger = Logger(subsystem: "com.parkbyeongjun.latte", category: "launchAtLogin")
+    private let logger = Logger(subsystem: "com.araforge.latte", category: "launchAtLogin")
 
     public init(service: SMAppService = .mainApp) {
         self.service = service

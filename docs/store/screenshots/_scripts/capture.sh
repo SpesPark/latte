@@ -7,7 +7,7 @@
 set -uo pipefail
 
 APP="/Users/parkbyeongjun/Library/Developer/Xcode/DerivedData/Latte-cgxustegptpqtqaarpshkphoradn/Build/Products/Debug/Latte.app"
-BID="com.parkbyeongjun.latte"
+BID="com.araforge.latte"
 LIB="$HOME/dev/smoke-harness/lib"
 OUT="/tmp/latte-shots"
 DBAK="/tmp/latte-defaults-backup.plist"
