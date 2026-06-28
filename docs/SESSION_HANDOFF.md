@@ -6,7 +6,7 @@
 
 **Last session:** S56 (2026-06-29) — **App Store rejection FIXED, ready to resubmit (build 1.0.0 (2)).** The first submission (dc78a591) was **rejected 2026-06-23** on four guidelines. All four are addressed and verified: two real code bugs fixed + tested, two metadata/answer items prepared. Nothing left to code — the remaining path is the owner's ASC resubmit (see entry point A + `docs/store/review-response-1.md`).
 **v1.x release line:** v1.9 (unchanged). **Public App Store version = 1.0.0**, **build bumped 1 → 2** (required for re-upload). **Bundle ID `com.araforge.latte` (permanent).**
-**Branch:** `claude/focused-hamilton-417bfc`. **⚠ S56 changes are VERIFIED but NOT yet committed** (awaiting owner go) — `git status` is dirty. PR #1 still OPEN, not merged.
+**Branch:** `claude/focused-hamilton-417bfc`. S56 fixes committed **`5bea1d3`** (13 files) on S55 tip `daba6cf`, **pushed** (origin ahead 0). PR #1 still OPEN, not merged. (This handoff line was wrapped in a follow-up docs commit.)
 **Test count:** **729/729 GREEN** (attempt 1, no stall) — 725 + 4 (`MenuBarLayoutTests`). README says 729.
 **Builds:** default + flag-on (`-D LATTE_ICLOUD_SYNC`) **0 warnings**; full suite green. **Doc-drift + store-limits `--strict`:** clean. **rebrand.sh --check:** clean. Built app: `CFBundleVersion = 2`, `CFBundleIdentifier = com.araforge.latte`, `CFBundleDisplayName = Latte`.
 **Toolchain:** Xcode 26.5 / Swift 6.3.2 / macOS 13 target. **Catalog:** 172 keys × 11 languages (unchanged).
@@ -83,5 +83,5 @@ scripts/run_tests.sh
 2. `ROADMAP.md` row 1.56 (this session) → 1.55 (S55 submission) → 1.54 (S54).
 3. `docs/store/review-response-1.md` is the owner's resubmit playbook (Reply block + checklist).
 4. Memory: `MEMORY.md` → `project_latte_v1_9.md` (S55/S56 at the tail) + `project_latte_status.md` (traps; cwd-reset hazard).
-5. ⚠ S56 code is **uncommitted** if `git status` is dirty — verify whether the owner had it committed before continuing.
+5. S56 code is committed (`5bea1d3`) + pushed; `git status` should be clean. PR #1 still OPEN.
 6. Test-seam gotchas from prior sessions still apply (instant sleeper in `AwakeTimerWiringTests`; `MenuBarExtra(isInserted:)` re-insertion is unreliable — keep the extra always-inserted).
