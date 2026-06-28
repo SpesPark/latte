@@ -1,5 +1,4 @@
 import AppKit
-import Combine
 import SwiftUI
 
 /// AppKit delegate so we can run boot logic at `applicationDidFinishLaunching`
@@ -7,26 +6,10 @@ import SwiftUI
 /// caused the popover to render alongside the onboarding wizard at first
 /// launch (owner S8b smoke feedback).
 @MainActor
-final class LatteAppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
-
-    /// Whether the menu-bar icon should be inserted right now. Bound via
-    /// `MenuBarExtra(_:systemImage:isInserted:)` so we can hide the icon
-    /// while the onboarding wizard is up — owner asked for the wizard to
-    /// be the only on-screen UI during first launch.
-    @Published var menuBarVisible: Bool = true
-
-    private var onboardingObservation: AnyCancellable?
+final class LatteAppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let env = AppEnvironment.shared
-        // Sync menu-bar visibility to onboarding state. Hidden while
-        // onboarding is active; visible afterward.
-        menuBarVisible = env.onboarding.hasCompletedOnboarding
-        onboardingObservation = env.onboarding.$hasCompletedOnboarding
-            .receive(on: RunLoop.main)
-            .sink { [weak self] completed in
-                self?.menuBarVisible = completed
-            }
         Task { @MainActor in
             await env.bootTriggers()
             // Dark in the default build (cloudSync nil, kill-switch off) —
@@ -98,13 +81,22 @@ struct LatteApp: App {
     }
 
     var body: some Scene {
+        // The menu-bar item is ALWAYS inserted — never gated on onboarding.
+        // App Store review (Submission dc78a591, 2026-06-23, Guideline 2.1(a))
+        // rejected the build because the app "disappeared (no menubar extra,
+        // menubar or Dock icon, but still active)" after onboarding. Root
+        // cause: this used to bind `isInserted:` to onboarding state to hide
+        // the icon during the wizard, then re-insert on completion. That
+        // `false → true` re-insertion of a SwiftUI `MenuBarExtra` is
+        // unreliable (esp. macOS 26), and since the app is `LSUIElement`
+        // (no Dock icon), a failed re-insert leaves NO interactive surface —
+        // a zombie process. Keeping the extra permanently inserted removes
+        // the fragile path entirely; the onboarding window simply sits on
+        // top of an already-present menu-bar icon (the wizard's "Find Latte
+        // in the menu bar" copy now matches what the user sees).
         MenuBarExtra(
             "Latte",
-            systemImage: environment.menuBarIconStyle.symbolName(awake: manager.isAwake),
-            isInserted: Binding(
-                get: { appDelegate.menuBarVisible },
-                set: { appDelegate.menuBarVisible = $0 }
-            )
+            systemImage: environment.menuBarIconStyle.symbolName(awake: manager.isAwake)
         ) {
             MenuBarRoot(manager: environment.manager)
                 .environmentObject(environment)

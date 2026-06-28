@@ -2,18 +2,24 @@ import AppKit
 import XCTest
 @testable import Latte
 
-/// Regression coverage for the first-run lockout bug: the onboarding window
+/// Regression coverage for the first-run close path: the onboarding window
 /// carries a title-bar close button (`.closable`), but the wizard only marks
 /// onboarding complete from its own Skip / Finish buttons. If the user closed
 /// the window with the X button, `markCompleted()` was never called, so
-/// `hasCompletedOnboarding` stayed false and — because the menu-bar item is
-/// gated on that flag — the LSUIElement app was left with NO UI surface for
-/// the rest of the session.
+/// `hasCompletedOnboarding` stayed false.
 ///
 /// The fix wires the controller as the window's `NSWindowDelegate` and treats
-/// a user-initiated close like Skip (finalize onboarding so the menu bar
-/// surfaces). These tests pin that contract at the delegate seam without
-/// standing up a full `AppEnvironment` / `NSHostingController`.
+/// a user-initiated close like Skip (finalize onboarding). These tests pin that
+/// contract at the delegate seam without standing up a full `AppEnvironment` /
+/// `NSHostingController`.
+///
+/// NOTE (App Store rejection dc78a591, 2026-06-23, Guideline 2.1(a)): the
+/// menu-bar item is no longer gated on `hasCompletedOnboarding` — `LatteApp`
+/// keeps the `MenuBarExtra` permanently inserted, so the LSUIElement app can
+/// never be left with NO UI surface even if onboarding is dismissed oddly.
+/// Persisting completion here is now purely about NOT re-showing the wizard on
+/// the next launch, rather than being the load-bearing line that surfaces the
+/// menu bar. See the comment on `LatteApp.body`.
 @MainActor
 final class OnboardingWindowControllerTests: XCTestCase {
 

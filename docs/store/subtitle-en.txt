@@ -1,1 +1,1 @@
-Auto keep-awake for your Mac
+Automatic keep-awake utility

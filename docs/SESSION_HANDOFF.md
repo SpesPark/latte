@@ -4,100 +4,62 @@
 
 ---
 
-**Last session:** S55 (2026-06-18) — **🚀 App Store FIRST SUBMISSION COMPLETE (in review).** Brand decided (Araforge → `com.araforge.latte`), scripted rewire landed + verified, then the owner drove the full ASC + Xcode submission to completion. Submitted **English (US) only** (Korean localization deferred — `*-ko` files ready for a later metadata update). Now awaiting Apple review (24–48h typical). See "S55 submission" below + entry points A.
-**v1.x release line:** v1.9 (unchanged). **Public App Store version = 1.0.0.** **Bundle ID now `com.araforge.latte` (permanent).**
-**Branch:** `claude/focused-hamilton-417bfc`. S55 adds one commit on top of `7dd1d86`: `6f9aef9` (rebrand, 24 files). **PR #1 OPEN** (`https://github.com/SpesPark/latte/pull/1`) — not merged (owner decides). Pushed; origin ahead 0.
-**Test count:** **725/725 verified GREEN** (attempt 1, no stall) — 717 + 4 (B3 `ChartDateLabelTests`) + 4 (B2 `IOPowerSourceFanOutTests`). README says 725.
-**Builds:** default + flag-on (`-D LATTE_ICLOUD_SYNC`) **0 warnings**; full suite green. **Doc-drift + store-limits:** clean. **rebrand.sh --check:** no leftovers.
-**Toolchain:** Xcode 26.5 / Swift 6.3.2 / macOS 13 target. **Catalog:** 172 keys × 11 languages (unchanged since S52).
+**Last session:** S56 (2026-06-29) — **App Store rejection FIXED, ready to resubmit (build 1.0.0 (2)).** The first submission (dc78a591) was **rejected 2026-06-23** on four guidelines. All four are addressed and verified: two real code bugs fixed + tested, two metadata/answer items prepared. Nothing left to code — the remaining path is the owner's ASC resubmit (see entry point A + `docs/store/review-response-1.md`).
+**v1.x release line:** v1.9 (unchanged). **Public App Store version = 1.0.0**, **build bumped 1 → 2** (required for re-upload). **Bundle ID `com.araforge.latte` (permanent).**
+**Branch:** `claude/focused-hamilton-417bfc`. **⚠ S56 changes are VERIFIED but NOT yet committed** (awaiting owner go) — `git status` is dirty. PR #1 still OPEN, not merged.
+**Test count:** **729/729 GREEN** (attempt 1, no stall) — 725 + 4 (`MenuBarLayoutTests`). README says 729.
+**Builds:** default + flag-on (`-D LATTE_ICLOUD_SYNC`) **0 warnings**; full suite green. **Doc-drift + store-limits `--strict`:** clean. **rebrand.sh --check:** clean. Built app: `CFBundleVersion = 2`, `CFBundleIdentifier = com.araforge.latte`, `CFBundleDisplayName = Latte`.
+**Toolchain:** Xcode 26.5 / Swift 6.3.2 / macOS 13 target. **Catalog:** 172 keys × 11 languages (unchanged).
 
 ---
 
-## S55 what landed — 상호 rewire (binary upload-ready)
+## S56 what landed — the 4 rejection fixes
 
-**Owner decisions.** (1) 상호 = **Araforge** → bundle prefix `com.araforge`, deriving `com.araforge.latte` / `.tests` / `iCloud.com.araforge.latte`. (2) `latte://demo` **stays in Release** (no `#if DEBUG` wrap) — owner took the recommended/safest option, so the screenshot + smoke pipelines keep working unchanged.
+Rejection: Submission **dc78a591-c4b8-46b3-b7ef-001f37fcb244**, reviewed **2026-06-23** on a MacBook Pro 14" / macOS 26.5.1, version 1.0 (1).
 
-**Rewire (`6f9aef9`).** `scripts/rebrand.sh com.araforge --apply` — 33 occurrences across 24 files swapped from the `com.parkbyeongjun` placeholder (build / signing / source / tests / smoke / store-tooling / published-page / contributor / living-docs). History allowlist (ROADMAP, SESSION_HANDOFF, QA_LOG, rebrand-checklist) intentionally retains the old prefix as audit trail; `--check` ignores them. iCloud container rewired in `Latte.icloud.entitlements` (dark, unreferenced until Phase-2).
+**1. Guideline 5.2.5 (IP) — "Mac" in name/subtitle.** App name "Latte - Keep Mac Awake" → **"Latte - Keep Awake"** (`docs/store/app-name.txt`); subtitle "Auto keep-awake for your Mac" → **"Automatic keep-awake utility"** (`subtitle-en.txt`). `subtitle-ko.txt` also de-"맥"-ed for the eventual KO add. Keywords had no "Mac"; the description **body**'s descriptive "Mac" is allowed (the reviewer cited only name + subtitle) — left intact. Owner must re-enter Name/Subtitle in ASC.
 
-**Verification.** `xcodegen generate` + default build = BUILD SUCCEEDED, 0 warnings; flag-on (`-D LATTE_ICLOUD_SYNC`) = BUILD SUCCEEDED, 0 warnings. Built app `CFBundleIdentifier = com.araforge.latte`; entitlements = sandbox + calendars + location (no CloudKit, correct for v1.0 dark launch). `run_tests.sh` = **725/725 PASS, attempt 1**. doc-drift + store-limits `--strict` clean; `rebrand.sh --check` = no leftovers outside allowlist. Pushed; origin ahead 0.
+**2. Guideline 4 (Design) — popover truncated at bottom (Settings/Quit unreachable).** `MenuBarRoot` was fixed-width / unbounded-height; 7 duration presets + expanded Custom + up to 3 recurring presets overflowed a notched 14" screen, and `MenuBarExtra(.window)` doesn't clamp or scroll. **Fix:** new pure `Sources/UI/MenuBar/MenuBarLayout.swift` (`maxScrollHeight(forVisibleScreenHeight:)`, floor 280, chrome reserve 220); `MenuBarRoot` now pins the header (top) and Settings/Quit (bottom) **outside** a height-capped `ScrollView`. Cap = `min(measuredContentHeight, maxScroll)` — `measuredContentHeight` from a `GeometryReader` background + `MenuBarContentHeightKey` preference (sizes to content when it fits, scrolls when it overflows; `min` makes it structurally impossible for the scroll area to exceed `maxScroll`, so the footer is always on-screen). Screen height = **min across all `NSScreen.screens`** (LSUIElement ⇒ `NSScreen.main` is the unreliable key-window screen; smallest display = safe on any multi-monitor config). Tests: `Tests/MenuBarLayoutTests.swift` ×4.
 
-## S55 submission — what the owner did in ASC + Xcode
+**3. Guideline 2.1(a) (Completeness) — app disappeared after onboarding (zombie).** The app is `LSUIElement` (no Dock icon) so its only UI is the `MenuBarExtra`. `LatteApp` bound `MenuBarExtra(isInserted:)` to onboarding state to hide the icon during the wizard then re-insert it on completion; that **false→true re-insertion is unreliable** (esp. macOS 26) → no UI surface, zombie process. **Fix:** `Sources/App/LatteApp.swift` keeps the `MenuBarExtra` **permanently inserted** — removed `menuBarVisible`, the Combine onboarding observation, and `ObservableObject` from `LatteAppDelegate`. The onboarding window simply sits on top of an always-present icon (matches the wizard's "Find Latte in the menu bar" copy). `OnboardingWindowControllerTests` header reframed: persisting completion now only prevents re-showing the wizard; it is **no longer** the load-bearing line that surfaces the menu bar.
 
-- **App Store display name = "Latte - Keep Mac Awake"** (`app-name.txt`, commit `418016d`). Reason: bare "Latte" is globally taken (App Store name uniqueness). Bundle ID and `CFBundleDisplayName = "Latte"` are UNCHANGED — store-listing-only, no rebuild. ASO-friendly (keyword in name).
-- **gh-pages privacy.html redeployed** (branch `gh-pages`, commit `2c32c02`) → live page now shows `com.araforge.latte`; verified `HTTP 200` at `https://spespark.github.io/latte/privacy.html`.
-- **ASC metadata** filled from `docs/store/` (English only): subtitle/promo/description/keywords, 8 screenshots, Support+Marketing+Privacy URLs (`spespark.github.io/latte`), Category Utilities/Productivity, Pricing $2.99, Age Rating 4+ (all None/No), App Privacy = "data not collected", **Copyright = "© 2026 Araforge"**.
-- **Build** uploaded via **local Xcode Archive** (Product ▸ Archive → Organizer ▸ Distribute ▸ App Store Connect ▸ Upload, Automatic signing Team `4BXCVHZANL`). NOT Xcode Cloud — owner briefly wandered into Xcode Cloud setup (branch picker showing stale worktree branches like `satoshi`); steered back to local Archive (which builds open files regardless of git branch).
-- **review-notes.md** pasted into App Review Notes; submitted **Add for Review**.
+**4. Guideline 2.1 (Information Needed) — sleep-prevention API.** Answers (verified against `Sources/Core/PowerAssertion.swift` + `AwakeManager.installSignalHandlers`) written into **`docs/store/review-response-1.md`**: (1) `IOPMAssertionCreateWithName`; (2) `kIOPMAssertionTypeNoDisplaySleep` or `kIOPMAssertionTypeNoIdleSleep` per the user's setting; (3) created on activate (manual duration / enabled trigger), released on off / duration-expire / all-triggers-off — crash cleanup guaranteed (per-process kernel assertion auto-released on terminate, plus SIGINT/SIGTERM handlers + `PowerAssertion.deinit`).
 
-### ⚠ S55 gotcha for next session — Xcode rewrites `Localizable.xcstrings` on build
-Opening the project + archiving caused Xcode to **auto-rewrite `Resources/Localizable.xcstrings`** (reformat `":"`→`" : "` + inject empty `state:"new"` auto-extracted keys like `""`, `":"`, `"%lld"`). This is churn, NOT a real change — the curated 172-key×11-lang catalog is source-of-truth and passes the gates. **Reverted with `git checkout -- Resources/Localizable.xcstrings`.** If you see this file dirty after any Xcode build, revert it (don't commit) unless you deliberately added a string.
+**Build #:** `project.yml` `CURRENT_PROJECT_VERSION` 1 → 2. **Code review:** code-reviewer agent = APPROVE, 0 CRITICAL/HIGH; the one MEDIUM (NSScreen.main on multi-monitor) was fixed (min-across-screens).
 
----
-
-## S54 what landed — B3 + B2 (autonomous backlog closed)
-
-**B3 — chart date labels localized (`85413b8`).** `DailyTotalsChart`'s x-axis used `en_US_POSIX` + a hardcoded `"M/d"`, forcing US month-first ordering ("1/15") in all 11 locales. Extracted a pure, locale-injectable `ChartDateLabel.makeFormatter(locale:)` that derives field order/separators via `setLocalizedDateFormatFromTemplate("Md")` — "15/01" en-GB, "1. 15." ko, "15.1." de. `DailyTotalsChart` caches a formatter built from `Locale.current` (same once-built `static let` caching as before — locale is fixed per app session). `ChartDateLabelTests` (4) pin month-first/day-first ordering and ko ≠ en-US; time zone pinned to UTC for CI independence, production uses the current zone.
-
-**B2 — IOPowerSource fan-out seam (`13db4a3`).** `fanOut()` was reachable only from the IOKit run-loop callback → the production observer registry (multi-observer delivery, copy-before-iterate cancel safety, single-shared-notifier lifecycle) had **zero** coverage; only `MockPowerSource`'s parallel reimplementation was tested (free to drift). Applied the S52 sleeper DI pattern: inject `snapshot: () -> Bool` + `notifier: PowerChangeNotifier`, defaults read real IOKit via new `systemIsOnAC` / `systemNotifier` statics. The IOKit run-loop wiring + the C-callback main-actor hop moved into `systemNotifier`; `observe()` installs one shared notifier and tears it down on last-observer-leave — **behaviour identical**, just injectable. `fanOut()` stays private; `IOPowerSourceFanOutTests` (4) drive it through an injected notifier so **no live `CFRunLoopSource`** is created in the test process (avoids aggravating trap #8).
-
-**New patterns.** (1) `setLocalizedDateFormatFromTemplate` is the correct fix for "all locales show US dates" — never hardcode `dateFormat` for user-facing labels. (2) The S52 inject-the-side-effecting-primitive seam generalizes cleanly: box a non-Sendable closure as a C run-loop context and keep it alive in the teardown closure. (3) Swift 6 tests that share mutable state across injected (sendable) closures need a `@MainActor` reference box (`Ref<T>`) — a captured local `var` trips "mutated after capture by sendable closure".
-
-**Verification.** `run_tests.sh` green attempt 1 (no stall) = **725/725, 0 failures**; default + flag-on builds **0 warnings**; doc-drift clean. README 717 → 725.
-
-### S54 post-wrap — pre-upload readiness audit (read-only, all GREEN)
-
-Owner-requested double-check that the binary + store assets are upload-ready so the only thing standing between here and submission is the brand decision. Nothing changed; all findings clean:
-- **Screenshots** 8/8 present, all **2880×1800** (valid macOS retina size).
-- **Store text fields** all present, non-empty, within Apple char limits (char-counted, confirms the doc-drift store-limits gate): keywords en 95 / ko 58 (≤100); subtitle en 28 / ko 12 (≤30); app-name 5 (≤30); promo en 163 / ko 88 (≤170).
-- **Version** `MARKETING_VERSION 1.0.0` / `CURRENT_PROJECT_VERSION 1`.
-- **Entitlements** active `Latte.entitlements` = sandbox + calendars + location (no CloudKit — correct for the v1.0 dark-iCloud launch); `Latte.icloud.entitlements` staged but unreferenced.
-- **Signing** `DEVELOPMENT_TEAM 4BXCVHZANL`, `CODE_SIGN_STYLE Automatic`.
-- **rebrand** `scripts/rebrand.sh --check` fails by design pre-rebrand (the `com.parkbyeongjun` placeholder is consistently present across the 24 target files, ready to swap in one pass).
-- **Conclusion:** zero asset/config blockers. The remaining path is owner-only: 상호 → `rebrand.sh` → archive + upload (distribution signing needs the Apple Developer Program / owner's machine).
+### ⚠ Carry-over gotcha (still applies): Xcode rewrites `Localizable.xcstrings` on build
+Opening/archiving in Xcode auto-rewrites `Resources/Localizable.xcstrings` (reformat + empty `state:"new"` keys). Churn, not a real change. Revert with `git checkout -- Resources/Localizable.xcstrings` unless you deliberately added a string.
 
 ---
 
 ## Next-session entry points (priority order)
 
-**A. (awaiting Apple review — owner-gated):**
-First submission is IN REVIEW. Nothing to do until Apple responds.
-1. 🟡 **Review outcome (24–48h):**
-   - **Rejected** → most likely on stay-awake differentiation or permission justification; `docs/store/review-notes.md` already pre-answers both. Read the rejection, reply in Resolution Center or adjust, resubmit.
-   - **Approved** → choose manual/auto release.
-2. **Korean localization** (deferred): add via a later metadata update — paste `docs/store/*-ko` into a Korean localization in ASC. KO users get Korean, others fall back to English (US) primary. Non-urgent.
-3. **Org App-Transfer** (Araforge brand on the seller field): Individual account currently shows the owner's legal name. To show "Araforge", move to an Org account (개인사업자 + D-U-N-S) and App-Transfer — MUST be during v1.x and **BEFORE iCloud Phase-2** (transfer blocked for iCloud apps).
-4. PR #1 merge (no blockers).
-5. WiFi When-In-Use device-verify (S50 T5 + S51 F2).
+**A. (owner-gated — RESUBMIT) — this is the active task.** Everything is fixed + verified; the owner finishes in ASC. Full checklist in **`docs/store/review-response-1.md`**:
+1. In ASC set **Name** = `Latte - Keep Awake`, **Subtitle** = `Automatic keep-awake utility` (English (US) only).
+2. **Archive + upload build 1.0.0 (2)** via local Xcode Archive (Team `4BXCVHZANL`, Automatic signing — NOT Xcode Cloud). Revert any `Localizable.xcstrings` churn first.
+3. Select the new build, **paste the Reply block** (review-response-1.md) into Resolution Center, **resubmit**.
+- (Optional, recommended before resubmit:) the owner does a quick local UI smoke of the two code fixes — first-run onboarding then confirm the menu-bar icon is present throughout, and open the popover to confirm Settings/Quit are reachable. These are SwiftUI scene/layout behaviours not coverable by the unit suite (UI smoke is owner-only).
 
-**Resolved S55:** 상호 = Araforge (`com.araforge.latte`, `6f9aef9`); `latte://demo` stays in Release; store name "Latte - Keep Mac Awake" (`418016d`); gh-pages privacy live-synced (`2c32c02`); **submitted to App Store review (English only)**.
+**B. (deferred, post-approval — unchanged from S55):**
+1. **Korean localization** — paste `docs/store/*-ko` into a KO localization in ASC (files ready; KO subtitle now Mac-free).
+2. **Org App-Transfer** (Araforge seller name) — MUST be during v1.x and **BEFORE iCloud Phase-2** (transfer blocked for iCloud apps).
+3. PR #1 merge.
+4. WiFi When-In-Use device-verify (S50 T5 + S51 F2).
 
-**B. (autonomous backlog — CLOSED):**
-- ✅ **B1 clock seam** — LANDED `872a38a` + VERIFIED S53 (717 green). Done.
-- ✅ **B3 chart date-label locale** — LANDED S54 `85413b8`. Done.
-- ✅ **B2 `IOPowerSource.fanOut` parity** — LANDED S54 `13db4a3`. Done.
-- ❌ **B4 LOW bundle** (dead `?? presets[0]`, `@MainActor` consistency, `recordActivity` object-nil) — still intentionally skipped; S50's "no churn during the App Store push" call stands. Pick up only post-launch as a refinement.
+**C. (gated) iCloud Phase 2/3 activation** — unchanged; read `project_icloud_design_audit.md` before flipping. NOT autonomous.
 
-There is **no remaining autonomous work**. Every open item is owner-gated (A) or post-launch refinement (B4).
-- ❌ **B4 LOW bundle** (dead `?? presets[0]`, `@MainActor` consistency, `recordActivity` object-nil) — intentionally skipped; S50's "no churn during the App Store push" call stands.
-
-**C. (gated) iCloud Phase 2/3 activation** — unchanged; S8.5 + container + entitlements switch + macOS-14 `@Model`. NOT autonomous. M2/L1/L4 activation contracts carried in source since S51 — read `project_icloud_design_audit.md` before flipping.
-
-**v1.x autonomous backlog:** EXHAUSTED as of S54. The only path to publish now runs through owner decisions (A) — chiefly the 상호/bundle-ID call below. No further code work is required to ship the current binary.
-
-### ✅ RESOLVED (S55): brand (상호) = Araforge / bundle ID = `com.araforge.latte`
-Rewire landed `6f9aef9`, verified clean (725/725, 0-warning builds, bundle ID confirmed in the built app). **Still owner-gated for later:** Individual account ⇒ App Store seller shows the personal legal name. To show the Araforge brand, the owner moves to an Org account (개인사업자 + D-U-N-S) via **App Transfer** — this MUST happen during v1.x and **BEFORE iCloud Phase-2 activation** (App Transfer is blocked for iCloud-using apps). The first publish can go out as Individual now; the brand-account transfer is a separate later step.
+**Autonomous backlog:** still exhausted (B4 LOW only, intentionally skipped). The S56 work was reactive (rejection), not from the backlog.
 
 ---
 
 ## Cold-start (다음 세션 진입)
 
 ```bash
-# 0. PTY CHECK (trap #9) — only matters for TESTS. S53 START was already pty-ok
-#    (reboot/uptime cleared S52's exhaustion). If this fails, owner must reboot/relogin.
+# 0. PTY check (trap #9) — only matters for TESTS.
 python3 -c "import os;[os.close(x) for x in os.openpty()]" && echo pty-ok || echo "PTY EXHAUSTED — reboot/relogin"
 
-# 1. ⚠ CWD: a session restart RESETS Bash cwd to the repo root (main/S35 state!) — bit S51.
-#    The ROOT checkout is stale (main = S35); ALL work happens in this worktree. Verify pwd; prefer absolute paths.
+# 1. ⚠ CWD: a session restart RESETS Bash cwd to the repo root (main = stale S35!).
+#    ALL work happens in this worktree. Verify pwd; prefer absolute paths.
 cd /Users/parkbyeongjun/Documents/Claude/Projects/Latte/.claude/worktrees/focused-hamilton-417bfc && pwd
 
 # 2. Doc/metadata gates (no pty, no build):
@@ -107,21 +69,19 @@ scripts/check_doc_drift.sh --strict && scripts/check_store_limits.sh --strict
 xcodegen generate
 xcodebuild build -scheme Latte -destination 'platform=macOS,arch=arm64' 2>&1 | grep -E "warning:|BUILD"
 
-# 4. Tests — PREFER the runner (absorbs the trap-#8 stall). ~9s suite, expect 725.
+# 4. Tests — PREFER the runner (absorbs the trap-#8 stall). ~9-11s, expect 729.
 scripts/run_tests.sh
 ```
 
-**Expect**: pty-ok; **725/725 PASS**; doc-drift + store-limits clean; 172 keys × 11 langs; `cloudSync` nil in the default build; bundle ID `com.araforge.latte`.
+**Expect**: pty-ok; **729/729 PASS**; doc-drift + store-limits clean; bundle ID `com.araforge.latte`; build # 2; name "Latte - Keep Awake".
 
 ---
 
 ## How to resume
 
 1. Read this file first.
-2. `ROADMAP.md` rows 1.51 → 1.52 → 1.53 (1.53 = this session; 1.52 = S52 i18n detail incl. the rejected-false-positive list).
-3. Memory: `MEMORY.md` → `project_latte_v1_9.md` (S51–S53 at the tail) + `project_latte_status.md` (traps; #8 = harness-absorbed, #9 = pty/reboot, cwd-reset-on-restart hazard) + `project_icloud_design_audit.md`.
-4. For App Store work: `docs/store/` **in this worktree** is source-of-truth (root's copy is stale S35). Metadata says FIVE triggers and no export — do not "fix" it back (Focus = V2-03b, export removed S24).
-5. For any future i18n agent pass: read the S52 "Rejected as FALSE POSITIVES" list in ROADMAP row 1.52 first — especially the ru paucal genitive-singular point.
-6. **Test-seam gotcha (S53):** the `AwakeManager` `sleeper` seam is an *instant* sleeper in tests — it ignores the interval, so EVERY scheduled timer fires the instant the main actor yields. Never write a wiring test that assumes a timer stays "pending" across an `await`; assert cancel/replace contracts synchronously (`Task.isCancelled` + FSM state). See the NOTE in `Tests/AwakeTimerWiringTests.swift`.
-
----
+2. `ROADMAP.md` row 1.56 (this session) → 1.55 (S55 submission) → 1.54 (S54).
+3. `docs/store/review-response-1.md` is the owner's resubmit playbook (Reply block + checklist).
+4. Memory: `MEMORY.md` → `project_latte_v1_9.md` (S55/S56 at the tail) + `project_latte_status.md` (traps; cwd-reset hazard).
+5. ⚠ S56 code is **uncommitted** if `git status` is dirty — verify whether the owner had it committed before continuing.
+6. Test-seam gotchas from prior sessions still apply (instant sleeper in `AwakeTimerWiringTests`; `MenuBarExtra(isInserted:)` re-insertion is unreliable — keep the extra always-inserted).

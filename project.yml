@@ -30,8 +30,12 @@ settings:
     SWIFT_VERSION: "6.0"
     DEVELOPMENT_TEAM: "4BXCVHZANL"
     CODE_SIGN_STYLE: Automatic
+    # CURRENT_PROJECT_VERSION bumped 1 → 2 for the App Store resubmission after
+    # Submission dc78a591 was rejected (2026-06-23): App Store requires a new
+    # build number for every upload. MARKETING_VERSION stays 1.0.0 (same public
+    # version, fixed binary).
     MARKETING_VERSION: "1.0.0"
-    CURRENT_PROJECT_VERSION: "1"
+    CURRENT_PROJECT_VERSION: "2"
     ENABLE_HARDENED_RUNTIME: YES
     SWIFT_STRICT_CONCURRENCY: complete
     # Xcode 15+ String Catalog auto-extraction

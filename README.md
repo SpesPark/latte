@@ -2,7 +2,7 @@
 
 A macOS menu-bar utility that keeps your Mac awake **automatically based on context** — calendar events, app activity, Wi-Fi networks, external displays, and time-of-day schedules. Solves the "Mac slept mid-Zoom-call" problem that incumbents (Amphetamine, Caffeinated) leave unaddressed.
 
-> **Status**: v1.9 code-side ship-ready. 725/725 tests passing, 23/23 smoke scenarios PASS. App Store prep (ASC submission) is the only remaining work — see [ROADMAP.md](ROADMAP.md). Pages live at https://spespark.github.io/latte/.
+> **Status**: v1.9 code-side ship-ready. 729/729 tests passing, 23/23 smoke scenarios PASS. First App Store submission was rejected (2026-06-23); the four review issues are fixed in build 1.0.0 (2) and the app is ready to resubmit — see [ROADMAP.md](ROADMAP.md). Pages live at https://spespark.github.io/latte/.
 
 ## What it does
 

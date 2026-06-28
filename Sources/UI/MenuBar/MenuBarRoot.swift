@@ -9,6 +9,14 @@ public struct MenuBarRoot: View {
     @State private var customExpanded: Bool = false
     @State private var customMinutes: Int = 60
 
+    /// Measured height of the scrollable middle section, fed by a
+    /// `GeometryReader` background + preference. Seeded to a typical content
+    /// height so the first opened frame doesn't visibly resize; the preference
+    /// then sets the real content height so the popover sizes to content when
+    /// it fits and scrolls (capped at `maxScroll`) only when it would
+    /// overflow. Part of the Guideline 4 truncation fix.
+    @State private var measuredContentHeight: CGFloat = MenuBarLayout.estimatedContentHeight
+
     /// Local NSEvent monitor token, installed in `.onAppear` (popover
     /// open) and removed in `.onDisappear` (popover close). Carries
     /// ⌘, → Settings and ⌘Q → Quit through a key-event handler since
@@ -21,123 +29,172 @@ public struct MenuBarRoot: View {
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
+        // Guideline 4 truncation fix: cap the scrollable middle section so the
+        // pinned Settings / Quit footer is always reachable, even on notched
+        // 14"/16" displays. See MenuBarLayout for the math.
+        //
+        // Use the SMALLEST visibleFrame across all screens, not `NSScreen.main`:
+        // this is an LSUIElement app, so `NSScreen.main` (the key-window screen)
+        // is unreliable, and with "Displays have separate Spaces" the popover
+        // can open on any display. Capping to the smallest display guarantees
+        // the footer stays on-screen wherever the popover lands — at worst the
+        // popover scrolls slightly sooner on a larger display.
+        let screenHeight = NSScreen.screens
+            .map(\.visibleFrame.height)
+            .min() ?? MenuBarLayout.fallbackScreenHeight
+        let maxScroll = MenuBarLayout.maxScrollHeight(forVisibleScreenHeight: screenHeight)
+
+        return VStack(spacing: 0) {
             HeaderView(manager: manager)
 
             Divider().opacity(0.5)
 
-            pauseTriggersRow
+            // Scrollable middle: pause toggle + durations + recurring presets
+            // + Turn off. Capped at `maxScroll`; everything stays reachable by
+            // scrolling and the footer below never gets pushed off-screen.
+            ScrollView {
+                VStack(spacing: 0) {
+                    pauseTriggersRow
 
-            Divider().opacity(0.5)
+                    Divider().opacity(0.5)
 
-            VStack(spacing: 0) {
-                ForEach(AwakeDuration.presets, id: \.label) { duration in
-                    DurationPickerRow(
-                        duration: duration,
-                        isActive: manager.activeDuration == duration && manager.isAwake,
-                        action: { manager.activate(for: duration) }
-                    )
+                    durationsSection
+
+                    Divider().opacity(0.5)
+
+                    recurringSection
+
+                    turnOffButton
                 }
-                CustomDurationRow(
-                    isExpanded: $customExpanded,
-                    minutes: $customMinutes,
-                    // S23 / P-issue-2: AND `activeRecurringPresetID == nil` so a
-                    // preset-driven `.minutes(N)` (which is also "unlisted") doesn't
-                    // poach the Custom row's checkmark — the recurring preset row
-                    // owns the marker via its own `isActive`.
-                    isActive: manager.isAwake
-                        && isUnlistedCustomDuration(manager.activeDuration)
-                        && manager.activeRecurringPresetID == nil,
-                    onStart: {
-                        manager.activate(for: .minutes(customMinutes))
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear.preference(
+                            key: MenuBarContentHeightKey.self,
+                            value: proxy.size.height
+                        )
                     }
                 )
             }
-            .padding(.vertical, 2)
+            .frame(height: min(measuredContentHeight, maxScroll))
 
             Divider().opacity(0.5)
 
-            // C-7 wall-clock target presets — seed-then-mutable model
-            // (S19 #2). The three legacy rows (until 5 PM / 11 PM /
-            // midnight) seed once into `recurringQuickPresets` at first
-            // launch and become editable like any user preset. Filtered
-            // by today's weekday — Mon-Fri preset never shows Saturday.
-            // Click → minutes-from-now → activate(.minutes(N)).
-            // Owner-cleared → empty section, popover stays clean.
-            let activePresets = environment.recurringQuickPresets
-                .filter { $0.isActiveOn(date: .now) }
-            if !activePresets.isEmpty {
-                VStack(spacing: 0) {
-                    ForEach(activePresets) { preset in
-                        RecurringQuickPresetRow(
-                            preset: preset,
-                            isActive: manager.isAwake
-                                && manager.activeRecurringPresetID == preset.id,
-                            action: {
-                                let mins = preset.minutes(from: .now)
-                                // S23 / P-issue-2: tag the activation so the
-                                // popover shows the checkmark on this row,
-                                // not on Custom.
-                                manager.activate(for: .minutes(mins), fromRecurringPreset: preset.id)
-                            }
-                        )
-                    }
-                }
-                .padding(.vertical, 2)
-
-                Divider().opacity(0.5)
-            }
-
-            Button(role: .destructive, action: { manager.deactivate() }) {
-                HStack(spacing: Theme.Spacing.sm) {
-                    Image(systemName: "stop.circle")
-                        .font(.system(size: 13))
-                        .frame(width: 16)
-                    Text("Turn off")
-                        .font(Theme.Fonts.body)
-                    Spacer()
-                }
-                .padding(.horizontal, Theme.Spacing.lg)
-                .padding(.vertical, Theme.Spacing.sm)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(!manager.isAwake)
-            .opacity(manager.isAwake ? 1.0 : 0.45)
-
-            Divider().opacity(0.5)
-
-            // S26 / B6 (S22 P-issue-4 close-out): `.keyboardShortcut(...)`
-            // doesn't reach the `MenuBarExtra(.window)` popover, so we
-            // install an `NSEvent.addLocalMonitorForEvents(.keyDown)` in
-            // `.onAppear` below (scoped to popover open/close) that maps
-            // ⌘Q → Quit via `PopoverKeyHandler.decide`. The monitor is
-            // removed on `.onDisappear` so the key goes back to its
-            // default no-op behaviour outside the popover.
-            // S27: ⌘, popover binding removed (low-value — popover is
-            // already mouse-bound for trigger selection). Only ⌘Q
-            // remains.
-            HStack {
-                Button(action: openSettings) {
-                    Text("Settings…")
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-                Spacer()
-                Button(action: { NSApp.terminate(nil) }) {
-                    Text("Quit")
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-            }
-            .font(Theme.Fonts.caption)
-            .padding(.horizontal, Theme.Spacing.lg)
-            .padding(.vertical, Theme.Spacing.sm)
+            settingsFooter
         }
         .frame(width: Theme.Sizes.menuBarWidth)
         .liquidGlassBackground()
         .onAppear { installKeyMonitor() }
         .onDisappear { removeKeyMonitor() }
+        .onPreferenceChange(MenuBarContentHeightKey.self) { height in
+            measuredContentHeight = height
+        }
+    }
+
+    // MARK: - Sections
+
+    private var durationsSection: some View {
+        VStack(spacing: 0) {
+            ForEach(AwakeDuration.presets, id: \.label) { duration in
+                DurationPickerRow(
+                    duration: duration,
+                    isActive: manager.activeDuration == duration && manager.isAwake,
+                    action: { manager.activate(for: duration) }
+                )
+            }
+            CustomDurationRow(
+                isExpanded: $customExpanded,
+                minutes: $customMinutes,
+                // S23 / P-issue-2: AND `activeRecurringPresetID == nil` so a
+                // preset-driven `.minutes(N)` (which is also "unlisted") doesn't
+                // poach the Custom row's checkmark — the recurring preset row
+                // owns the marker via its own `isActive`.
+                isActive: manager.isAwake
+                    && isUnlistedCustomDuration(manager.activeDuration)
+                    && manager.activeRecurringPresetID == nil,
+                onStart: {
+                    manager.activate(for: .minutes(customMinutes))
+                }
+            )
+        }
+        .padding(.vertical, 2)
+    }
+
+    // C-7 wall-clock target presets — seed-then-mutable model (S19 #2). The
+    // three legacy rows (until 5 PM / 11 PM / midnight) seed once into
+    // `recurringQuickPresets` at first launch and become editable like any
+    // user preset. Filtered by today's weekday — Mon-Fri preset never shows
+    // Saturday. Click → minutes-from-now → activate(.minutes(N)).
+    // Owner-cleared → empty section, popover stays clean (no trailing divider).
+    @ViewBuilder
+    private var recurringSection: some View {
+        let activePresets = environment.recurringQuickPresets
+            .filter { $0.isActiveOn(date: .now) }
+        if !activePresets.isEmpty {
+            VStack(spacing: 0) {
+                ForEach(activePresets) { preset in
+                    RecurringQuickPresetRow(
+                        preset: preset,
+                        isActive: manager.isAwake
+                            && manager.activeRecurringPresetID == preset.id,
+                        action: {
+                            let mins = preset.minutes(from: .now)
+                            // S23 / P-issue-2: tag the activation so the
+                            // popover shows the checkmark on this row,
+                            // not on Custom.
+                            manager.activate(for: .minutes(mins), fromRecurringPreset: preset.id)
+                        }
+                    )
+                }
+            }
+            .padding(.vertical, 2)
+
+            Divider().opacity(0.5)
+        }
+    }
+
+    private var turnOffButton: some View {
+        Button(role: .destructive, action: { manager.deactivate() }) {
+            HStack(spacing: Theme.Spacing.sm) {
+                Image(systemName: "stop.circle")
+                    .font(.system(size: 13))
+                    .frame(width: 16)
+                Text("Turn off")
+                    .font(Theme.Fonts.body)
+                Spacer()
+            }
+            .padding(.horizontal, Theme.Spacing.lg)
+            .padding(.vertical, Theme.Spacing.sm)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!manager.isAwake)
+        .opacity(manager.isAwake ? 1.0 : 0.45)
+    }
+
+    // S26 / B6 (S22 P-issue-4 close-out): `.keyboardShortcut(...)` doesn't
+    // reach the `MenuBarExtra(.window)` popover, so we install an
+    // `NSEvent.addLocalMonitorForEvents(.keyDown)` in `.onAppear` (scoped to
+    // popover open/close) that maps ⌘Q → Quit via `PopoverKeyHandler.decide`.
+    // The monitor is removed on `.onDisappear`. S27: ⌘, popover binding
+    // removed (low-value — popover is already mouse-bound). Only ⌘Q remains.
+    // Pinned outside the ScrollView so it is always reachable (Guideline 4).
+    private var settingsFooter: some View {
+        HStack {
+            Button(action: openSettings) {
+                Text("Settings…")
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            Spacer()
+            Button(action: { NSApp.terminate(nil) }) {
+                Text("Quit")
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+        }
+        .font(Theme.Fonts.caption)
+        .padding(.horizontal, Theme.Spacing.lg)
+        .padding(.vertical, Theme.Spacing.sm)
     }
 
     private func installKeyMonitor() {
@@ -202,5 +259,17 @@ public struct MenuBarRoot: View {
             coordinator: environment.coordinator,
             environment: environment
         )
+    }
+}
+
+/// Carries the measured height of the scrollable middle section up to
+/// `MenuBarRoot`, so the ScrollView can size to content when it fits and
+/// scroll (capped) only when it would overflow. Part of the Guideline 4
+/// truncation fix.
+private struct MenuBarContentHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        // Single emitter (one GeometryReader background); take the latest.
+        value = nextValue()
     }
 }
