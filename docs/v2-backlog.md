@@ -285,14 +285,14 @@
 
 ### V2-20 — Bundle ID prefix revisit
 
-- **Decided in S8 (2026-04-27)**: `com.parkbyeongjun.latte` as default reverse-DNS based on owner's name.
+- **Decided in S8 (2026-04-27)**: `com.araforge.latte` as default reverse-DNS based on owner's name.
 - **Why deferred**: owner asked to ship with a sensible default and revisit later. No domain ownership was required for the default choice.
 - **When to revisit**: before App Store Connect record creation (Phase E). Once submitted to App Store, bundle ID is **immutable** for the app's lifetime — Apple does not allow renaming. Final lock-in is at submission.
 - **Alternatives considered**:
   - `com.hightempier.latte` — based on owner's gmail handle. Reasonable nickname-style.
   - `com.bjpark.latte` / `kr.bjpark.latte` — shorter; needs owner-controlled domain (`bjpark.com` / `bjpark.kr`) to be defensible.
   - `app.latte.mac` / `com.latte.app` — needs owner to buy `latte.app` or `latte.com` domain (`latte.app` is currently registered; `.app` TLD requires HTTPS).
-- **Action when revisiting**: re-run the same sweep done in S8 — `project.yml` (3 spots), `Sources/Core/{Logging,PowerAssertion,SettingsStore}.swift` (3 spots), `docs/design/{01-PRD,02-architecture,04-data-model}.md`, `docs/QA_LOG.md`, `docs/site/privacy.html`, `docs/store/*-url.txt`. Single grep: `grep -rn "com.parkbyeongjun.latte" .`. Re-run `xcodegen generate` + full test suite.
+- **Action when revisiting**: re-run the same sweep done in S8 — `project.yml` (3 spots), `Sources/Core/{Logging,PowerAssertion,SettingsStore}.swift` (3 spots), `docs/design/{01-PRD,02-architecture,04-data-model}.md`, `docs/QA_LOG.md`, `docs/site/privacy.html`, `docs/store/*-url.txt`. Single grep: `grep -rn "com.araforge.latte" .`. Re-run `xcodegen generate` + full test suite.
 
 ### V2-21 — Git author identity revisit
 

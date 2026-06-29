@@ -97,7 +97,7 @@ Output:
 
 When done capturing, clean up:
 ```bash
-pkill -x Latte && defaults delete com.parkbyeongjun.latte
+pkill -x Latte && defaults delete com.araforge.latte
 ```
 
 LSUIElement (menu-bar-only) apps cannot be driven into Settings programmatically — the popover/Settings click chain requires sandbox-restricted UI scripting. Shots 1-5 are owner-manual; the harness reduces setup time but does not replace the click.
@@ -153,7 +153,7 @@ Pick your daily brew.
 
 ### Shot 3 — Settings → Triggers showing all 4 with vote indicators
 
-**What to capture**: Triggers tab. All 4 trigger Sections visible (Calendar, App, Wi-Fi, Focus). At least 2 enabled (showing the voting dot in the header). One Section expanded (suggest the App trigger — it has the richest config form with friendly app names + icons).
+**What to capture**: Triggers tab. All 5 trigger Sections visible (Calendar, App, Wi-Fi, Schedule, External Display). At least 2 enabled (showing the voting dot in the header). One Section expanded (suggest the App trigger — it has the richest config form with friendly app names + icons).
 
 **How to set up**:
 1. Settings → Triggers tab.

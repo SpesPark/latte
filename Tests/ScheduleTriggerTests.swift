@@ -361,7 +361,8 @@ final class ScheduleTriggerTests: XCTestCase {
         XCTAssertEqual(first?.wantsAwake, true)
 
         let task = Task { @MainActor () -> TriggerVote? in
-            await iterator.next()
+            var it = trigger.voteStream.makeAsyncIterator()
+            return await it.next()
         }
         try? await Task.sleep(nanoseconds: 50_000_000)
         task.cancel()
@@ -448,7 +449,8 @@ final class ScheduleTriggerTests: XCTestCase {
         trigger.stop()
         // Stop must not finish the AsyncStream (S7.11 invariant).
         let probe = Task { @MainActor () -> TriggerVote? in
-            await iterator.next()
+            var it = trigger.voteStream.makeAsyncIterator()
+            return await it.next()
         }
         try await Task.sleep(nanoseconds: 50_000_000)
         probe.cancel()
@@ -476,5 +478,42 @@ final class ScheduleTriggerTests: XCTestCase {
         XCTAssertEqual(trigger.id, "schedule")
         XCTAssertEqual(trigger.displayName, "Schedule")
         XCTAssertEqual(trigger.symbol, "clock")
+    }
+
+    // MARK: - trap #8: a started trigger must not leak via a self-retaining pollTask
+
+    /// `start()` installs a long-lived `pollTask`. Before the trap #8 fix that
+    /// task bound a *strong* `self` (a `guard let self` ahead of the loop) and
+    /// held it across `Task.sleep`, so the trigger — and its recurring main-actor
+    /// poll — outlived every external reference even when `stop()` was never
+    /// called. Across the full suite these accumulated and stalled the run
+    /// (`project_latte_status.md` trap #8). The poll task must capture only a weak
+    /// self and `deinit` must cancel it, so dropping the last reference
+    /// deallocates the trigger promptly.
+    func testStartedTriggerDeallocatesWithoutExplicitStop() async {
+        weak var weakTrigger: ScheduleTrigger?
+        do {
+            let settings = InMemorySettingsStore()
+            settings.setBool(true, for: .scheduleTriggerEnabled)
+            let trigger = ScheduleTrigger(
+                settings: settings,
+                pollInterval: 0.02,
+                now: { Date() },
+                calendar: gmt
+            )
+            weakTrigger = trigger
+            await trigger.start()
+            // Let the poll task actually run so it executes its `guard let self`
+            // and parks in `Task.sleep` *while the trigger is still referenced* —
+            // the leak only manifests once a strong self has been bound.
+            try? await Task.sleep(nanoseconds: 50_000_000)
+            XCTAssertNotNil(weakTrigger, "trigger alive while referenced")
+        }
+        for _ in 0..<200 where weakTrigger != nil {
+            await Task.yield()
+            try? await Task.sleep(nanoseconds: 5_000_000)
+        }
+        XCTAssertNil(weakTrigger,
+                     "started ScheduleTrigger leaked via a self-retaining pollTask (trap #8)")
     }
 }

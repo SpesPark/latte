@@ -112,7 +112,8 @@ final class WiFiTriggerTests: XCTestCase {
 
         trigger.evaluate()
         let task = Task { @MainActor () -> TriggerVote? in
-            await iterator.next()
+            var it = trigger.voteStream.makeAsyncIterator()
+            return await it.next()
         }
         try await Task.sleep(nanoseconds: 50_000_000)
         task.cancel()
@@ -186,7 +187,8 @@ final class WiFiTriggerTests: XCTestCase {
         // S7.11: stop() no longer finishes the AsyncStream (so Toggle OFF→ON
         // cycles work). Verify no further yields by polling with a timeout.
         let nextProbe = Task { @MainActor () -> TriggerVote? in
-            await it.next()
+            var probeIt = trigger.voteStream.makeAsyncIterator()
+            return await probeIt.next()
         }
         try await Task.sleep(nanoseconds: 50_000_000)
         nextProbe.cancel()
@@ -250,5 +252,35 @@ final class WiFiTriggerTests: XCTestCase {
         let secondVote = await iterator.next()
         XCTAssertEqual(secondVote?.wantsAwake, true, "reemitCurrentVote must re-emit ON for steady-state matching SSID")
         XCTAssertTrue(secondVote?.reason.contains("HomeNet") ?? false)
+    }
+
+    // MARK: - trap #8: a started trigger must not leak via a self-retaining pollTask
+
+    /// See `ScheduleTriggerTests.testStartedTriggerDeallocatesWithoutExplicitStop`
+    /// for the full rationale — `WiFiTrigger.start()` installs the same kind of
+    /// long-lived `pollTask` that must hold only a weak self.
+    func testStartedTriggerDeallocatesWithoutExplicitStop() async {
+        weak var weakTrigger: WiFiTrigger?
+        do {
+            let settings = InMemorySettingsStore()
+            settings.setBool(true, for: .wifiTriggerEnabled)
+            let trigger = WiFiTrigger(
+                settings: settings,
+                source: MockWiFiSource(currentSSID: "HomeNet"),
+                pollInterval: 0.02
+            )
+            weakTrigger = trigger
+            await trigger.start()
+            // See ScheduleTriggerTests: let the poll task bind a strong self
+            // before the trigger reference is dropped.
+            try? await Task.sleep(nanoseconds: 50_000_000)
+            XCTAssertNotNil(weakTrigger, "trigger alive while referenced")
+        }
+        for _ in 0..<200 where weakTrigger != nil {
+            await Task.yield()
+            try? await Task.sleep(nanoseconds: 5_000_000)
+        }
+        XCTAssertNil(weakTrigger,
+                     "started WiFiTrigger leaked via a self-retaining pollTask (trap #8)")
     }
 }

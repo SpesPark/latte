@@ -46,9 +46,21 @@ public final class CoreWLANSource: NSObject, WiFiSource, CLLocationManagerDelega
         case .notDetermined: return .notDetermined
         case .restricted, .denied: return .denied
         case .authorized, .authorizedAlways: return .granted
-        @unknown default: return .notDetermined
+        @unknown default:
+            // `.authorizedWhenInUse` is API_UNAVAILABLE(macos) in the current
+            // SDK so it cannot be named as a case — but we request When-In-Use
+            // authorization, so if a future macOS starts returning it, a user
+            // who granted access must not be misclassified as not-determined.
+            return status.rawValue == Self.authorizedWhenInUseRawValue
+                ? .granted
+                : .notDetermined
         }
     }
+
+    /// `kCLAuthorizationStatusAuthorizedWhenInUse` from the shared
+    /// CoreLocation header. Unavailable as a Swift case on macOS today;
+    /// matched by raw value for forward compatibility.
+    private static let authorizedWhenInUseRawValue: CLAuthorizationStatus.RawValue = 4
 
     public var currentSSID: String? {
         client.interface()?.ssid()
@@ -57,9 +69,25 @@ public final class CoreWLANSource: NSObject, WiFiSource, CLLocationManagerDelega
     public func requestAccess() async -> Bool {
         if permissionStatus == .granted { return true }
         if permissionStatus == .denied { return false }
+        // A request is already in flight. Starting another would overwrite
+        // `pendingPermissionContinuation`, stranding the first caller's
+        // coroutine forever (its continuation is never resumed → leak +
+        // CheckedContinuation runtime trap in debug). Report the current,
+        // not-yet-granted status to this redundant caller; the in-flight
+        // request resolves the real result for the first one.
+        guard pendingPermissionContinuation == nil else { return false }
         return await withCheckedContinuation { continuation in
             pendingPermissionContinuation = continuation
-            locationManager.requestAlwaysAuthorization()
+            // When-In-Use matches the only usage-string we ship
+            // (`NSLocationWhenInUseUsageDescription`) and is least-privilege —
+            // requesting `Always` while declaring only the When-In-Use string
+            // is an entitlement/description mismatch an App Reviewer can flag.
+            // macOS resolves both to the same prompt and grants
+            // `.authorized` / `.authorizedAlways` (both handled by
+            // `permissionStatus`). OWNER DEVICE-VERIFY: confirm CoreWLAN
+            // `ssid()` still resolves under When-In-Use before relying on the
+            // Wi-Fi trigger in the shipped build.
+            locationManager.requestWhenInUseAuthorization()
         }
     }
 
@@ -73,7 +101,9 @@ public final class CoreWLANSource: NSObject, WiFiSource, CLLocationManagerDelega
             let granted: Bool
             switch status {
             case .authorized, .authorizedAlways: granted = true
-            default: granted = false
+            // Forward-compat: a future macOS may report When-In-Use (raw 4),
+            // which is what we actually requested. See `permissionStatus`.
+            default: granted = status.rawValue == Self.authorizedWhenInUseRawValue
             }
             continuation.resume(returning: granted)
         }
@@ -130,16 +160,26 @@ public final class WiFiTrigger: Trigger {
         }
     }
 
+    isolated deinit {
+        // See ScheduleTrigger.deinit — cancel the weak-self poll task so it
+        // does not spin no-op polls after the trigger is released without stop().
+        pollTask?.cancel()
+    }
+
     public func start() async {
         guard pollTask == nil else { return }
         logger.info("WiFiTrigger.start")
         evaluate()
+        // Capture the interval by value and re-acquire `self` weakly each
+        // iteration — never hold a strong `self` across `Task.sleep`, which
+        // would form a pollTask ↔ trigger cycle that survives release
+        // (project_latte_status.md trap #8). `deinit` cancels the task.
         pollTask = Task { @MainActor [weak self] in
-            guard let self else { return }
+            guard let interval = self?.pollInterval else { return }
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: UInt64(self.pollInterval * 1_000_000_000))
+                try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
                 if Task.isCancelled { break }
-                self.evaluate()
+                self?.evaluate()
             }
         }
     }

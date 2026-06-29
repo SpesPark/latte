@@ -68,11 +68,15 @@ public final class INFocusSource: FocusSource {
     }
 
     public func observe(onChange: @escaping @MainActor (Bool) -> Void) -> FocusObservation {
-        // INFocusStatusCenter.focusStatus is KVO-compliant.
+        // INFocusStatusCenter.focusStatus is KVO-compliant. The KVO change
+        // handler is @Sendable and may fire off the main thread, so read the
+        // main-actor `isFocusActive` inside the MainActor hop, not in the
+        // @Sendable scope.
         kvoToken = center.observe(\.focusStatus, options: [.new]) { [weak self] _, _ in
-            guard let self else { return }
-            let isActive = self.isFocusActive
-            Task { @MainActor in onChange(isActive) }
+            Task { @MainActor in
+                guard let self else { return }
+                onChange(self.isFocusActive)
+            }
         }
         return FocusObservation { [weak self] in
             self?.kvoToken?.invalidate()

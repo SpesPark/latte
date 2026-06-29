@@ -77,7 +77,9 @@ public final class NSScreenSource: DisplaySource {
         }
     }
 
-    deinit {
+    isolated deinit {
+        // `isolated deinit` (SE-0371) runs on the main actor so the teardown
+        // can read the @MainActor-isolated `observer` token.
         if let observer { NotificationCenter.default.removeObserver(observer) }
         continuation.finish()
     }
@@ -154,10 +156,14 @@ public final class DebouncingDisplaySource: DisplaySource {
         let (stream, cont) = AsyncStream<Void>.makeStream()
         self.changeStream = stream
         self.continuation = cont
-        self.observeTask = Task { @MainActor [weak self] in
-            guard let self else { return }
+        // Capture `upstream` (the iterated stream's owner) but reach `self`
+        // weakly inside the loop — a strong `self` ahead of the `for await`
+        // retains the source across the suspension so `deinit` never runs
+        // (project_latte_status.md trap #8).
+        self.observeTask = Task { @MainActor [weak self, upstream] in
             for await _ in upstream.changeStream {
-                self.scheduleFlush()
+                if Task.isCancelled { break }
+                self?.scheduleFlush()
             }
         }
     }
@@ -253,10 +259,16 @@ public final class ExternalDisplayTrigger: Trigger {
             // can only be iterated by a single consumer for its entire
             // lifetime, so we keep this task alive across start/stop
             // cycles and gate evaluation through `isRunning`.
+            // Capture `source` (the iterated stream's owner) but re-acquire
+            // `self` weakly inside the loop. Binding a strong `self` ahead of
+            // the `for await` retains the trigger across the suspension, so its
+            // `deinit` (below) never runs and the trigger leaks
+            // (project_latte_status.md trap #8).
             observeTask = Task { @MainActor [weak self] in
-                guard let self else { return }
-                for await _ in self.source.changeStream {
+                guard let source = self?.source else { return }
+                for await _ in source.changeStream {
                     if Task.isCancelled { break }
+                    guard let self else { break }
                     // Gate observe-driven evaluation on the isRunning
                     // flag so source events during a stop window are
                     // ignored; the next start() will pick up fresh state.

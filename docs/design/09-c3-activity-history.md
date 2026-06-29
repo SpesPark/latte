@@ -63,7 +63,7 @@ public actor ActivityLogStore {
 ```
 
 - **File location**: `FileManager.default.url(for: .applicationSupportDirectory, ...)`
-  / `Latte/activity-log.json`. Sandbox: `com.parkbyeongjun.latte` container OK.
+  / `Latte/activity-log.json`. Sandbox: `com.araforge.latte` container OK.
 - **Atomic write**: `Data.write(to: url, options: .atomic)`.
 - **GC**: on every `append`, drop entries older than `retention`. No background timer.
 - **Concurrency**: actor isolation = no shared-mutable hazard. All callers `await`.
@@ -303,6 +303,13 @@ ergonomic value were shipped in 4 feat commits + 1 simplify-pass:
 | 4 | `0dfb9d2` | **D — click-row → trigger config jump**. Activity rows are buttons with chevron; click flips tab + `ScrollViewReader` scrolls. Deep-link form `latte://settings/triggers?focus=<id>`. `parseRoute(_:)` returns `SettingsRoute`; legacy `parse(_:)` kept. Already-open window re-emits via `Notification.Name.settingsRequestFocusTrigger`. 462 → 467 tests. |
 | 5 | `4343d2a` | **8th simplify-pass follow-through**. APPROVE-WITH-NITS, 0 CRIT/HIGH, 2 MED + 5 LOW all addressed: reload on retention `.onChange`, `isLoading=true` at reload entry, `ActivityLogStore.secondsPerDay` constant collapses 4 magic-86_400 sites, `ActivityFilter.label(for:)` extraction (kebab → Title-Case, no `.capitalized` locale dep), DST cosmetic note documented on `splitByHourWithDate`. 467 → **468 tests**. |
 
+> **Update (S24, `0e13546`)**: the CSV/JSON export (#3 above) was **removed** —
+> the export buttons were non-functional in the shipped Settings layout.
+> `ActivityLogExporter` and the `ExportButtons` view no longer exist in the
+> codebase; cross-device history is now folded into the iCloud-sync RFC
+> ([10-c3-icloud-sync-rfc.md](10-c3-icloud-sync-rfc.md) Domain B). Treat any
+> "export" reference above as historical, not current state.
+
 **Deferred design decisions resolved during ship**:
 - **F: which Settings tab does the Stepper live in?** — Activity tab itself
   (not General). It's contextually about activity; owner adjusting retention
@@ -425,4 +432,8 @@ key.
 
 - **iCloud sync**: postponed for joint design with B1.2 iCloud-chord-
   sync — both touch the same Settings schema and a solo ship would
-  risk migration churn.
+  risk migration churn. **Joint design now drafted:
+  [10-c3-icloud-sync-rfc.md](10-c3-icloud-sync-rfc.md)** — **owner
+  decisions locked 2026-05-18 (RFC §12): Q1=B-2, so the activity log is
+  Domain B / append-only union merge, deliberately *not* last-writer-wins;
+  ships as Phase 3 / v2.1, S8.5-gated.**

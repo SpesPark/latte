@@ -119,7 +119,8 @@ final class FocusTriggerTests: XCTestCase {
         // After stop, observation handle is gone — flipping source must not vote.
         source.isFocusActive = false
         let task = Task { @MainActor () -> TriggerVote? in
-            await iterator.next()
+            var it = trigger.voteStream.makeAsyncIterator()
+            return await it.next()
         }
         try await Task.sleep(nanoseconds: 50_000_000)
         task.cancel()

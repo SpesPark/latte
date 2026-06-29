@@ -201,4 +201,47 @@ final class LocalizationCatalogTests: XCTestCase {
         XCTAssertNotNil(AssertionStatusFormatter.modeLabel(isAwake: true, allowDisplaySleep: false))
         XCTAssertNil(AssertionStatusFormatter.modeLabel(isAwake: false, allowDisplaySleep: true))
     }
+
+    // MARK: - Russian CLDR plural forms
+
+    /// Russian cardinals require four CLDR forms (one/few/many/other), not the
+    /// two (one/other) the S35 migration shipped as a baseline. The pre-fix
+    /// `one` slot also hard-coded the literal "1" ("1 минута"), which is
+    /// CLDR-wrong: n = 21, 31, 101… are also Russian `one` but rendered via
+    /// `other` ("%lld минут" → "21 минут", grammatically incorrect; correct is
+    /// "21 минута"). Lock in: all four forms present AND every form keeps the
+    /// `%lld` placeholder so the count renders for 21/31/… too.
+    func testRussianPluralKeysHaveAllFourCLDRForms() throws {
+        let json = try loadCatalog()
+        guard let strings = json["strings"] as? [String: Any] else {
+            XCTFail("strings object missing"); return
+        }
+        let pluralKeys = ["%lld minutes", "%lld hours", "Currently: %lld external displays"]
+        let required = ["one", "few", "many", "other"]
+        for key in pluralKeys {
+            guard
+                let entry = strings[key] as? [String: Any],
+                let localizations = entry["localizations"] as? [String: Any],
+                let ru = localizations["ru"] as? [String: Any],
+                let variations = ru["variations"] as? [String: Any],
+                let plural = variations["plural"] as? [String: Any]
+            else {
+                XCTFail("ru variations.plural missing for key \(key.debugDescription)")
+                continue
+            }
+            for form in required {
+                guard
+                    let formEntry = plural[form] as? [String: Any],
+                    let stringUnit = formEntry["stringUnit"] as? [String: Any],
+                    let value = stringUnit["value"] as? String,
+                    !value.isEmpty
+                else {
+                    XCTFail("ru \(key.debugDescription) missing non-empty CLDR form \(form.debugDescription)")
+                    continue
+                }
+                XCTAssertTrue(value.contains("%lld"),
+                    "ru \(key.debugDescription) form \(form.debugDescription) lost the %lld placeholder (\(value.debugDescription)); n=21/31/… would not show the count")
+            }
+        }
+    }
 }

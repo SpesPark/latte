@@ -161,13 +161,6 @@ private struct DailyHeatmapChart: View {
     }
 }
 
-// MARK: - Export buttons (C)
-//
-// Buttons are now inlined directly into the Section in ActivityTab.body
-// (see S23 / P-issue-5 comment there). The previous `ExportButtons`
-// wrapper View was removed because Section's row tap-handling could
-// swallow events when the buttons sat inside an HStack child.
-
 // MARK: - Per-trigger filter picker (B)
 
 /// Picker selection for narrowing the Activity charts to a single trigger.
@@ -296,6 +289,23 @@ private struct ChartColorPickers: View {
 
 // MARK: - Daily totals (E)
 
+/// Locale-aware "month/day" label for the daily-totals chart x-axis.
+///
+/// Pure + locale-injectable so it's unit-testable. `setLocalizedDateFormatFromTemplate`
+/// derives the field order and separators from the locale ("1/15" en-US,
+/// "15/01" en-GB, "1. 15." ko, "15.1." de). Replaces the prior `en_US_POSIX`
+/// + hardcoded `"M/d"`, which forced US month-first ordering in all 11 locales (B3).
+enum ChartDateLabel {
+    /// Builds the formatter. Cache the result — constructing a `DateFormatter`
+    /// per render is expensive, and the locale is fixed for an app session.
+    static func makeFormatter(locale: Locale = .current) -> DateFormatter {
+        let f = DateFormatter()
+        f.locale = locale
+        f.setLocalizedDateFormatFromTemplate("Md")
+        return f
+    }
+}
+
 /// Bar chart of total awake minutes per day across the retention window.
 /// Today is highlighted via a darker accent so the eye picks "today vs N
 /// days ago" without a separate overlay. Parallel triggers don't double-
@@ -304,12 +314,7 @@ private struct DailyTotalsChart: View {
     let entries: [ActivityLogEntry]
     let days: Int
 
-    private static let dayLabel: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "M/d"
-        return f
-    }()
+    private static let dayLabel: DateFormatter = ChartDateLabel.makeFormatter()
 
     var body: some View {
         let totals = DailyTotal.compute(from: entries, days: days, now: .now)

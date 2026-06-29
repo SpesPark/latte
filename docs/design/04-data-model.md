@@ -50,12 +50,16 @@ Out of scope:
 
 **Migration plan** (executes once on first v2.0 launch):
 
-1. Detect `schemaVersion == 1` in UserDefaults. (If absent, treat as fresh install — no migration needed.)
+1. Read `schemaVersion` from UserDefaults, **treating an absent value as `1`** — the shipped v1.x app never wrote this key, so an existing install reads as v1, **not** as a fresh install. Migrate whenever the (possibly-defaulted) value is `< 2`. (On a genuinely fresh v2.0 install the read is also `1`, but the copy in step 3 finds no present keys — a harmless no-op — and step 4 then stamps `2`. The pre-built `SettingsMigration.currentSchemaVersion` already defaults absent → `1`; this step matches it. Earlier drafts said "absent → fresh → skip", which would have skipped migrating every real upgrading user — corrected.)
 2. Open SwiftData store.
 3. For each `SettingsKey`, read from UserDefaults, decode into a typed `Setting` model entity, save to SwiftData.
 4. Write `schemaVersion = 2` to SwiftData.
 5. Mark `migrationCompleted = true` in UserDefaults.
 6. Future launches: read from SwiftData. UserDefaults is read only as fallback if SwiftData store is missing or corrupt.
+
+**Idempotency gate (L1, S49 audit).** The pre-built `SettingsMigration.needsMigration` reads `schemaVersion` from **UserDefaults** (the `SettingsStore`), so step 4's write of `2` must land where that read sees it: either also bump UserDefaults `schemaVersion` to `2`, or gate on `migrationCompleted` (step 5). Writing the new version **only** to SwiftData leaves UserDefaults at the absent/`1` reading → `needsMigration` stays true → the migration re-runs every launch. Pin the gate to the store the check actually reads.
+
+**Type-mismatch keys (L2, S49 audit).** `SettingsMigration.snapshot` omits a key whose stored value can't be read as its declared `valueType` (e.g. a `.data` key holding a non-`Data` object) → that setting reverts to its default in v2. Vanishingly rare (the app only ever writes consistent types) and non-crashing; noted so activation tests don't flag a dropped malformed key as a regression.
 
 **Why not delete UserDefaults immediately after migration?**
 - Defensive: if migration partially failed, we can re-run it.
@@ -115,7 +119,7 @@ Example: `SettingsKey.allowDisplaySleep.rawValue == "latte.allowDisplaySleep"`.
 
 | Key (`latte.` prefixed) | Type | Default | Description | Validation |
 |---|---|---|---|---|
-| `schemaVersion` | `Int` | `1` | Bumped when shape of stored data changes. | Must be `1` in v1; mismatch → log fault, treat as fresh. |
+| `schemaVersion` | `Int` | `1` | Bumped when shape of stored data changes. First *written* by v2.0's migration (§2.2). | **Shipped v1.x never wrote this key** → absent reads as `1` (an existing v1 install), **not** fresh — see §2.2 / §6.2. Migrate when `< 2`; `>` current → §6.2 downgrade handling. |
 | `firstRunCompleted` | `Bool` | `false` | Set after onboarding screen dismissed. | Read-only after first true. |
 | `firstRunCompletedAt` | `Double` (Date) | `0` | Timestamp of first run completion. | Informational. |
 | `allowDisplaySleep` | `Bool` | `false` | When true, display may sleep but system stays awake (`NoIdleSleep`). | — |
@@ -223,10 +227,21 @@ public struct ScheduleEntry: Codable, Sendable, Equatable, Identifiable {
 
 ## 5. `SettingsStore` extended
 
-Building on 02-architecture.md §4.3, here is the **complete** `SettingsKey` enum for v1. Adding a new key requires bumping `schemaVersion` only if the new key's default is non-trivially derived (e.g., re-keying old data); pure additions don't need a bump.
+Building on 02-architecture.md §4.3, this is the **complete** `SettingsKey`
+enum as shipped through the v1.x line (v1.0 → v1.9). Adding a new key requires
+bumping `schemaVersion` only if the new key's default is non-trivially derived
+(e.g., re-keying old data); pure additions don't need a bump.
+
+> **Authoritative source: [`Sources/Core/SettingsStore.swift`](../../Sources/Core/SettingsStore.swift).**
+> This block is a curated snapshot for design readers; `SettingsKey.allCases`
+> in that file is the single source of truth (the iCloud-sync RFC
+> [10-c3-icloud-sync-rfc.md](10-c3-icloud-sync-rfc.md) §10/§13 references
+> `allCases`, not this snapshot, so its migration stays correct regardless of
+> drift here). Per-key prose (`///` doc comments, default-resolution rationale)
+> lives in the Swift source; keep this list in sync when adding keys.
 
 ```swift
-public enum SettingsKey: String, CaseIterable {
+public enum SettingsKey: String, CaseIterable, Sendable {
     // Versioning
     case schemaVersion         = "latte.schemaVersion"
     case firstRunCompleted     = "latte.firstRunCompleted"
@@ -238,6 +253,7 @@ public enum SettingsKey: String, CaseIterable {
     case activateOnLaunch      = "latte.activateOnLaunch"
     case launchAtLogin         = "latte.launchAtLogin"
     case menuBarIconStyle      = "latte.menuBarIconStyle"
+    case coffeeAccent          = "latte.coffeeAccent"
 
     // Calendar trigger
     case calendarTriggerEnabled            = "latte.calendarTrigger.enabled"
@@ -247,8 +263,9 @@ public enum SettingsKey: String, CaseIterable {
     case calendarTriggerTrailingMinutes    = "latte.calendarTrigger.trailingMinutes"
 
     // App-presence trigger
-    case appTriggerEnabled     = "latte.appTrigger.enabled"
-    case appTriggerBundleIDs   = "latte.appTrigger.bundleIDs"
+    case appTriggerEnabled         = "latte.appTrigger.enabled"
+    case appTriggerBundleIDs       = "latte.appTrigger.bundleIDs"
+    case hasSeededAppDefaults      = "latte.appTrigger.hasSeededDefaults"
 
     // Wi-Fi trigger
     case wifiTriggerEnabled        = "latte.wifiTrigger.enabled"
@@ -259,13 +276,35 @@ public enum SettingsKey: String, CaseIterable {
     case focusTriggerEnabled   = "latte.focusTrigger.enabled"
     case focusTriggerFocusIDs  = "latte.focusTrigger.focusIDs"
 
-    // Schedule trigger (V2-05, v1.1)
+    // Schedule trigger (V2-05) — v1.1
     case scheduleTriggerEnabled = "latte.scheduleTrigger.enabled"
     case scheduleTriggerEntries = "latte.scheduleTrigger.entries"
 
-    // Battery-aware (C-1) and pause-all (C-9) — v1.1
+    // External-display trigger (V2-06) — v1.2; whitelist deferred H — v1.5
+    case externalDisplayEnabled   = "latte.externalDisplayTrigger.enabled"
+    case externalDisplayWhitelist = "latte.externalDisplayTrigger.whitelist"
+
+    // Battery-aware mode (C-1) and pause-all (C-9) — v1.1
     case requireACForAwake      = "latte.requireACForAwake"
     case triggersPaused         = "latte.triggersPaused"
+
+    // Global keyboard shortcut (B1) — v1.1
+    case keyboardShortcutEnabled = "latte.keyboardShortcut.enabled"
+
+    // Custom keyboard-shortcut chord (B1.2) — v1.2
+    case shortcutChord = "latte.keyboardShortcut.chord"
+
+    // Activity history retention (C-3 deferred F) — v1.3.1
+    case activityRetentionDays = "latte.activityHistory.retentionDays"
+
+    // Activity chart colour overrides (C-3) — v1.7
+    case activityChartColors = "latte.activityHistory.chartColors"
+
+    // Recurring quick presets (C-7) — v1.7
+    case recurringQuickPresets = "latte.quickPresets.recurring"
+
+    // Built-in seed sentinel (S19 #2 — seed-then-mutable C-7 redesign)
+    case didSeedBuiltinPresets = "latte.quickPresets.didSeedBuiltins"
 }
 ```
 
@@ -325,7 +364,7 @@ public enum SettingsDefaults {
 
 - **Type mismatch on read**: return default, log `.notice` once per launch ("settings key X had unexpected type, using default").
 - **Out-of-range numeric**: return default. Example: `calendarTriggerLeadTimeMinutes` must be 0–15; 99 → default 0.
-- **JSON decode failure**: return default, log `.notice`. Do not erase the bad data — leave it for owner inspection if a user sends a `defaults read com.parkbyeongjun.latte` dump.
+- **JSON decode failure**: return default, log `.notice`. Do not erase the bad data — leave it for owner inspection if a user sends a `defaults read com.araforge.latte` dump.
 - **Unknown enum rawValue**: return default. Same rule.
 
 The principle: corruption never crashes the app. Worst case, settings revert to defaults silently.
@@ -336,7 +375,7 @@ Future bumps follow this protocol:
 
 1. New version `N` ships with `schemaVersion = N`.
 2. On launch, read current `schemaVersion`:
-   - missing → fresh install; write `N`.
+   - missing → **treat as `1`** (the shipped v1.x floor never wrote `schemaVersion`, so an absent key means an existing v1 install, *not* fresh) → fall into the `< N` migration path below. On a genuinely fresh install that path copies nothing — a harmless no-op — and step 3 writes `N`. **Never skip migration on a missing key.**
    - `< N` → run migration function `migrate_K_to_N(store:)` for each step `K → K+1`.
    - `== N` → no-op.
    - `> N` → user downgraded; log `.notice`, leave data untouched (forward compatibility within reason; older code reads what it knows).
@@ -361,7 +400,7 @@ In all cases, **nothing leaves the device**. The Privacy Policy (PRD §10.3) ass
 
 ### 8.1 v1: Time Machine + iCloud Drive (system-level)
 
-The app's UserDefaults plist (`~/Library/Containers/com.parkbyeongjun.latte/Data/Library/Preferences/com.parkbyeongjun.latte.plist`) is included in:
+The app's UserDefaults plist (`~/Library/Containers/com.araforge.latte/Data/Library/Preferences/com.araforge.latte.plist`) is included in:
 - Time Machine backups
 - iCloud Drive backup if user has "Desktop & Documents" sync (excluded — Containers/ is not in the synced set, but personal recovery via Migration Assistant works)
 

@@ -18,7 +18,7 @@ public final class OnboardingState: ObservableObject {
     @Published public private(set) var hasCompletedOnboarding: Bool
 
     private let settings: SettingsStore
-    private let logger = Logger(subsystem: "com.parkbyeongjun.latte", category: "onboarding")
+    private let logger = Logger(subsystem: "com.araforge.latte", category: "onboarding")
     private let dateProvider: @Sendable () -> Date
 
     public init(

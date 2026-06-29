@@ -17,7 +17,7 @@ The app accesses the following platform APIs only when the corresponding feature
 - EventKit (Calendar trigger) — read-only access to upcoming event start/end times. Event data is used in-process only and is never persisted or transmitted by Latte.
 - NSWorkspace (App trigger) — running-application list, used in-process to decide whether a watched app is currently running.
 - CoreWLAN (Wi-Fi trigger) — current SSID, used in-process to compare against the user's configured SSID list.
-- INFocusStatusCenter (Focus trigger) — boolean "is any Focus mode active." No specific Focus identifier is exposed by Apple to third parties.
+- (v1.0 ships without the Focus trigger — INFocusStatusCenter is not called; planned for a future version.)
 
 None of the above results in data leaving the device.
 

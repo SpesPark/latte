@@ -1,6 +1,15 @@
 import XCTest
 @testable import Latte
 
+/// Mutable time box so the `@Sendable` `now:` provider stays Sendable while
+/// the test advances the clock between polls. The trigger only reads it on the
+/// main actor (via pollOnce), so @unchecked is safe — same pattern as
+/// ScheduleTriggerTests' Clock box.
+private final class Clock: @unchecked Sendable {
+    var current: Date
+    init(_ d: Date) { current = d }
+}
+
 @MainActor
 final class CalendarTriggerTests: XCTestCase {
 
@@ -167,7 +176,7 @@ final class CalendarTriggerTests: XCTestCase {
     }
 
     func testEventEndingTransitionsToOff() async {
-        var now = Date(timeIntervalSince1970: 1_750_000_000)
+        let now = Date(timeIntervalSince1970: 1_750_000_000)
         let event = CalendarEventSnapshot(
             id: "ev-trans",
             title: "Brief",
@@ -176,7 +185,7 @@ final class CalendarTriggerTests: XCTestCase {
             isAllDay: false,
             calendarID: "cal-1"
         )
-        var nowRef = now
+        let clock = Clock(now)
         let settings = InMemorySettingsStore()
         settings.setBool(true, for: .calendarTriggerEnabled)
         let source = MockCalendarSource(events: [event])
@@ -184,12 +193,11 @@ final class CalendarTriggerTests: XCTestCase {
             settings: settings,
             source: source,
             pollInterval: 60,
-            now: { nowRef }
+            now: { clock.current }
         )
         await trigger.pollOnce()
         // Move time past event + trailing
-        now = now.addingTimeInterval(120)
-        nowRef = now
+        clock.current = now.addingTimeInterval(120)
         await trigger.pollOnce()
 
         var votes: [TriggerVote] = []
@@ -200,6 +208,64 @@ final class CalendarTriggerTests: XCTestCase {
         XCTAssertEqual(votes.count, 2)
         XCTAssertEqual(votes[0].wantsAwake, true)
         XCTAssertEqual(votes[1].wantsAwake, false)
+    }
+
+    /// Two overlapping events: when the shorter one ends but the longer one
+    /// is still active, the trigger must NOT emit OFF (the assertion stays
+    /// held). This guards the `&& activeIDs.isEmpty` condition — without it,
+    /// back-to-back / overlapping meetings would release the Mac to sleep
+    /// the moment the first event ends.
+    func testOverlappingEventEndingKeepsAssertionWhenOtherActive() async {
+        let t0 = Date(timeIntervalSince1970: 1_750_000_000)
+        let clock = Clock(t0)
+        let shortEvent = CalendarEventSnapshot(
+            id: "ev-short",
+            title: "Short",
+            startDate: t0.addingTimeInterval(-60),
+            endDate: t0.addingTimeInterval(60),
+            isAllDay: false,
+            calendarID: "cal-1"
+        )
+        let longEvent = CalendarEventSnapshot(
+            id: "ev-long",
+            title: "Long",
+            startDate: t0.addingTimeInterval(-60),
+            endDate: t0.addingTimeInterval(3600),
+            isAllDay: false,
+            calendarID: "cal-1"
+        )
+        let settings = InMemorySettingsStore()
+        settings.setBool(true, for: .calendarTriggerEnabled)
+        let source = MockCalendarSource(events: [shortEvent, longEvent])
+        let trigger = CalendarTrigger(
+            settings: settings,
+            source: source,
+            pollInterval: 60,
+            now: { clock.current }
+        )
+
+        await trigger.pollOnce() // both newly active → two ON votes
+        clock.current = t0.addingTimeInterval(1800) // short ended; long still active
+        await trigger.pollOnce() // short inactive, long active → must NOT emit OFF
+
+        // Collect everything available within the window: exactly the two ON
+        // votes from poll 1, and crucially no OFF.
+        let collect = Task { @MainActor () -> [TriggerVote] in
+            var it = trigger.voteStream.makeAsyncIterator()
+            var acc: [TriggerVote] = []
+            while let v = await it.next() {
+                acc.append(v)
+                if acc.count >= 3 { break }
+            }
+            return acc
+        }
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        collect.cancel()
+        let votes = await collect.value
+
+        XCTAssertEqual(votes.count, 2, "only the two ON votes; no OFF while an event is still active")
+        XCTAssertTrue(votes.allSatisfy { $0.wantsAwake },
+                      "an overlapping active event must suppress the OFF vote")
     }
 
     func testDoesNothingWhenDisabled() async {
@@ -304,7 +370,8 @@ final class CalendarTriggerTests: XCTestCase {
         // work). To verify nothing else is yielded after stop, drain with a
         // bounded timeout.
         let nextProbe = Task { @MainActor () -> TriggerVote? in
-            await it.next()
+            var probeIt = trigger.voteStream.makeAsyncIterator()
+            return await probeIt.next()
         }
         try await Task.sleep(nanoseconds: 50_000_000)
         nextProbe.cancel()
@@ -421,5 +488,36 @@ final class CalendarTriggerTests: XCTestCase {
         let secondVote = await iterator.next()
         XCTAssertEqual(secondVote?.wantsAwake, true, "reemitCurrentVote must re-emit ON for steady-state active event")
         XCTAssertTrue(secondVote?.reason.contains("Standup") ?? false)
+    }
+
+    // MARK: - trap #8: a started trigger must not leak via a self-retaining pollTask
+
+    /// See `ScheduleTriggerTests.testStartedTriggerDeallocatesWithoutExplicitStop`
+    /// for the full rationale — `CalendarTrigger.start()` installs the same kind
+    /// of long-lived `pollTask` that must hold only a weak self.
+    func testStartedTriggerDeallocatesWithoutExplicitStop() async {
+        weak var weakTrigger: CalendarTrigger?
+        do {
+            let settings = InMemorySettingsStore()
+            settings.setBool(true, for: .calendarTriggerEnabled)
+            let trigger = CalendarTrigger(
+                settings: settings,
+                source: MockCalendarSource(events: []),
+                pollInterval: 0.02,
+                now: { Date() }
+            )
+            weakTrigger = trigger
+            await trigger.start()
+            // See ScheduleTriggerTests: let the poll task bind a strong self
+            // before the trigger reference is dropped.
+            try? await Task.sleep(nanoseconds: 50_000_000)
+            XCTAssertNotNil(weakTrigger, "trigger alive while referenced")
+        }
+        for _ in 0..<200 where weakTrigger != nil {
+            await Task.yield()
+            try? await Task.sleep(nanoseconds: 5_000_000)
+        }
+        XCTAssertNil(weakTrigger,
+                     "started CalendarTrigger leaked via a self-retaining pollTask (trap #8)")
     }
 }

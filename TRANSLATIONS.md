@@ -8,22 +8,26 @@ Brazilian Portuguese, Italian, and Russian.
 |---|---|---|
 | `en` | English | Source — written by the developer |
 | `ko` | 한국어 | Hand-reviewed by the developer (native speaker) |
-| `ja` | 日本語 | Machine-assisted, awaiting native review |
-| `zh-Hans` | 简体中文 | Machine-assisted, awaiting native review |
-| `zh-Hant` | 繁體中文 | Machine-assisted, awaiting native review |
-| `es` | Español | Machine-assisted, awaiting native review |
-| `de` | Deutsch | Machine-assisted, awaiting native review |
-| `fr` | Français | Machine-assisted, awaiting native review |
-| `pt-BR` | Português (Brasil) | Machine-assisted, awaiting native review |
-| `it` | Italiano | Machine-assisted, awaiting native review |
-| `ru` | Русский | Machine-assisted, awaiting native review |
+| `ja` | 日本語 | Machine-assisted + adversarial AI review pass; awaiting native review |
+| `zh-Hans` | 简体中文 | Machine-assisted + adversarial AI review pass; awaiting native review |
+| `zh-Hant` | 繁體中文 | Machine-assisted + adversarial AI review pass; awaiting native review |
+| `es` | Español | Machine-assisted + adversarial AI review pass; awaiting native review |
+| `de` | Deutsch | Machine-assisted + adversarial AI review pass; awaiting native review |
+| `fr` | Français | Machine-assisted + adversarial AI review pass; awaiting native review |
+| `pt-BR` | Português (Brasil) | Machine-assisted + adversarial AI review pass; awaiting native review |
+| `it` | Italiano | Machine-assisted + adversarial AI review pass; awaiting native review |
+| `ru` | Русский | Machine-assisted + adversarial AI review pass; awaiting native review |
 
-The 9 "machine-assisted" translations were drafted with LLM assistance
+The 9 non-Korean translations were drafted with LLM assistance
 following Apple's official platform terminology (System Settings →
-Privacy & Security per locale, etc.). They are **shipping** so that
-non-English speakers can use Latte today in their language, but a
-native speaker's eye will catch awkward phrasings, terminology drift,
-or outright errors that the drafting pass missed.
+Privacy & Security per locale, etc.), then went through a per-language
+**adversarial AI review pass** (one reviewer per language hunting
+mistranslations, terminology drift, untranslated leftovers, CJK
+punctuation-width issues, and CLDR plural-rule violations; ~100 fixes
+landed from that pass). They are **shipping** so that non-English
+speakers can use Latte today in their language, but a human native
+speaker's eye will still catch register nuances and awkward phrasings
+that both machine passes missed.
 
 **Community PRs improving these translations are welcome and
 appreciated.**
@@ -69,6 +73,29 @@ If you'd like to edit the catalog directly:
 - **Length** — UI strings are constrained by layout. Roughly matching
   the source string length avoids truncation in tight menu rows.
 
+### Deliberate choices — please don't "fix" these
+
+These have come up in review passes and were confirmed correct as
+shipped. A PR changing them will be asked to justify against this list:
+
+- **Russian paucal forms use genitive *singular*** — `few` (2–4) is
+  "%lld минуты" / "%lld дисплея", NOT the genitive plural ("минут" /
+  "дисплеев", which belongs to `many`). "2 дисплея" is correct Russian;
+  "2 дисплеев" is not. `other` (decimal fractions like "1,5") also takes
+  the genitive-singular-looking form per CLDR.
+- **Informal register in de / es / zh-Hans is intentional** — modern
+  Apple UI uses du / tú / 你 in these languages, and the catalog applies
+  it consistently. Don't convert to Sie / usted / 您 piecemeal.
+- **Japanese and Chinese plural keys carry only `other`** — CLDR
+  defines no `one` form for ja / zh; adding one would never be selected
+  and just creates dead data.
+- **CJK punctuation is full-width when adjacent to CJK text**
+  （）／：／，— but `⌘,` keeps the half-width comma (it's a keyboard
+  shortcut, not prose), and ASCII-only fragments keep ASCII punctuation.
+- **`fr` renders the Awake state as "Actif"** (paired with
+  Inactif/En veille across the catalog) rather than "Éveillé" —
+  catalog-wide consistency wins.
+
 ### Plural-aware keys
 
 A small number of keys are **plural-aware** — they encode different forms
@@ -81,7 +108,9 @@ for different counts. In the catalog they look like this:
       "variations": {
         "plural": {
           "one":   { "stringUnit": { "state": "translated", "value": "%lld минута" } },
-          "other": { "stringUnit": { "state": "translated", "value": "%lld минут" } }
+          "few":   { "stringUnit": { "state": "translated", "value": "%lld минуты" } },
+          "many":  { "stringUnit": { "state": "translated", "value": "%lld минут" } },
+          "other": { "stringUnit": { "state": "translated", "value": "%lld минуты" } }
         }
       }
     }
@@ -91,22 +120,31 @@ for different counts. In the catalog they look like this:
 
 The current plural keys are `%lld minutes`, `%lld hours`, and
 `Currently: %lld external displays`. They were migrated from flat pairs
-in S35; the structural groundwork is in place but only `one` + `other`
-are filled in for languages that need more forms.
+in S35. **Russian (`ru`) is now fully populated with the complete CLDR
+four-form set (`one`/`few`/`many`/`other`)** — it serves as the worked
+reference for any other multi-form language. Every form keeps the
+`%lld` placeholder so counts like 21/31/101 (also Russian `one`) render
+the number correctly; the earlier two-form baseline hard-coded "1" in
+the `one` slot and was CLDR-incorrect for those values.
 
-If your language has more than two plural forms (Russian, Polish,
-Arabic, Czech, etc. — see [CLDR plural rules](https://cldr.unicode.org/index/cldr-spec/plural-rules)),
-**we welcome PRs that add the missing forms.** The Apple-standard form
-keys are `zero`, `one`, `two`, `few`, `many`, `other` — only include
-the forms your language actually needs (CLDR specifies which forms
-apply per language). For example, Russian:
+If your language has more than two plural forms (Polish, Arabic,
+Czech, etc. — see [CLDR plural rules](https://cldr.unicode.org/index/cldr-spec/plural-rules)),
+**we welcome PRs that add the missing forms** (these languages are not
+yet in the shipped 11-locale set, so adding them also means adding the
+locale to `project.yml` `knownRegions`). The Apple-standard form keys
+are `zero`, `one`, `two`, `few`, `many`, `other` — only include the
+forms your language actually needs (CLDR specifies which forms apply
+per language). Russian, shipped, looks like this:
 
 ```json
 "one":   { "stringUnit": { "state": "translated", "value": "%lld минута" } },
 "few":   { "stringUnit": { "state": "translated", "value": "%lld минуты" } },
 "many":  { "stringUnit": { "state": "translated", "value": "%lld минут" } },
-"other": { "stringUnit": { "state": "translated", "value": "%lld минут" } }
+"other": { "stringUnit": { "state": "translated", "value": "%lld минуты" } }
 ```
+
+(`other` carries the decimal form — e.g. "1,5 минуты" — since `%lld`
+integers never reach it but Apple requires the form to exist.)
 
 Languages without grammatical plural distinction (Korean, Japanese,
 Simplified Chinese, Traditional Chinese) use **only** `other` — that is

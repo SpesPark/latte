@@ -102,6 +102,10 @@ public protocol SettingsStore: AnyObject {
     func data(_ key: SettingsKey) -> Data?
     func setData(_ value: Data?, for key: SettingsKey)
     func remove(_ key: SettingsKey)
+    /// Whether a value has been explicitly stored for `key`. Distinguishes
+    /// "never touched" (→ default) from "set to the default value" — the OQ-04
+    /// migration relies on this to copy only present keys (04-data-model §2.2).
+    func exists(_ key: SettingsKey) -> Bool
 }
 
 public extension SettingsStore {
@@ -120,7 +124,16 @@ public extension SettingsStore {
         // preserves the "absent = default / never touched" invariant a
         // future migration may rely on.
         guard !value.isEmpty else { remove(key); return }
-        let encoded = try? JSONEncoder().encode(value)
+        // Preserve the existing value on encode failure rather than writing a
+        // nil (which `setData` interprets as remove) — silently deleting a
+        // non-empty value the caller asked to persist would be data loss.
+        // Mirrors `setKeyChord`'s preserve-on-failure contract. Encoding a
+        // `[String]` cannot actually throw for valid Swift strings, so this is
+        // defensive; the `.fault` makes any future regression visible.
+        guard let encoded = try? JSONEncoder().encode(value) else {
+            settingsLogger.fault("settings key \(key.rawValue, privacy: .public) failed to encode as [String]; existing value left unchanged")
+            return
+        }
         setData(encoded, for: key)
     }
 
@@ -132,7 +145,7 @@ public extension SettingsStore {
     }
 }
 
-let settingsLogger = Logger(subsystem: "com.parkbyeongjun.latte", category: "settings")
+let settingsLogger = Logger(subsystem: "com.araforge.latte", category: "settings")
 
 public final class UserDefaultsSettingsStore: SettingsStore {
 
@@ -211,6 +224,10 @@ public final class UserDefaultsSettingsStore: SettingsStore {
     public func remove(_ key: SettingsKey) {
         defaults.removeObject(forKey: key.rawValue)
     }
+
+    public func exists(_ key: SettingsKey) -> Bool {
+        defaults.object(forKey: key.rawValue) != nil
+    }
 }
 
 public final class InMemorySettingsStore: SettingsStore {
@@ -277,5 +294,9 @@ public final class InMemorySettingsStore: SettingsStore {
 
     public func remove(_ key: SettingsKey) {
         storage.removeValue(forKey: key.rawValue)
+    }
+
+    public func exists(_ key: SettingsKey) -> Bool {
+        storage[key.rawValue] != nil
     }
 }

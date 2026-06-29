@@ -233,16 +233,26 @@ public final class CalendarTrigger: Trigger {
         }
     }
 
+    isolated deinit {
+        // See ScheduleTrigger.deinit — cancel the weak-self poll task so it
+        // does not spin no-op polls after the trigger is released without stop().
+        pollTask?.cancel()
+    }
+
     public func start() async {
         guard pollTask == nil else { return }
         logger.info("CalendarTrigger.start")
+        // Capture the interval by value and re-acquire `self` weakly each
+        // iteration — never hold a strong `self` across `Task.sleep`, which
+        // would form a pollTask ↔ trigger cycle that survives release
+        // (project_latte_status.md trap #8). `deinit` cancels the task.
         pollTask = Task { @MainActor [weak self] in
-            guard let self else { return }
-            await self.pollOnce()
+            guard let interval = self?.pollInterval else { return }
+            await self?.pollOnce()
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: UInt64(self.pollInterval * 1_000_000_000))
+                try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
                 if Task.isCancelled { break }
-                await self.pollOnce()
+                await self?.pollOnce()
             }
         }
     }
@@ -282,7 +292,7 @@ public final class CalendarTrigger: Trigger {
     /// initial poll.
     public func reevaluateWatched() {
         guard pollTask != nil else { return }
-        Task { await pollOnce() }
+        Task { [weak self] in await self?.pollOnceIfRunning() }
     }
 
     /// **S22 / P-issue-6d** — see `Trigger.reemitCurrentVote()` doc.
@@ -293,7 +303,19 @@ public final class CalendarTrigger: Trigger {
     public func reemitCurrentVote() {
         guard pollTask != nil else { return }
         activeEventIDs = []
-        Task { await pollOnce() }
+        Task { [weak self] in await self?.pollOnceIfRunning() }
+    }
+
+    /// Deferred-poll seam for `reevaluateWatched` / `reemitCurrentVote`. Both
+    /// enqueue a `Task` whose body runs on a LATER main-actor turn; a `stop()`
+    /// can land in between (e.g. a pause-lift reevaluate racing a user
+    /// toggle-off). Re-check `pollTask` at execution time so a stale deferred
+    /// poll never emits a spurious vote for an already-stopped trigger. Unlike
+    /// `pollOnce()` (a direct test/UI seam that intentionally runs unguarded),
+    /// this only polls while the trigger is actually running.
+    func pollOnceIfRunning() async {
+        guard pollTask != nil else { return }
+        await pollOnce()
     }
 
     /// Test seam — invoked by `start`'s polling loop, also callable directly from tests.

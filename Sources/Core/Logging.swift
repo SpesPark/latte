@@ -2,7 +2,7 @@ import Foundation
 import os
 
 public enum LatteLog {
-    public static let subsystem = "com.parkbyeongjun.latte"
+    public static let subsystem = "com.araforge.latte"
 
     public static func logger(_ category: String) -> Logger {
         Logger(subsystem: subsystem, category: category)

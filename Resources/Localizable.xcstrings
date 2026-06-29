@@ -173,7 +173,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "已選 %lld 個"
+            "value": "已選取 %lld 項"
           }
         },
         "es": {
@@ -988,19 +988,19 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "現在のネットワークを追加: %@"
+            "value": "現在のネットワークを追加：%@"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "添加当前网络: %@"
+            "value": "添加当前网络：%@"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "新增目前網路: %@"
+            "value": "新增目前網路：%@"
           }
         },
         "es": {
@@ -1384,7 +1384,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "すべてのトリガ"
+            "value": "すべてのトリガー"
           }
         },
         "zh-Hans": {
@@ -1443,7 +1443,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "디스플레이는 잠자기 허용"
+            "value": "디스플레이 잠자기 허용"
           }
         },
         "ja": {
@@ -1467,7 +1467,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Permitir que la pantalla duerma"
+            "value": "Permitir que la pantalla entre en reposo"
           }
         },
         "de": {
@@ -1485,7 +1485,7 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Permitir dormir a tela"
+            "value": "Deixar a tela dormir"
           }
         },
         "it": {
@@ -1664,7 +1664,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Durmiendo"
+            "value": "En reposo"
           }
         },
         "de": {
@@ -1682,7 +1682,7 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dormindo"
+            "value": "Em repouso"
           }
         },
         "it": {
@@ -1783,7 +1783,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "起動中 — %@"
+            "value": "アクティブ — %@"
           }
         },
         "zh-Hans": {
@@ -2357,13 +2357,13 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Attraversa la mezzanotte — viene eseguito dall'ora di inizio nel/i giorno/i selezionato/i fino all'ora di fine del mattino successivo."
+            "value": "Attraversa la mezzanotte — viene eseguito dall'ora di inizio nei giorni selezionati fino all'ora di fine del mattino successivo."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Пересекает полночь — выполняется от времени начала в выбранный день(дни) до времени окончания на следующее утро."
+            "value": "Пересекает полночь — выполняется от времени начала в выбранные дни до времени окончания на следующее утро."
           }
         }
       }
@@ -2599,7 +2599,7 @@
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "現在: 外部ディスプレイ%lld台"
+                  "value": "現在：外部ディスプレイ%lld台"
                 }
               }
             }
@@ -2638,16 +2638,28 @@
         "ru": {
           "variations": {
             "plural": {
-              "other": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Сейчас: %lld внешний дисплей"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Сейчас: %lld внешних дисплея"
+                }
+              },
+              "many": {
                 "stringUnit": {
                   "state": "translated",
                   "value": "Сейчас: %lld внешних дисплеев"
                 }
               },
-              "one": {
+              "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Сейчас: 1 внешний дисплей"
+                  "value": "Сейчас: %lld внешних дисплея"
                 }
               }
             }
@@ -2659,7 +2671,7 @@
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "当前: %lld 台外部显示器"
+                  "value": "当前：%lld 台外部显示器"
                 }
               }
             }
@@ -2671,7 +2683,7 @@
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "目前: %lld 台外接顯示器"
+                  "value": "目前：%lld 台外接顯示器"
                 }
               }
             }
@@ -2697,19 +2709,19 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "現在: 外部ディスプレイなし"
+            "value": "現在：外部ディスプレイなし"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "当前: 无外部显示器"
+            "value": "当前：无外部显示器"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "目前: 無外接顯示器"
+            "value": "目前：無外接顯示器"
           }
         },
         "es": {
@@ -3234,19 +3246,19 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ディスプレイ: %@"
+            "value": "ディスプレイ：%@"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "显示器: %@"
+            "value": "显示器：%@"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "顯示器: %@"
+            "value": "顯示器：%@"
           }
         },
         "es": {
@@ -3502,19 +3514,19 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "反転モードで空のリストは何もしないものとして扱われます(トリガーは発動しません)。"
+            "value": "反転モードで空のリストは何もしないものとして扱われます（トリガーは発動しません）。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "反向模式下空列表视为不执行任何操作(触发器永远不会触发)。"
+            "value": "反向模式下空列表视为不执行任何操作（触发器永远不会触发）。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "反向模式下空清單視為不執行任何操作(觸發器永遠不會觸發)。"
+            "value": "反向模式下空清單視為無作用（觸發器永遠不會觸發）。"
           }
         },
         "es": {
@@ -3526,7 +3538,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eine leere Liste im Umkehrmodus wird als untätig behandelt (der Auslöser wird nie aktiv)."
+            "value": "Eine leere Liste im Umkehrmodus hat keine Wirkung (der Auslöser wird nie aktiv)."
           }
         },
         "fr": {
@@ -4104,31 +4116,31 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@(으)로 Latte의 awake/asleep을 전역 토글합니다. 다른 단축키를 지정하려면 아래 레코더를 클릭하세요."
+            "value": "%@(으)로 Latte의 깨어 있음/잠자기를 전역으로 전환합니다. 다른 단축키를 지정하려면 아래 레코더를 클릭하세요."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@でLatteのawake/asleepをグローバルに切り替えます。別のコードを割り当てるには下のレコーダーをクリックします。"
+            "value": "%@でLatteのアクティブ/スリープをグローバルに切り替えます。別のコードを割り当てるには下のレコーダーをクリックします。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "使用 %@ 全局切换 Latte 的 awake/asleep。点按下方录制器以指定其他组合键。"
+            "value": "使用 %@ 全局切换 Latte 的唤醒/睡眠。点按下方录制器以指定其他组合键。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "使用 %@ 全域切換 Latte 的 awake/asleep。點按下方錄製器以指定其他組合鍵。"
+            "value": "使用 %@ 全域切換 Latte 的喚醒/睡眠。點按下方錄製器以指定其他組合鍵。"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Alterna globalmente Latte entre activo/dormido con %@. Haz clic en el registrador de abajo para asignar otra combinación."
+            "value": "Alterna globalmente Latte entre activo y reposo con %@. Haz clic en el registrador de abajo para asignar otra combinación."
           }
         },
         "de": {
@@ -4140,7 +4152,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Basculer globalement Latte entre actif/dormant avec %@. Cliquez sur l'enregistreur ci-dessous pour attribuer une autre combinaison."
+            "value": "Basculer globalement Latte entre actif et veille avec %@. Cliquez sur l'enregistreur ci-dessous pour attribuer une autre combinaison."
           }
         },
         "pt-BR": {
@@ -4152,13 +4164,13 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Alterna globalmente Latte tra attivo/sospeso con %@. Fai clic sul registratore qui sotto per assegnare un'altra combinazione."
+            "value": "Alterna globalmente Latte tra attivo e stop con %@. Fai clic sul registratore qui sotto per assegnare un'altra combinazione."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Глобально переключайте Latte между awake/asleep по %@. Нажмите на регистратор ниже, чтобы назначить другое сочетание."
+            "value": "Глобально переключайте Latte между активным и спящим режимом с помощью %@. Нажмите на регистратор ниже, чтобы назначить другое сочетание."
           }
         }
       }
@@ -4462,7 +4474,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "保留歷史時間"
+            "value": "保留記錄期限"
           }
         },
         "es": {
@@ -4522,13 +4534,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在重要时刻,让你的 Mac 保持唤醒。"
+            "value": "在重要时刻，让你的 Mac 保持唤醒。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "在重要時刻,讓你的 Mac 保持喚醒。"
+            "value": "在重要時刻，讓你的 Mac 保持喚醒。"
           }
         },
         "es": {
@@ -4647,19 +4659,19 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ラベル(任意)"
+            "value": "ラベル（任意）"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "标签(可选)"
+            "value": "标签（可选）"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "標籤(選填)"
+            "value": "標籤（選填）"
           }
         },
         "es": {
@@ -5287,13 +5299,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在这些循环时间段内,Latte 将保持唤醒。适用于工作时间、计划批处理任务,或任何“从 X 到 Y 保持唤醒”的常规需求。"
+            "value": "在这些循环时间段内，Latte 将保持唤醒。适用于工作时间、计划批处理任务，或任何“从 X 到 Y 保持唤醒”的常规需求。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "在這些循環時段內,Latte 將保持喚醒。適用於工作時段、排定的批次任務,或任何“從 X 到 Y 保持喚醒”的常規需求。"
+            "value": "在這些循環時段內，Latte 將保持喚醒。適用於工作時段、排定的批次任務，或任何“從 X 到 Y 保持喚醒”的常規需求。"
           }
         },
         "es": {
@@ -5358,13 +5370,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "只要连接了外部显示器,Latte 就会保持唤醒。在带显示器的办公桌前工作时非常有用 — 即使 MacBook 盖子合上也可以。"
+            "value": "只要连接了外部显示器，Latte 就会保持唤醒。在带显示器的办公桌前工作时非常有用 — 即使 MacBook 盖子合上也可以。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "只要連接了外接顯示器,Latte 就會保持喚醒。在有顯示器的辦公桌前工作時非常有用 — 即使 MacBook 蓋子闔上也可以。"
+            "value": "只要連接了外接顯示器，Latte 就會保持喚醒。在有顯示器的辦公桌前工作時非常有用 — 即使 MacBook 蓋子闔上也可以。"
           }
         },
         "es": {
@@ -5429,13 +5441,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "只要任何专注模式过滤器处于活动状态,Latte 就会保持唤醒。macOS 不会以稳定的方式向第三方应用程序公开各个专注模式标识符,因此按专注模式选择将推迟到 Apple 开放该 API 之后。"
+            "value": "只要任何专注模式过滤器处于活动状态，Latte 就会保持唤醒。macOS 不会以稳定的方式向第三方应用程序公开各个专注模式标识符，因此按专注模式选择将推迟到 Apple 开放该 API 之后。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "只要任何專注模式過濾器處於活躍狀態,Latte 就會保持喚醒。macOS 不會以穩定的方式向第三方應用程式公開各個專注模式識別碼,因此按專注模式選擇將延後到 Apple 開放該 API 之後。"
+            "value": "只要任何專注模式過濾器處於活躍狀態，Latte 就會保持喚醒。macOS 不會以穩定的方式向第三方應用程式公開各個專注模式識別碼，因此按專注模式選擇將延後到 Apple 開放該 API 之後。"
           }
         },
         "es": {
@@ -5500,13 +5512,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "只要其中任何一个应用程序正在运行,Latte 就会保持唤醒。添加需要让 Mac 保持活动状态的应用程序 — 视频会议、演示、长时间运行的工具。"
+            "value": "只要其中任何一个应用程序正在运行，Latte 就会保持唤醒。添加需要让 Mac 保持活动状态的应用程序 — 视频会议、演示、长时间运行的工具。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "只要這些應用程式中的任何一個正在執行,Latte 就會保持喚醒。新增需要讓 Mac 保持活動狀態的應用程式 — 視訊會議、簡報、長時間執行的工具。"
+            "value": "只要這些應用程式中的任何一個正在執行，Latte 就會保持喚醒。新增需要讓 Mac 保持活動狀態的應用程式 — 視訊會議、簡報、長時間執行的工具。"
           }
         },
         "es": {
@@ -5571,13 +5583,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Latte 会监视你已授权访问的所有日历。授予日历权限后,重新打开此选项卡以选择特定日历。"
+            "value": "Latte 会监视你已授权访问的所有日历。授予日历权限后，重新打开此选项卡以选择特定日历。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Latte 會監看您已授權存取的所有行事曆。授予行事曆權限後,重新開啟此分頁以選擇特定行事曆。"
+            "value": "Latte 會監看您已授權存取的所有行事曆。授予行事曆權限後，重新開啟此分頁以選擇特定行事曆。"
           }
         },
         "es": {
@@ -5631,7 +5643,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Latteは次の条件に基づいてMacを起動状態に保ちます: %@。"
+            "value": "Latteは次の条件に基づいてMacを起動状態に保ちます：%@。"
           }
         },
         "zh-Hans": {
@@ -5709,7 +5721,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "下次啟動時 Latte 將以此語言運行。您可以隨時在設定中更改。"
+            "value": "下次啟動時 Latte 將以此語言執行。您可以隨時在設定中更改。"
           }
         },
         "es": {
@@ -6122,7 +6134,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nur diese Bildschirme"
+            "value": "Nur diese Displays"
           }
         },
         "fr": {
@@ -6679,7 +6691,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Приложения ещё не настроены. Используйте “Добавить из запущенных приложений” ниже, чтобы добавить приложения, которые Latte должен поддерживать активными — или “Расширенные” для приложения, которое сейчас не запущено."
+            "value": "Приложения ещё не настроены. Используйте “Добавить из запущенных приложений” ниже, чтобы добавить приложения, которые Latte должен поддерживать активными — или “Дополнительно” для приложения, которое сейчас не запущено."
           }
         }
       }
@@ -6720,7 +6732,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kein Filter — jeder externe Bildschirm aktiviert Latte."
+            "value": "Kein Filter — jedes externe Display aktiviert Latte."
           }
         },
         "fr": {
@@ -6903,19 +6915,19 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "スケジュールが設定されていません。下に追加してください — 例: 勤務時間の場合は“月–金、09:00–18:00”。"
+            "value": "スケジュールが設定されていません。下に追加してください — 例：勤務時間の場合は“月–金、09:00–18:00”。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "未配置任何计划。在下方添加一个 — 例如,工作时间为“周一–周五, 09:00–18:00”。"
+            "value": "未配置任何计划。在下方添加一个 — 例如，工作时间为“周一–周五，09:00–18:00”。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "未設定任何排程。在下方新增一個 — 例如,工作時段為“週一–週五, 09:00–18:00”。"
+            "value": "未設定任何排程。在下方新增一個 — 例如，工作時段為“週一–週五，09:00–18:00”。"
           }
         },
         "es": {
@@ -6969,7 +6981,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "現在アクティブなトリガはありません。"
+            "value": "現在アクティブなトリガーはありません。"
           }
         },
         "zh-Hans": {
@@ -7365,19 +7377,19 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "トリガがLatteをオンまたはオフにすると、そのイベントは14日間記録されます。"
+            "value": "トリガーがLatteをオンまたはオフにすると、そのイベントは14日間記録されます。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "当任一触发器开启或关闭 Latte 时,该事件将记录 14 天。"
+            "value": "当任一触发器开启或关闭 Latte 时，该事件将记录 14 天。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "當任一觸發條件開啟或關閉 Latte 時,該事件會被記錄 14 天。"
+            "value": "當任一觸發條件開啟或關閉 Latte 時，該事件會被記錄 14 天。"
           }
         },
         "es": {
@@ -7646,7 +7658,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "其他防睡眠應用需要您手動開關。Latte 會觀察行事曆、運行中的應用、Wi-Fi、專注模式等情境，自動為您判斷。"
+            "value": "其他防睡眠應用需要您手動開關。Latte 會觀察行事曆、執行中的應用程式、Wi-Fi、專注模式等情境，自動為您判斷。"
           }
         },
         "es": {
@@ -7835,7 +7847,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "トリガが初めて発動するときに権限を要求します。"
+            "value": "トリガーが初めて発動するときに権限を要求します。"
           }
         },
         "zh-Hans": {
@@ -9135,7 +9147,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dormir con batería"
+            "value": "Reposo con batería"
           }
         },
         "de": {
@@ -9481,7 +9493,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "System + Bildschirm wach"
+            "value": "System + Display wach"
           }
         },
         "fr": {
@@ -9523,25 +9535,25 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "システムをアクティブ(ディスプレイはスリープ可)"
+            "value": "システムをアクティブ（ディスプレイはスリープ可）"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "系统唤醒(显示器可睡眠)"
+            "value": "系统唤醒（显示器可睡眠）"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "系統喚醒(顯示器可睡眠)"
+            "value": "系統喚醒（顯示器可睡眠）"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sistema activo (la pantalla puede dormir)"
+            "value": "Sistema activo (la pantalla puede entrar en reposo)"
           }
         },
         "de": {
@@ -10060,7 +10072,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "トリガがアクティブ"
+            "value": "トリガーがアクティブ"
           }
         },
         "zh-Hans": {
@@ -10126,7 +10138,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "トリガの発動がここに表示されます。"
+            "value": "トリガーの発動がここに表示されます。"
           }
         },
         "zh-Hans": {
@@ -10192,7 +10204,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "トリガ"
+            "value": "トリガー"
           }
         },
         "zh-Hans": {
@@ -10405,19 +10417,19 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "現在実行されていないアプリを監視するには、バンドル識別子(例: us.zoom.xos)を入力します。"
+            "value": "現在実行されていないアプリを監視するには、バンドル識別子（例：us.zoom.xos）を入力します。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "输入 bundle 标识符(例如 us.zoom.xos)以监控当前未运行的应用程序。"
+            "value": "输入 bundle 标识符（例如 us.zoom.xos）以监控当前未运行的应用程序。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "輸入 bundle 識別碼(例如 us.zoom.xos)以監看目前未執行的應用程式。"
+            "value": "輸入 bundle 識別碼（例如 us.zoom.xos）以監控目前未執行的應用程式。"
           }
         },
         "es": {
@@ -10749,19 +10761,19 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "バージョン %@ (%@)"
+            "value": "バージョン %@ （%@）"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "版本 %@ (%@)"
+            "value": "版本 %@ （%@）"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "版本 %@ (%@)"
+            "value": "版本 %@ （%@）"
           }
         },
         "es": {
@@ -10910,7 +10922,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Warmes Bernstein"
+            "value": "Warmer Bernsteinton"
           }
         },
         "fr": {
@@ -11083,13 +11095,13 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Latte 시작 시 즉시 무제한 awake 상태를 유지합니다. 데스크톱이나 상시 가동 워크스테이션에 유용합니다. 첫 실행 시에는 항상 온보딩이 우선합니다."
+            "value": "Latte 시작 시 즉시 무제한 깨어 있음 상태를 유지합니다. 데스크톱이나 상시 가동 워크스테이션에 유용합니다. 첫 실행 시에는 항상 온보딩이 우선합니다."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Latte起動時に即座に無期限のawakeアサーションを保持します。デスクトップや常時稼働のワークステーションに便利です。初回起動時は常にオンボーディングが優先されます。"
+            "value": "Latte起動時に即座に無期限のスリープ解除アサーションを保持します。デスクトップや常時稼働のワークステーションに便利です。初回起動時は常にオンボーディングが優先されます。"
           }
         },
         "zh-Hans": {
@@ -11125,7 +11137,7 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quando o Latte inicia, mantém imediatamente uma asserção de atividade indefinida. Útil para desktops ou estações sempre ativas. A integração tem prioridade no primeiro início."
+            "value": "Quando o Latte inicia, mantém imediatamente uma asserção de atividade indefinida. Útil para desktops ou estações sempre ativas. A configuração inicial sempre tem prioridade no primeiro início."
           }
         },
         "it": {
@@ -11137,7 +11149,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "При запуске Latte немедленно удерживает бессрочное awake-утверждение. Полезно для настольных ПК или всегда работающих рабочих станций. При первом запуске приоритет всегда у онбординга."
+            "value": "При запуске Latte немедленно удерживает бессрочное утверждение активности. Полезно для настольных ПК или всегда работающих рабочих станций. При первом запуске приоритет всегда у онбординга."
           }
         }
       }
@@ -11154,25 +11166,25 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "활성화하면 Mac이 배터리로 작동하는 동안에는 Latte가 awake 상태를 유지하지 않습니다 — 앱을 비활성화하지 않고도 노트북 배터리를 절약합니다."
+            "value": "활성화하면 Mac이 배터리로 작동하는 동안에는 Latte가 깨어 있음 상태를 유지하지 않습니다 — 앱을 비활성화하지 않고도 노트북 배터리를 절약합니다."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "有効にすると、Macがバッテリー駆動の間はLatteがawakeアサーションを保持しません — アプリを無効化せずにノートのバッテリーを節約します。"
+            "value": "有効にすると、Macがバッテリー駆動の間はLatteがスリープ解除アサーションを保持しません — アプリを無効化せずにノートのバッテリーを節約します。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "启用后,Mac 使用电池时 Latte 永远不会保持唤醒断言 — 在不禁用应用的情况下为笔记本节省电池。"
+            "value": "启用后，Mac 使用电池时 Latte 永远不会保持唤醒断言 — 在不禁用应用的情况下为笔记本节省电池。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "啟用後,Mac 使用電池時 Latte 永遠不會保持喚醒斷言 — 在不停用應用程式的情況下為筆電節省電量。"
+            "value": "啟用後，Mac 使用電池時 Latte 永遠不會保持喚醒斷言 — 在不停用應用程式的情況下為筆電節省電量。"
           }
         },
         "es": {
@@ -11190,7 +11202,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lorsqu'activé, Latte ne maintient jamais d'assertion d'éveil tant que le Mac est sur batterie — économise la batterie sur portables sans désactiver l'app."
+            "value": "Lorsque cette option est activée, Latte ne maintient jamais d'assertion d'éveil tant que le Mac est sur batterie — économise la batterie sur portables sans désactiver l'app."
           }
         },
         "pt-BR": {
@@ -11208,7 +11220,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Если включено, Latte никогда не удерживает awake-утверждение, пока Mac работает от батареи — экономит заряд на ноутбуках без отключения приложения."
+            "value": "Если включено, Latte никогда не удерживает утверждение активности, пока Mac работает от батареи — экономит заряд на ноутбуках без отключения приложения."
           }
         }
       }
@@ -11237,13 +11249,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "启用后,系统保持唤醒,但显示器可能进入睡眠。"
+            "value": "启用后，系统保持唤醒，但显示器可能进入睡眠。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "啟用後,系統保持喚醒,但顯示器可能進入睡眠。"
+            "value": "啟用後，系統保持喚醒，但顯示器可能進入睡眠。"
           }
         },
         "es": {
@@ -11261,7 +11273,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lorsqu'activé, le système reste actif mais l'écran peut s'endormir."
+            "value": "Lorsque cette option est activée, le système reste actif mais l'écran peut s'endormir."
           }
         },
         "pt-BR": {
@@ -11309,7 +11321,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "當 Zoom、Teams 或您選擇的任何應用正在運行時。"
+            "value": "當 Zoom、Teams 或您選擇的任何應用程式正在執行時。"
           }
         },
         "es": {
@@ -11757,16 +11769,28 @@
         "ru": {
           "variations": {
             "plural": {
-              "other": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld минута"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld минуты"
+                }
+              },
+              "many": {
                 "stringUnit": {
                   "state": "translated",
                   "value": "%lld минут"
                 }
               },
-              "one": {
+              "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "1 минута"
+                  "value": "%lld минуты"
                 }
               }
             }
@@ -11936,16 +11960,28 @@
         "ru": {
           "variations": {
             "plural": {
-              "other": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld час"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld часа"
+                }
+              },
+              "many": {
                 "stringUnit": {
                   "state": "translated",
                   "value": "%lld часов"
                 }
               },
-              "one": {
+              "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "1 час"
+                  "value": "%lld часа"
                 }
               }
             }

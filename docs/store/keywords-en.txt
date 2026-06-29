@@ -1,1 +1,1 @@
-caffeine,nosleep,insomnia,screensaver,presentation,zoom,download,render,trigger,wifi,focus,menubar
+caffeine,nosleep,insomnia,screensaver,presentation,meeting,download,render,trigger,wifi,menubar

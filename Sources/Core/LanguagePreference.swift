@@ -89,5 +89,5 @@ public enum LanguagePreference {
         logger.info("applied AppleLanguages = [\(code, privacy: .public)]")
     }
 
-    private static let logger = Logger(subsystem: "com.parkbyeongjun.latte", category: "i18n")
+    private static let logger = Logger(subsystem: "com.araforge.latte", category: "i18n")
 }

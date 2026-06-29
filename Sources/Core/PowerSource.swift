@@ -46,16 +46,76 @@ public final class PowerSourceObservation {
 // MARK: - Real IOKit-backed source
 
 #if canImport(IOKit)
+/// Installs a system hook that calls `onSignal` (on the main actor) whenever the
+/// OS reports a power-source change, returning a teardown closure (or `nil` if
+/// the hook could not be created). Injected into `IOPowerSource` so tests drive
+/// the real fan-out path without a live IOKit `CFRunLoopSource` in the test
+/// process — same DI seam the S52 sleeper uses for `AwakeManager`'s timer.
+public typealias PowerChangeNotifier =
+    @MainActor (_ onSignal: @escaping @MainActor () -> Void) -> (@MainActor () -> Void)?
+
 @MainActor
 public final class IOPowerSource: PowerSourceType {
 
     private let logger = LatteLog.powerSource
-    private var runLoopSource: CFRunLoopSource?
+    private let readSnapshot: @MainActor () -> Bool
+    private let installNotifier: PowerChangeNotifier
+    private var teardownNotifier: (@MainActor () -> Void)?
     private var observers: [UUID: @MainActor (Bool) -> Void] = [:]
 
-    public init() {}
+    /// Production defaults read real IOKit; tests inject `snapshot`/`notifier`
+    /// to exercise the observer registry + fan-out + lifecycle deterministically.
+    public init(
+        snapshot: @escaping @MainActor () -> Bool = IOPowerSource.systemIsOnAC,
+        notifier: @escaping PowerChangeNotifier = IOPowerSource.systemNotifier
+    ) {
+        self.readSnapshot = snapshot
+        self.installNotifier = notifier
+    }
 
-    public var isOnAC: Bool {
+    public var isOnAC: Bool { readSnapshot() }
+
+    public func observe(
+        onChange: @escaping @MainActor (Bool) -> Void
+    ) -> PowerSourceObservation {
+        let token = UUID()
+        observers[token] = onChange
+
+        if teardownNotifier == nil {
+            // Single shared notifier; we fan out to all observers.
+            teardownNotifier = installNotifier { [weak self] in
+                self?.fanOut()
+            }
+            if teardownNotifier == nil {
+                logger.error("power-change notifier unavailable; AC observation disabled")
+            }
+        }
+
+        return PowerSourceObservation { [weak self] in
+            guard let self else { return }
+            self.observers.removeValue(forKey: token)
+            if self.observers.isEmpty {
+                self.teardownNotifier?()
+                self.teardownNotifier = nil
+            }
+        }
+    }
+
+    private func fanOut() {
+        let snapshot = isOnAC
+        // Copy before iterating: a callback may cancel its observation,
+        // which removes a key from `observers` mid-enumeration.
+        for callback in Array(observers.values) {
+            callback(snapshot)
+        }
+    }
+
+    // MARK: Production IOKit defaults
+
+    /// Reads AC state from IOKit. On a desktop without a battery (no info /
+    /// empty source list) returns `true` — "always on AC" — so battery-aware
+    /// gating doesn't break non-laptop installs.
+    public static func systemIsOnAC() -> Bool {
         guard let snapshot = IOPSCopyPowerSourcesInfo()?.takeRetainedValue() else {
             return true // No info → assume desktop / always-on. Don't gate.
         }
@@ -77,45 +137,35 @@ public final class IOPowerSource: PowerSourceType {
         return false
     }
 
-    public func observe(
-        onChange: @escaping @MainActor (Bool) -> Void
-    ) -> PowerSourceObservation {
-        let token = UUID()
-        observers[token] = onChange
-
-        if runLoopSource == nil {
-            // Single shared run-loop source; we fan out to all observers.
-            let context = Unmanaged.passUnretained(self).toOpaque()
+    /// Wraps `IOPSNotificationCreateRunLoopSource`. The C callback is not
+    /// actor-isolated, so it boxes `onSignal` as the run-loop context and hops
+    /// to the main actor before firing. The teardown closure removes the source
+    /// and retains the box until then (keeping the context pointer valid).
+    public static func systemNotifier(
+        _ onSignal: @escaping @MainActor () -> Void
+    ) -> (@MainActor () -> Void)? {
+        final class CallbackBox {
+            let fire: @MainActor () -> Void
+            init(_ fire: @escaping @MainActor () -> Void) { self.fire = fire }
+        }
+        let box = CallbackBox(onSignal)
+        let context = Unmanaged.passUnretained(box).toOpaque()
+        guard
             let source = IOPSNotificationCreateRunLoopSource(
                 { ctx in
                     guard let ctx else { return }
-                    let me = Unmanaged<IOPowerSource>.fromOpaque(ctx).takeUnretainedValue()
-                    Task { @MainActor in me.fanOut() }
+                    let box = Unmanaged<CallbackBox>.fromOpaque(ctx).takeUnretainedValue()
+                    Task { @MainActor in box.fire() }
                 },
                 context
             )?.takeRetainedValue()
-            if let source {
-                runLoopSource = source
-                CFRunLoopAddSource(CFRunLoopGetMain(), source, .defaultMode)
-            } else {
-                logger.error("IOPSNotificationCreateRunLoopSource returned nil; AC observation disabled")
-            }
+        else {
+            return nil
         }
-
-        return PowerSourceObservation { [weak self] in
-            guard let self else { return }
-            self.observers.removeValue(forKey: token)
-            if self.observers.isEmpty, let src = self.runLoopSource {
-                CFRunLoopRemoveSource(CFRunLoopGetMain(), src, .defaultMode)
-                self.runLoopSource = nil
-            }
-        }
-    }
-
-    private func fanOut() {
-        let snapshot = isOnAC
-        for callback in observers.values {
-            callback(snapshot)
+        CFRunLoopAddSource(CFRunLoopGetMain(), source, .defaultMode)
+        return {
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .defaultMode)
+            _ = box // keep the context box alive until teardown
         }
     }
 }
@@ -128,7 +178,9 @@ public final class MockPowerSource: PowerSourceType {
     public var isOnAC: Bool {
         didSet {
             if isOnAC != oldValue {
-                for cb in observers.values { cb(isOnAC) }
+                // Copy before iterating: a callback may cancel its
+                // observation, mutating `observers` mid-enumeration.
+                for cb in Array(observers.values) { cb(isOnAC) }
             }
         }
     }

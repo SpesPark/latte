@@ -20,6 +20,11 @@
     <string>$(MARKETING_VERSION)</string>
     <key>CFBundleVersion</key>
     <string>$(CURRENT_PROJECT_VERSION)</string>
+    <!-- Latte makes no network requests and uses no encryption beyond Apple's
+         OS-provided primitives → exempt. Declaring this here skips the
+         export-compliance question on every App Store Connect upload. -->
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.utilities</string>
     <key>LSMinimumSystemVersion</key>
@@ -32,8 +37,6 @@
     <string>Latte reads your calendar to keep your Mac awake automatically during scheduled meetings.</string>
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>Latte uses your location only to read the current Wi-Fi network name, so it can keep your Mac awake on your chosen networks. Your location is never stored or transmitted.</string>
-    <key>NSFocusStatusUsageDescription</key>
-    <string>Latte reads whether a Focus mode is active so it can keep your Mac awake while you're heads-down.</string>
     <key>NSHumanReadableCopyright</key>
     <string>Copyright © 2026. All rights reserved.</string>
     <key>NSSupportsAutomaticTermination</key>

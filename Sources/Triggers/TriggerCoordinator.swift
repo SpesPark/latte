@@ -61,7 +61,23 @@ public final class TriggerCoordinator: ObservableObject {
         }
     }
 
-    deinit {
+    isolated deinit {
+        // `isolated deinit` (SE-0371) runs on the main actor so the teardown
+        // can read the @MainActor-isolated stored properties.
+        //
+        // Cancel the long-lived consumer tasks. start(_:) keeps one alive for a
+        // trigger's whole registered lifetime and deliberately never cancels on
+        // stop() — cancelling tears down the AsyncStream and breaks the OFF→ON
+        // restart (S8b). But once the coordinator is being deallocated there is
+        // no restart left to protect, and each suspended `for await voteStream`
+        // task strongly retains its trigger. Draining them here prevents the
+        // leak that, across the full test suite's hundreds of coordinators,
+        // accumulated as suspended main-actor work and stalled the run
+        // (project_latte_status.md trap #8). The live OFF→ON path is untouched
+        // — it only ever runs while the coordinator is alive.
+        for task in consumerTasks.values {
+            task.cancel()
+        }
         if let pauseLiftObserver {
             NotificationCenter.default.removeObserver(pauseLiftObserver)
         }
@@ -194,15 +210,19 @@ public final class TriggerCoordinator: ObservableObject {
             kind: kind,
             reasonCode: reasonCode
         )
-        Task { await activityStore.append(entry) }
-        // Live-refresh signal for an open Activity tab. Posting from
-        // @MainActor synchronously (the actor task above is queued; by the
-        // time a subscriber's reload `await`s a snapshot, FIFO actor
-        // ordering guarantees the append has committed). No userInfo —
+        // Append, THEN signal. The post happens inside the task *after* the
+        // append `await` returns, so any subscriber that re-fetches the
+        // snapshot in response is guaranteed to see the committed row. (The
+        // post used to run synchronously before this task even started,
+        // relying on the consumer's debounce to mask the gap — a real
+        // ordering guarantee replaces that accidental one.) No userInfo —
         // the canonical consumer just refetches the snapshot, so emitting
         // triggerId/kind to every in-process observer would be needless
         // payload.
-        NotificationCenter.default.post(name: .activityLogDidAppend, object: self)
+        Task { [weak self] in
+            await activityStore.append(entry)
+            NotificationCenter.default.post(name: .activityLogDidAppend, object: self)
+        }
     }
 }
 

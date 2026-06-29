@@ -29,7 +29,12 @@ that chord through a small recorder UI in Settings → General.
 - **Per-action chords** — only the awake-toggle gets a recorder. Pause-all,
   snooze, etc., stay menu-driven.
 - **iCloud sync of the chord** — local-only setting. Sync would need
-  CloudKit + conflict resolution.
+  CloudKit + conflict resolution. **Joint design now drafted:
+  [10-c3-icloud-sync-rfc.md](10-c3-icloud-sync-rfc.md)** §7 — the chord
+  rides Domain A (Settings) LWW sync with per-device best-effort
+  registration + an optional non-synced local override. **Owner decisions
+  locked 2026-05-18 (RFC §12): Phase 1 unblocked; chord sync lands in
+  Phase 2 (v2.0), S8.5-gated.**
 - **Visual indicator that current chord is reserved by another app** —
   macOS can't enumerate other apps' Carbon registrations; we'd ship false
   negatives. Defer.
@@ -192,7 +197,7 @@ approach Spotlight pickers use. ~50 LOC, isolated.
 - Capture window screenshot showing the default `⌘⇧L` glyph.
 - (Manual-only, can't script keyDown into the recorder field with current
   harness.) Document as INFO line that recorder interaction is owner-side.
-- Verify `defaults read com.parkbyeongjun.latte shortcutChord` is empty by
+- Verify `defaults read com.araforge.latte shortcutChord` is empty by
   default (since default chord isn't persisted until user-customised).
 
 For full recorder validation, owner manual smoke is the source of truth:

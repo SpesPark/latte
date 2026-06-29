@@ -65,6 +65,36 @@ public enum AwakeState: Equatable, Sendable {
     }
 }
 
+extension AwakeState: CustomStringConvertible {
+    /// Privacy-safe rendering for os_log. The transition logger emits this at
+    /// `privacy: .public`, so it must NOT include `TriggerVote.reason` — which
+    /// carries user content (Wi-Fi SSID, calendar event title, running-app
+    /// names). `.awakeTriggered` / `.coolingDown` therefore expose only the
+    /// static voting trigger IDs (e.g. "wifi"), never the reasons. The default
+    /// reflected `String(describing:)` would leak the full vote structs.
+    public var description: String {
+        switch self {
+        case .asleep:
+            return "asleep"
+        case .awakeUserIndefinite:
+            return "awakeUserIndefinite"
+        case .awakeUserTimed(let endsAt):
+            return "awakeUserTimed(endsAt: \(endsAt.timeIntervalSince1970))"
+        case .awakeTriggered(let votes):
+            return "awakeTriggered(triggers: \(Self.triggerIDList(votes)))"
+        case .coolingDown(let until, let lastVotes):
+            return "coolingDown(until: \(until.timeIntervalSince1970), triggers: \(Self.triggerIDList(lastVotes)))"
+        case .snoozed(let until):
+            return "snoozed(until: \(until.timeIntervalSince1970))"
+        }
+    }
+
+    /// Sorted trigger IDs only — deterministic and PII-free.
+    private static func triggerIDList(_ votes: [String: TriggerVote]) -> String {
+        "[" + votes.keys.sorted().joined(separator: ", ") + "]"
+    }
+}
+
 public enum AwakeInput: Equatable, Sendable {
     case userActivate(AwakeDuration)
     case userDeactivate
@@ -588,7 +618,7 @@ public final class AwakeManager: ObservableObject {
         didSet {
             settings.setBool(allowDisplaySleep, for: .allowDisplaySleep)
             if assertion.isActive {
-                assertion.activate(mode: assertionMode, reason: "allowDisplaySleep changed")
+                activateAssertionOrForceAsleep(reason: "allowDisplaySleep changed")
             }
         }
     }
@@ -642,15 +672,25 @@ public final class AwakeManager: ObservableObject {
     private var snoozeTask: Task<Void, Never>?
     private var powerObservation: PowerSourceObservation?
 
+    /// Sleep seam for timer scheduling (S52 B1). Production sleeps with
+    /// `Task.sleep`; tests inject an instant sleeper so the TimerKind →
+    /// AwakeInput wiring in `schedule(kind:fireAt:)` is testable
+    /// end-to-end — before this seam, a wiring bug there ("timed session
+    /// never ends") shipped with every test green because tests could
+    /// only feed expiry inputs to the FSM directly.
+    private let sleeper: @Sendable (UInt64) async throws -> Void
+
     private static var signalHandlerInstalled = false
 
     public init(
         assertion: PowerAssertionType = PowerAssertion(),
         settings: SettingsStore = UserDefaultsSettingsStore(),
-        powerSource: PowerSourceType? = nil
+        powerSource: PowerSourceType? = nil,
+        sleeper: @escaping @Sendable (UInt64) async throws -> Void = { try await Task.sleep(nanoseconds: $0) }
     ) {
         self.assertion = assertion
         self.settings = settings
+        self.sleeper = sleeper
         if let powerSource {
             self.powerSource = powerSource
         } else {
@@ -671,10 +711,12 @@ public final class AwakeManager: ObservableObject {
         }
     }
 
-    deinit {
-        // PowerSourceObservation cancellation is @MainActor; deinit isn't.
-        // Best-effort: drop the strong ref. The IOPowerSource observer table
-        // also drops via [weak self], so the run-loop callback no-ops.
+    isolated deinit {
+        // PowerSourceObservation cancellation is @MainActor. `isolated deinit`
+        // (SE-0371) runs this teardown on the main actor so it can touch the
+        // isolated `powerObservation`. Drop the strong ref; the IOPowerSource
+        // observer table also drops via [weak self], so the run-loop callback
+        // no-ops.
         powerObservation = nil
     }
 
@@ -769,8 +811,17 @@ public final class AwakeManager: ObservableObject {
         }
     }
 
-    /// Installs SIGINT/SIGTERM/SIGABRT handlers that release the assertion.
-    /// Idempotent — safe to call multiple times.
+    /// Installs SIGINT/SIGTERM handlers that release the assertion on
+    /// deliberate termination. Idempotent — safe to call multiple times.
+    ///
+    /// Deliberately does NOT handle SIGABRT: that signal is raised from an
+    /// already-faulting runtime (failed assertion, abort()), where spawning
+    /// a Swift `Task` is unsafe and — worse — catching it suppresses the OS
+    /// crash report, blinding production debugging. The kernel releases the
+    /// IOPMAssertion automatically on process death, so the handler buys
+    /// nothing on the crash path. SIGINT/SIGTERM are user-driven terminations
+    /// delivered while the process is in a normal state, so the best-effort
+    /// Task-based release is acceptable there.
     public static func installSignalHandlers() {
         guard !signalHandlerInstalled else { return }
         signalHandlerInstalled = true
@@ -784,7 +835,6 @@ public final class AwakeManager: ObservableObject {
         }
         signal(SIGINT, handler)
         signal(SIGTERM, handler)
-        signal(SIGABRT, handler)
     }
 
     // MARK: Constraint enforcement (C-1, C-9)
@@ -875,12 +925,12 @@ public final class AwakeManager: ObservableObject {
         for effect in effects {
             switch effect {
             case .acquireAssertion:
-                assertion.activate(mode: assertionMode, reason: "Latte awake")
+                activateAssertionOrForceAsleep(reason: "Latte awake")
             case .releaseAssertion:
                 assertion.deactivate()
             case .refreshAssertion:
                 if assertion.isActive {
-                    assertion.activate(mode: assertionMode, reason: "Latte mode change")
+                    activateAssertionOrForceAsleep(reason: "Latte mode change")
                 }
             case .scheduleTimer(let kind, let fireAt):
                 schedule(kind: kind, fireAt: fireAt)
@@ -892,12 +942,33 @@ public final class AwakeManager: ObservableObject {
         }
     }
 
+    /// Activates the IOKit assertion; when acquisition FAILS, the app must
+    /// not keep claiming awake while the system refused the assertion (the
+    /// cup would show awake while the Mac can sleep — the worst silent
+    /// failure). Defer a constraint-deactivate to the next main-actor turn:
+    /// this runs inside `applyEffects`, and re-entering `process()`
+    /// mid-transition would nest `applyTransition`. S51 audit finding — the
+    /// failure Bool was previously discarded.
+    private func activateAssertionOrForceAsleep(reason: String) {
+        if assertion.activate(mode: assertionMode, reason: reason) { return }
+        logger.fault("power assertion acquisition failed; deactivating instead of claiming awake")
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            // A later transition may have recovered (re-acquired the
+            // assertion) or already left the awake state — only force
+            // asleep while we still claim awake without holding one.
+            guard self.state.isAwake, !self.assertion.isActive else { return }
+            self.process(.constraintDeactivate)
+        }
+    }
+
     private func schedule(kind: TimerKind, fireAt: Date) {
         cancelTimer(kind)
         let interval = max(0, fireAt.timeIntervalSinceNow)
+        let sleeper = self.sleeper
         let task = Task { @MainActor [weak self] in
             let nanos = UInt64(interval * 1_000_000_000)
-            try? await Task.sleep(nanoseconds: nanos)
+            try? await sleeper(nanos)
             if Task.isCancelled { return }
             guard let self else { return }
             switch kind {
@@ -910,6 +981,17 @@ public final class AwakeManager: ObservableObject {
         case .duration: durationTask = task
         case .coolDown: coolDownTask = task
         case .snooze: snoozeTask = task
+        }
+    }
+
+    /// Test seam (S52 B1): expose the pending timer task so tests can
+    /// await the scheduled expiry deterministically instead of polling.
+    /// Internal — not part of the public surface.
+    func timerTask(for kind: TimerKind) -> Task<Void, Never>? {
+        switch kind {
+        case .duration: return durationTask
+        case .coolDown: return coolDownTask
+        case .snooze: return snoozeTask
         }
     }
 

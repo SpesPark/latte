@@ -166,7 +166,8 @@ final class AppTriggerTests: XCTestCase {
 
         source.simulateLaunch("com.microsoft.teams2")
         let task = Task { @MainActor () -> TriggerVote? in
-            await iterator.next()
+            var it = trigger.voteStream.makeAsyncIterator()
+            return await it.next()
         }
         try await Task.sleep(nanoseconds: 50_000_000)
         task.cancel()
@@ -194,7 +195,8 @@ final class AppTriggerTests: XCTestCase {
 
         source.simulateTerminate("us.zoom.xos")
         let task = Task { @MainActor () -> TriggerVote? in
-            await iterator.next()
+            var it = trigger.voteStream.makeAsyncIterator()
+            return await it.next()
         }
         try await Task.sleep(nanoseconds: 50_000_000)
         task.cancel()
@@ -491,7 +493,8 @@ final class AppTriggerTests: XCTestCase {
         trigger.reevaluateWatched()
 
         let task = Task { @MainActor () -> TriggerVote? in
-            await iterator.next()
+            var it = trigger.voteStream.makeAsyncIterator()
+            return await it.next()
         }
         try await Task.sleep(nanoseconds: 50_000_000)
         task.cancel()
@@ -534,9 +537,9 @@ final class AppTriggerTests: XCTestCase {
         settings.appTriggerBundleIDs = ["com.microsoft.teams2"]
         trigger.reevaluateWatched()
 
-        var iterator = trigger.voteStream.makeAsyncIterator()
         let task = Task { @MainActor () -> TriggerVote? in
-            await iterator.next()
+            var it = trigger.voteStream.makeAsyncIterator()
+            return await it.next()
         }
         try await Task.sleep(nanoseconds: 50_000_000)
         task.cancel()

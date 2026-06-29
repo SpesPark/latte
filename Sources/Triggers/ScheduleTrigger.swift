@@ -157,7 +157,15 @@ public extension SettingsStore {
             return decoded
         }
         set {
-            let encoded = try? JSONEncoder().encode(newValue)
+            // Preserve the existing value on encode failure rather than writing
+            // a nil (which `setData` interprets as remove) — silently deleting
+            // the user's schedule entries would be data loss. Mirrors
+            // `encodeStringArray`'s preserve-on-failure contract; encoding
+            // `[ScheduleEntry]` cannot actually throw, so this is defensive.
+            guard let encoded = try? JSONEncoder().encode(newValue) else {
+                settingsLogger.fault("scheduleTriggerEntries failed to encode; existing value left unchanged")
+                return
+            }
             setData(encoded, for: .scheduleTriggerEntries)
         }
     }
@@ -210,16 +218,31 @@ public final class ScheduleTrigger: Trigger {
         self.continuation = continuation
     }
 
+    isolated deinit {
+        // `isolated deinit` (SE-0371) runs on the main actor so it can touch
+        // the isolated `pollTask`. Cancel it: the poll task holds only a weak
+        // self (see start()), so once the trigger is released the task would
+        // otherwise spin no-op polls forever. stop() already cancels on the
+        // live path; this covers release without an explicit stop().
+        pollTask?.cancel()
+    }
+
     public func start() async {
         guard pollTask == nil else { return }
         logger.info("ScheduleTrigger.start")
+        // Capture the interval by value and re-acquire `self` weakly each
+        // iteration. Binding a strong `self` ahead of the loop (the obvious
+        // `guard let self`) retains it across `Task.sleep`, forming a
+        // pollTask ↔ trigger cycle that survives release — across the full
+        // test suite these orphaned tasks accumulated and stalled the run
+        // (project_latte_status.md trap #8). `deinit` cancels the task.
         pollTask = Task { @MainActor [weak self] in
-            guard let self else { return }
-            await self.pollOnce()
+            guard let interval = self?.pollInterval else { return }
+            await self?.pollOnce()
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: UInt64(self.pollInterval * 1_000_000_000))
+                try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
                 if Task.isCancelled { break }
-                await self.pollOnce()
+                await self?.pollOnce()
             }
         }
     }
@@ -276,7 +299,7 @@ public final class ScheduleTrigger: Trigger {
     /// initial poll.
     public func reevaluateWatched() {
         guard pollTask != nil else { return }
-        Task { await pollOnce() }
+        Task { [weak self] in await self?.pollOnceIfRunning() }
     }
 
     /// **S22 / P-issue-6d** — see `Trigger.reemitCurrentVote()` doc.
@@ -287,7 +310,19 @@ public final class ScheduleTrigger: Trigger {
     public func reemitCurrentVote() {
         guard pollTask != nil else { return }
         activeEntryID = nil
-        Task { await pollOnce() }
+        Task { [weak self] in await self?.pollOnceIfRunning() }
+    }
+
+    /// Deferred-poll seam for `reevaluateWatched` / `reemitCurrentVote`. Both
+    /// enqueue a `Task` whose body runs on a LATER main-actor turn; a `stop()`
+    /// can land in between (e.g. a pause-lift reevaluate racing a user
+    /// toggle-off). Re-check `pollTask` at execution time so a stale deferred
+    /// poll never emits a spurious vote for an already-stopped trigger. Unlike
+    /// `pollOnce()` (a direct test/UI seam that intentionally runs unguarded),
+    /// this only polls while the trigger is actually running.
+    func pollOnceIfRunning() async {
+        guard pollTask != nil else { return }
+        await pollOnce()
     }
 
     private func voteReason(for entry: ScheduleEntry) -> String {
