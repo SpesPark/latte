@@ -9,13 +9,12 @@ public struct MenuBarRoot: View {
     @State private var customExpanded: Bool = false
     @State private var customMinutes: Int = 60
 
-    /// Measured height of the scrollable middle section, fed by a
-    /// `GeometryReader` background + preference. Seeded to a typical content
-    /// height so the first opened frame doesn't visibly resize; the preference
-    /// then sets the real content height so the popover sizes to content when
-    /// it fits and scrolls (capped at `maxScroll`) only when it would
-    /// overflow. Part of the Guideline 4 truncation fix.
-    @State private var measuredContentHeight: CGFloat = MenuBarLayout.estimatedContentHeight
+    /// Natural height of `middleContent`, measured from a hidden copy (see
+    /// `body`). Seeded so the first frame decides correctly before the geometry
+    /// read lands. Used ONLY to decide whether the content is taller than the
+    /// screen and must scroll (`MenuBarLayout.needsScroll`) — never to size the
+    /// displayed content, so an under-report can't clip rows.
+    @State private var measuredContentHeight: CGFloat = MenuBarLayout.seedContentHeight
 
     /// Local NSEvent monitor token, installed in `.onAppear` (popover
     /// open) and removed in `.onDisappear` (popover close). Carries
@@ -29,68 +28,115 @@ public struct MenuBarRoot: View {
     }
 
     public var body: some View {
-        // Guideline 4 truncation fix: cap the scrollable middle section so the
-        // pinned Settings / Quit footer is always reachable, even on notched
-        // 14"/16" displays. See MenuBarLayout for the math.
+        // Guideline 4 truncation fix: when the content fits the screen it is
+        // rendered at NATURAL size — the popover window hugs it (grows / shrinks
+        // with the Custom row, no gap, no scrollbar) and every row is shown.
+        // Only when the content is taller than the screen does it fall back to a
+        // ScrollView capped at the screen, so the pinned Settings / Quit footer
+        // stays reachable on notched 14"/16" displays.
+        //
+        // A hidden, fixedSize copy of `middleContent` measures its natural
+        // height; that measurement is used ONLY to decide whether to scroll
+        // (`needsScroll`), never to size the displayed content — driving the
+        // displayed height from the measurement clipped rows when it
+        // under-reported (owner saw the last preset cut off), and the
+        // MenuBarExtra window can't be smoothly frame-animated anyway.
         //
         // Use the SMALLEST visibleFrame across all screens, not `NSScreen.main`:
         // this is an LSUIElement app, so `NSScreen.main` (the key-window screen)
         // is unreliable, and with "Displays have separate Spaces" the popover
-        // can open on any display. Capping to the smallest display guarantees
-        // the footer stays on-screen wherever the popover lands — at worst the
-        // popover scrolls slightly sooner on a larger display.
+        // can open on any display. Sizing for the smallest display guarantees
+        // the footer stays on-screen wherever the popover lands.
         let screenHeight = NSScreen.screens
             .map(\.visibleFrame.height)
             .min() ?? MenuBarLayout.fallbackScreenHeight
-        let maxScroll = MenuBarLayout.maxScrollHeight(forVisibleScreenHeight: screenHeight)
+        let needsScroll = MenuBarLayout.needsScroll(
+            measuredContentHeight: measuredContentHeight,
+            visibleScreenHeight: screenHeight
+        )
 
         return VStack(spacing: 0) {
             HeaderView(manager: manager)
 
             Divider().opacity(0.5)
 
-            // Scrollable middle: pause toggle + durations + recurring presets
-            // + Turn off. Capped at `maxScroll`; everything stays reachable by
-            // scrolling and the footer below never gets pushed off-screen.
-            ScrollView {
-                VStack(spacing: 0) {
-                    pauseTriggersRow
-
-                    Divider().opacity(0.5)
-
-                    durationsSection
-
-                    Divider().opacity(0.5)
-
-                    recurringSection
-
-                    turnOffButton
+            // When the content fits the screen, render it at natural size so the
+            // popover window grows / shrinks with it (no fixed window, no
+            // scrollbar) and every row is shown. Driving the displayed height
+            // from the runtime measurement instead clips content when the
+            // measurement under-reports (owner saw the last preset row cut off),
+            // so the measurement is used ONLY to decide whether to scroll. Only
+            // when the content is taller than the screen does it scroll, capped
+            // so the Settings / Quit footer below stays reachable.
+            Group {
+                if needsScroll {
+                    ScrollView { middleContent }
+                        .frame(height: MenuBarLayout.maxScrollHeight(forVisibleScreenHeight: screenHeight))
+                } else {
+                    middleContent
                 }
-                .background(
-                    GeometryReader { proxy in
-                        Color.clear.preference(
-                            key: MenuBarContentHeightKey.self,
-                            value: proxy.size.height
-                        )
-                    }
-                )
             }
-            .frame(height: min(measuredContentHeight, maxScroll))
+            // Measure the middle section's natural height from a hidden copy
+            // forced to its ideal size — independent of whether the visible copy
+            // is scrolling, so it reports the true content height (never 0) and
+            // drives the scroll decision above.
+            .background(
+                middleContent
+                    .frame(width: Theme.Sizes.menuBarWidth)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .hidden()
+                    .allowsHitTesting(false)
+                    .background(
+                        GeometryReader { proxy in
+                            Color.clear.preference(
+                                key: MenuBarContentHeightKey.self,
+                                value: proxy.size.height
+                            )
+                        }
+                    )
+            )
 
             Divider().opacity(0.5)
 
             settingsFooter
         }
         .frame(width: Theme.Sizes.menuBarWidth)
+        // Animate the content layout when the Custom row expands / collapses.
+        // NOTE: the MenuBarExtra(.window) window itself resizes in one step
+        // (AppKit snaps the popover window to the content's final size); the
+        // SwiftUI animation here smooths the inner content. Forcing the window
+        // frame to animate requires pinning an explicit measured height, which
+        // clips content when the measurement under-reports — so we keep natural
+        // sizing (every row shown) and animate only what reliably animates.
+        .animation(.easeInOut(duration: 0.18), value: customExpanded)
         .liquidGlassBackground()
         .onAppear { installKeyMonitor() }
         .onDisappear { removeKeyMonitor() }
         .onPreferenceChange(MenuBarContentHeightKey.self) { height in
-            measuredContentHeight = height
+            if height > 0 { measuredContentHeight = height }
         }
     }
 
     // MARK: - Sections
+
+    /// The scrollable middle: pause toggle + durations + recurring presets +
+    /// Turn off. Defined once and rendered twice — visibly in the ScrollView,
+    /// and hidden in `.background` purely to measure its natural height.
+    private var middleContent: some View {
+        VStack(spacing: 0) {
+            pauseTriggersRow
+
+            Divider().opacity(0.5)
+
+            durationsSection
+
+            Divider().opacity(0.5)
+
+            recurringSection
+
+            turnOffButton
+        }
+    }
 
     private var durationsSection: some View {
         VStack(spacing: 0) {
@@ -262,14 +308,13 @@ public struct MenuBarRoot: View {
     }
 }
 
-/// Carries the measured height of the scrollable middle section up to
-/// `MenuBarRoot`, so the ScrollView can size to content when it fits and
-/// scroll (capped) only when it would overflow. Part of the Guideline 4
-/// truncation fix.
+/// Carries the measured natural height of `middleContent` up to `MenuBarRoot`
+/// so the ScrollView can hug the content. Part of the Guideline 4 truncation
+/// fix.
 private struct MenuBarContentHeightKey: PreferenceKey {
     static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        // Single emitter (one GeometryReader background); take the latest.
+        // Single emitter (one hidden measurement copy); take the latest.
         value = nextValue()
     }
 }

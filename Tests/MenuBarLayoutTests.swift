@@ -56,4 +56,41 @@ final class MenuBarLayoutTests: XCTestCase {
             MenuBarLayout.minScrollHeight + 1
         )
     }
+
+    // MARK: - needsScroll (render natural size vs. fall back to a ScrollView)
+
+    /// Content that fits the screen renders natural-size (no scroll) so the
+    /// window hugs it — no fixed window, no scrollbar (owner-reported on build).
+    func testDoesNotScrollWhenContentFits() {
+        // 450 content on a roomy 1440 screen (cap 1220) → fits.
+        XCTAssertFalse(
+            MenuBarLayout.needsScroll(measuredContentHeight: 450, visibleScreenHeight: 1440)
+        )
+        // Even right up to the cap it still fits (boundary is strict >).
+        let cap = MenuBarLayout.maxScrollHeight(forVisibleScreenHeight: 1440)
+        XCTAssertFalse(
+            MenuBarLayout.needsScroll(measuredContentHeight: cap, visibleScreenHeight: 1440)
+        )
+    }
+
+    /// Content taller than the screen scrolls so the footer stays reachable
+    /// (the original rejection).
+    func testScrollsWhenContentExceedsScreen() {
+        // Short screen: 650 usable → cap 430; tall content must scroll.
+        XCTAssertTrue(
+            MenuBarLayout.needsScroll(measuredContentHeight: 900, visibleScreenHeight: 650)
+        )
+        let cap = MenuBarLayout.maxScrollHeight(forVisibleScreenHeight: 650)
+        XCTAssertTrue(
+            MenuBarLayout.needsScroll(measuredContentHeight: cap + 1, visibleScreenHeight: 650)
+        )
+    }
+
+    /// A stray 0 / tiny measurement never triggers the scroll fallback (it
+    /// "fits"), so the middle renders natural-size and can't collapse.
+    func testZeroMeasurementRendersNaturalNotScrolled() {
+        XCTAssertFalse(
+            MenuBarLayout.needsScroll(measuredContentHeight: 0, visibleScreenHeight: 1440)
+        )
+    }
 }
